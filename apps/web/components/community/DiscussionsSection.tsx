@@ -211,7 +211,7 @@ export default function DiscussionsSection({ animeId, currentUser }: Discussions
                   <p className="text-sm font-bold text-zinc-200 group-hover:text-white mt-1 line-clamp-1">{disc.title}</p>
                   <SpoilerPreview title={disc.title} body={disc.body} hasSpoiler={disc.has_spoiler} />
                   <div className="flex items-center gap-3 mt-2 text-[10px] text-zinc-600">
-                    <span>by <span className="text-zinc-400 font-semibold">{disc.user.username}</span></span>
+                    <span>by <Link href={`/profile/${disc.user.username}`} onClick={(e) => e.stopPropagation()} className="text-zinc-400 font-semibold hover:text-purple-400 transition-colors">{disc.user.username}</Link></span>
                     <span>💬 {disc.comment_count}</span>
                     <span>👁️ {disc.view_count}</span>
                     <span>{new Date(disc.created_at).toLocaleDateString()}</span>

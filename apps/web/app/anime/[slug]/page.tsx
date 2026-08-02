@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/layout/Header";
 import { fetchWithCredentials, getApiUrl } from "@/lib/auth";
+import ReviewsSection from "@/components/community/ReviewsSection";
+import DiscussionsSection from "@/components/community/DiscussionsSection";
 
 interface Title {
   english?: string;
@@ -79,7 +81,7 @@ export default function AnimeDetailPage() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "characters" | "relations" | "videos">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "characters" | "relations" | "videos" | "reviews" | "discussions">("overview");
 
   // User auth & watchlist states
   const [user, setUser] = useState<any>(null);
@@ -275,8 +277,9 @@ export default function AnimeDetailPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-purple-500 selection:text-white relative">
       <Header />
-      {/* Banner */}
-      <div className="relative h-[250px] md:h-[400px] w-full overflow-hidden bg-zinc-950">
+      <main>
+        {/* Banner */}
+        <div className="relative h-[250px] md:h-[400px] w-full overflow-hidden bg-zinc-950">
         {anime.banner_url ? (
           <img
             src={anime.banner_url}
@@ -457,8 +460,8 @@ export default function AnimeDetailPage() {
         </div>
 
         {/* Tab Selection */}
-        <div className="mt-12 border-b border-zinc-900 flex gap-6 text-sm">
-          {["overview", "characters", "relations", "videos"].map((t) => (
+        <div className="mt-12 border-b border-zinc-900 flex gap-6 text-sm overflow-x-auto whitespace-nowrap">
+          {["overview", "characters", "relations", "videos", "reviews", "discussions"].map((t) => (
             <button
               key={t}
               onClick={() => setActiveTab(t as any)}
@@ -678,8 +681,19 @@ export default function AnimeDetailPage() {
               )}
             </div>
           )}
+
+          {/* Tab 5: Reviews */}
+          {activeTab === "reviews" && (
+            <ReviewsSection animeId={anime.id} currentUser={user} />
+          )}
+
+          {/* Tab 6: Discussions */}
+          {activeTab === "discussions" && (
+            <DiscussionsSection animeId={anime.id} currentUser={user} />
+          )}
         </div>
-      </main>
+      </div>
+    </main>
 
       {/* Modal Video Player */}
       {activeVideoId && (

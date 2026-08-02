@@ -54,6 +54,10 @@ export default function MyListPage() {
   const [anilistUsername, setAnilistUsername] = useState("");
   const [importing, setImporting] = useState(false);
 
+  // Blocked users
+  const [blockedUsers, setBlockedUsers] = useState<{ blocked_id: string; username: string }[]>([]);
+  const [unblocking, setUnblocking] = useState<string | null>(null);
+
   const handleImportAniList = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!anilistUsername.trim()) return;
@@ -112,9 +116,28 @@ export default function MyListPage() {
     }
   };
 
+  const fetchBlocked = async () => {
+    try {
+      const res = await fetchWithCredentials(getApiUrl("/me/blocks"));
+      if (res.ok) setBlockedUsers(await res.json());
+    } catch (_) {}
+  };
+
+  const handleUnblock = async (username: string) => {
+    setUnblocking(username);
+    try {
+      const res = await fetchWithCredentials(getApiUrl(`/users/${username}/block`), { method: "DELETE" });
+      if (res.ok) fetchBlocked();
+      else { const e = await res.json(); alert(e.detail || "Failed to unblock."); }
+    } finally {
+      setUnblocking(null);
+    }
+  };
+
   useEffect(() => {
     fetchWatchlist();
     fetchFavourites();
+    fetchBlocked();
   }, []);
 
   const handleIncrementEpisode = async (entry: WatchlistEntry) => {
@@ -349,6 +372,38 @@ export default function MyListPage() {
                   </Link>
                 );
               })}
+            </div>
+          </div>
+        )}
+        {/* Blocked Users Section */}
+        {blockedUsers.length > 0 && (
+          <div className="mt-12">
+            <div className="flex items-center gap-3 mb-6">
+              <h2 className="text-xl font-extrabold tracking-tight text-zinc-200">Blocked Users</h2>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-bold">
+                {blockedUsers.length}
+              </span>
+            </div>
+            <div className="flex flex-col gap-3">
+              {blockedUsers.map((b) => (
+                <div key={b.blocked_id} className="flex items-center justify-between bg-zinc-900/30 border border-zinc-900 rounded-xl px-5 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-black text-zinc-400">
+                      {b.username[0].toUpperCase()}
+                    </div>
+                    <Link href={`/profile/${b.username}`} className="text-sm font-bold text-zinc-300 hover:text-purple-400 transition-colors">
+                      @{b.username}
+                    </Link>
+                  </div>
+                  <button
+                    onClick={() => handleUnblock(b.username)}
+                    disabled={unblocking === b.username}
+                    className="text-xs px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold border border-zinc-700 transition-all disabled:opacity-50"
+                  >
+                    {unblocking === b.username ? "..." : "Unblock"}
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         )}

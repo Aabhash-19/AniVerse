@@ -205,3 +205,24 @@ def get_me(current_user: User = Depends(get_current_user)):
         } if prefs else None
     }
     return UserResponseSchema(**response_data)
+
+
+@router.get("/profile/{username}")
+def get_public_profile(username: str, db: Session = Depends(get_db)):
+    """
+    Get public profile information for any user by username.
+    Returns safe fields only (no email, no preferences).
+    """
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return {
+        "id": str(user.id),
+        "username": user.username,
+        "display_name": user.display_name,
+        "avatar_url": user.avatar_url,
+        "bio": user.bio if hasattr(user, "bio") else None,
+        "role": user.role.value,
+        "created_at": user.created_at,
+    }
+

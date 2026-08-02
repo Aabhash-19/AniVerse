@@ -66,12 +66,20 @@ export default function ReviewsSection({ animeId, currentUser }: ReviewsSectionP
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [reportingId, setReportingId] = useState<string | null>(null);
-  
-  // Form state
+
+  // Create form state
   const [score, setScore] = useState<string>("");
   const [body, setBody] = useState("");
   const [hasSpoiler, setHasSpoiler] = useState(false);
   const [formError, setFormError] = useState("");
+
+  // Edit form state
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editScore, setEditScore] = useState<string>("");
+  const [editBody, setEditBody] = useState("");
+  const [editHasSpoiler, setEditHasSpoiler] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const fetchReviews = async () => {
     setLoading(true);
@@ -148,6 +156,45 @@ export default function ReviewsSection({ animeId, currentUser }: ReviewsSectionP
     if (!confirm("Delete this review?")) return;
     await fetchWithCredentials(getApiUrl(`/reviews/${reviewId}`), { method: "DELETE" });
     fetchReviews();
+  };
+
+  const startEditing = (review: Review) => {
+    setEditingReviewId(review.id);
+    setEditScore(review.score?.toString() ?? "");
+    setEditBody(review.body);
+    setEditHasSpoiler(review.has_spoiler);
+    setEditError("");
+  };
+
+  const cancelEditing = () => {
+    setEditingReviewId(null);
+    setEditError("");
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent, reviewId: string) => {
+    e.preventDefault();
+    if (editBody.trim().length < 20) { setEditError("Review must be at least 20 characters."); return; }
+    setEditSubmitting(true);
+    setEditError("");
+    try {
+      const res = await fetchWithCredentials(getApiUrl(`/reviews/${reviewId}`), {
+        method: "PATCH",
+        body: JSON.stringify({
+          body: editBody.trim(),
+          score: editScore ? parseInt(editScore) : null,
+          has_spoiler: editHasSpoiler,
+        }),
+      });
+      if (res.ok) {
+        setEditingReviewId(null);
+        fetchReviews();
+      } else {
+        const err = await res.json();
+        setEditError(err.detail || "Failed to save changes.");
+      }
+    } finally {
+      setEditSubmitting(false);
+    }
   };
 
   const scoreColor = (s?: number) => {
@@ -264,7 +311,9 @@ export default function ReviewsSection({ animeId, currentUser }: ReviewsSectionP
                     )}
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-zinc-300">{review.user.display_name || review.user.username}</p>
+                    <Link href={`/profile/${review.user.username}`} className="text-xs font-bold text-zinc-300 hover:text-purple-400 transition-colors">
+                      {review.user.display_name || review.user.username}
+                    </Link>
                     <p className="text-[10px] text-zinc-600">{new Date(review.created_at).toLocaleDateString()}</p>
                   </div>
                   {review.score && (
@@ -318,15 +367,59 @@ export default function ReviewsSection({ animeId, currentUser }: ReviewsSectionP
                     </button>
                   )}
                   {currentUser && currentUser.id === review.user.id && (
-                    <button
-                      onClick={() => handleDelete(review.id)}
-                      className="text-[10px] text-zinc-600 hover:text-red-400 transition-all font-medium"
-                    >
-                      Delete
-                    </button>
+                    <>
+                      <button
+                        onClick={() => startEditing(review)}
+                        className="text-[10px] text-zinc-600 hover:text-purple-400 transition-all font-medium"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(review.id)}
+                        className="text-[10px] text-zinc-600 hover:text-red-400 transition-all font-medium"
+                      >
+                        Delete
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
+
+              {/* Inline Edit Form */}
+              {editingReviewId === review.id && (
+                <form onSubmit={(e) => handleSaveEdit(e, review.id)} className="mt-4 pt-4 border-t border-zinc-800/60 space-y-3">
+                  <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Edit Your Review</h4>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs text-zinc-500 w-14">Score</label>
+                    <input
+                      type="number" min={1} max={100}
+                      value={editScore}
+                      onChange={(e) => setEditScore(e.target.value)}
+                      placeholder="1–100"
+                      className="w-28 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                  <textarea
+                    value={editBody}
+                    onChange={(e) => setEditBody(e.target.value)}
+                    rows={4}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-purple-500 resize-none"
+                  />
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id={`edit-spoiler-${review.id}`} checked={editHasSpoiler} onChange={(e) => setEditHasSpoiler(e.target.checked)} className="accent-purple-500" />
+                    <label htmlFor={`edit-spoiler-${review.id}`} className="text-xs text-zinc-400">Contains spoilers</label>
+                  </div>
+                  {editError && <p className="text-xs text-red-400">{editError}</p>}
+                  <div className="flex gap-2">
+                    <button type="submit" disabled={editSubmitting} className="px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-bold">
+                      {editSubmitting ? "Saving..." : "Save Changes"}
+                    </button>
+                    <button type="button" onClick={cancelEditing} className="px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           ))}
         </div>
