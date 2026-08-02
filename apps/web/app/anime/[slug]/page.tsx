@@ -81,7 +81,11 @@ export default function AnimeDetailPage() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "characters" | "relations" | "videos" | "reviews" | "discussions">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "characters" | "relations" | "videos" | "reviews" | "discussions" | "recommendations">("overview");
+
+  // Similar recommendations state
+  const [similarRecs, setSimilarRecs] = useState<any[]>([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
 
   // User auth & watchlist states
   const [user, setUser] = useState<any>(null);
@@ -93,6 +97,36 @@ export default function AnimeDetailPage() {
   
   const [isFavourite, setIsFavourite] = useState<boolean>(false);
   const [togglingFavourite, setTogglingFavourite] = useState<boolean>(false);
+
+  const fetchSimilar = async () => {
+    if (!anime) return;
+    setLoadingSimilar(true);
+    try {
+      const res = await fetch(getApiUrl(`/recommendations/similar/${anime.id}`));
+      if (res.ok) setSimilarRecs(await res.json());
+    } finally {
+      setLoadingSimilar(false);
+    }
+  };
+
+  const handleRecFeedback = async (recId: number, feedbackType: "INTERESTED" | "NOT_INTERESTED") => {
+    try {
+      const res = await fetchWithCredentials(getApiUrl(`/recommendations/${recId}/feedback`), {
+        method: "POST",
+        body: JSON.stringify({ feedback_type: feedbackType }),
+      });
+      if (res.ok) {
+        alert(feedbackType === "INTERESTED" ? "Added to your profile preferences! 👍" : "Hiding this suggestion. 👎");
+        fetchSimilar();
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    if (activeTab === "recommendations" && anime && similarRecs.length === 0) {
+      fetchSimilar();
+    }
+  }, [activeTab, anime]);
 
   const fetchWatchlistInfo = async (userId: string) => {
     try {
@@ -461,7 +495,7 @@ export default function AnimeDetailPage() {
 
         {/* Tab Selection */}
         <div className="mt-12 border-b border-zinc-900 flex gap-6 text-sm overflow-x-auto whitespace-nowrap">
-          {["overview", "characters", "relations", "videos", "reviews", "discussions"].map((t) => (
+          {["overview", "characters", "relations", "videos", "reviews", "discussions", "recommendations"].map((t) => (
             <button
               key={t}
               onClick={() => setActiveTab(t as any)}
@@ -690,6 +724,70 @@ export default function AnimeDetailPage() {
           {/* Tab 6: Discussions */}
           {activeTab === "discussions" && (
             <DiscussionsSection animeId={anime.id} currentUser={user} />
+          )}
+
+          {/* Tab 7: Recommendations */}
+          {activeTab === "recommendations" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-bold text-zinc-250">Similar Titles</h2>
+                <p className="text-xs text-zinc-500 mt-1">AI vector-similarity matches based on themes, synopsis, and details.</p>
+              </div>
+
+              {loadingSimilar ? (
+                <div className="flex justify-center py-10">
+                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : similarRecs.length === 0 ? (
+                <div className="bg-zinc-900/10 border border-zinc-900 rounded-xl p-8 text-center text-zinc-500">
+                  No similar recommendations found for this title.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {similarRecs.map((rec) => {
+                    const simTitle = rec.title.english || rec.title.romaji || rec.title.native;
+                    return (
+                      <div key={rec.id} className="bg-zinc-900/20 border border-zinc-900 rounded-xl p-3 flex flex-col justify-between space-y-3 group hover:border-zinc-800 transition-all">
+                        <Link href={`/anime/${rec.slug}-${rec.id}`} className="space-y-2">
+                          <div className="aspect-[3/4] rounded-lg overflow-hidden bg-zinc-950 relative">
+                            {rec.cover_url ? (
+                              <img src={rec.cover_url} alt={simTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs">No Cover</div>
+                            )}
+                            <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-purple-600 text-[10px] font-black text-white">
+                              {(rec.score * 100).toFixed(0)}% Similar
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-zinc-300 group-hover:text-purple-400 transition-colors line-clamp-1">{simTitle}</p>
+                        </Link>
+
+                        {rec.reasons.length > 0 && (
+                          <p className="text-[10px] text-zinc-500 leading-tight">✓ {rec.reasons[0]}</p>
+                        )}
+
+                        {user && (
+                          <div className="flex gap-2 pt-1.5 border-t border-zinc-900">
+                            <button
+                              onClick={() => handleRecFeedback(rec.id, "INTERESTED")}
+                              className="text-[9px] font-bold text-zinc-400 hover:text-green-400 bg-zinc-950 hover:bg-green-500/10 border border-zinc-850 py-1 rounded flex-1 text-center"
+                            >
+                              👍 Yes
+                            </button>
+                            <button
+                              onClick={() => handleRecFeedback(rec.id, "NOT_INTERESTED")}
+                              className="text-[9px] font-bold text-zinc-400 hover:text-red-400 bg-zinc-950 hover:bg-red-500/10 border border-zinc-850 py-1 rounded flex-1 text-center"
+                            >
+                              👎 No
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
