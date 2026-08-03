@@ -167,7 +167,7 @@ const NAMI_ARC_CARDS = [
     highlight: "Sailed the Sky Island"
   },
   {
-    arc: "Water 7",
+    arc: "Enies Lobby",
     outfit: "Denim cropped jacket over a dark striped bra top + Light blue pleated miniskirt",
     era: "Pre-Timeskip",
     rating: 5,
@@ -728,18 +728,13 @@ export default function VideosPage() {
                         style={{ imageRendering: "auto" }}
                       />
 
-                      {/* Cost Emblem (Top Left) */}
-                      <div className="absolute top-3 left-3 w-8 h-8 rounded-full bg-red-600 border border-white/20 flex items-center justify-center font-extrabold text-white text-sm shadow-lg z-10 select-none">
-                        {card.cost}
-                      </div>
-
                       {/* Power Emblem (Top Right) */}
                       <div className="absolute top-3 right-3 bg-amber-500 text-black px-2 py-0.5 rounded font-black text-[9px] shadow-lg z-10 select-none tracking-wider uppercase">
                         {card.power} PWR
                       </div>
 
                       {/* Era Label */}
-                      <div className="absolute top-13 left-3 bg-black/60 backdrop-blur-md border border-white/10 px-2 py-0.5 rounded text-[8px] font-black text-zinc-300 z-10 select-none tracking-widest uppercase">
+                      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md border border-white/10 px-2 py-0.5 rounded text-[8px] font-black text-zinc-300 z-10 select-none tracking-widest uppercase">
                         {card.era}
                       </div>
 
@@ -800,18 +795,13 @@ export default function VideosPage() {
                         style={{ imageRendering: "auto" }}
                       />
 
-                      {/* Cost Emblem (Top Left) */}
-                      <div className="absolute top-3 left-3 w-8 h-8 rounded-full bg-red-600 border border-white/20 flex items-center justify-center font-extrabold text-white text-sm shadow-lg z-10 select-none">
-                        {card.cost}
-                      </div>
-
                       {/* Power Emblem (Top Right) */}
                       <div className="absolute top-3 right-3 bg-amber-500 text-black px-2 py-0.5 rounded font-black text-[9px] shadow-lg z-10 select-none tracking-wider uppercase">
                         {card.power} PWR
                       </div>
 
                       {/* Era Label */}
-                      <div className="absolute top-13 left-3 bg-black/60 backdrop-blur-md border border-white/10 px-2 py-0.5 rounded text-[8px] font-black text-zinc-300 z-10 select-none tracking-widest uppercase">
+                      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md border border-white/10 px-2 py-0.5 rounded text-[8px] font-black text-zinc-300 z-10 select-none tracking-widest uppercase">
                         {card.era}
                       </div>
 
