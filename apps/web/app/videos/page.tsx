@@ -446,7 +446,7 @@ export default function VideosPage() {
                   : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
               }`}
             >
-              Official Trailers ({videos.length})
+              Official Trailers
             </button>
             <button
               onClick={() => setActiveTab("social")}
