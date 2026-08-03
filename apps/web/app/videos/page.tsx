@@ -183,61 +183,46 @@ const NAMI_ARC_CARDS = [
   },
   {
     arc: "Fishman Island",
-    outfit: "Green & White striped bikini top + Low-rise blue jeans + Left arm tattoo fully visible",
-    era: "Post-Timeskip",
-    rating: 4,
-    image: "/nami-arcs/media__1785778521085.jpg",
-    cost: 6,
-    power: "7000",
-    color: "from-emerald-950 to-zinc-950",
-    border: "border-emerald-500/30",
-    badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-    accent: "text-emerald-400",
-    snippet: "Reunited at Sabaody after two years of weather training on Weatheria. She navigated the Sunny 10,000 meters down into the deep sea.",
-    highlight: "Sailed to the Ocean Floor"
-  },
-  {
-    arc: "Zou (Arrival)",
     outfit: "Comfy short white knitted sweater dress + Broad brown leather hip belt",
     era: "Post-Timeskip",
     rating: 4,
     image: "/nami-arcs/media__1785778521083.jpg",
-    cost: 5,
-    power: "6500",
+    cost: 6,
+    power: "7000",
     color: "from-zinc-800 to-zinc-950",
     border: "border-zinc-500/30",
     badge: "bg-zinc-700/20 text-zinc-300 border-zinc-700/30",
     accent: "text-zinc-400",
-    snippet: "Arriving at the phantom island Zou on the back of the giant elephant Zunesha. Nami helped rescue the Mink Tribe from Jack's poison gas.",
-    highlight: "Helped Rescue the Mink Tribe"
+    snippet: "Reunited at Sabaody after two years of weather training on Weatheria. She navigated the Sunny 10,000 meters down into the deep sea.",
+    highlight: "Sailed to the Ocean Floor"
   },
   {
-    arc: "Zou (Feast)",
-    outfit: "Intricate black lace halter top + Yellow furry hooded cloak + Dark belt-skirt + Furry boots",
-    era: "Post-Timeskip",
-    rating: 5,
-    image: "/nami-arcs/media__1785778218412.png",
-    cost: 7,
-    power: "7500",
-    color: "from-yellow-950 to-zinc-950",
-    border: "border-yellow-500/30",
-    badge: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-    accent: "text-yellow-400",
-    snippet: "Adorned in defensive fur clothing gifted by the grateful Minks during the grand feast celebrating their survival.",
-    highlight: "Honored by the Mink Tribe"
-  },
-  {
-    arc: "Whole Cake Island",
+    arc: "Zou",
     outfit: "Elegant purple evening dress with deep-cut sides laced up + Pearl bead shoulder chains",
     era: "Post-Timeskip",
     rating: 5,
     image: "/nami-arcs/media__1785778521067.jpg",
-    cost: 8,
+    cost: 7,
     power: "8000",
     color: "from-purple-950 to-zinc-950",
     border: "border-purple-500/30",
     badge: "bg-purple-500/20 text-purple-300 border-purple-500/30",
     accent: "text-purple-400",
+    snippet: "Adorned in the Mink Tribe's national treasure dress, Nami commanded the Homies and navigated the treacherous phantom elephant island.",
+    highlight: "Honored with Mink Treasure"
+  },
+  {
+    arc: "Whole Cake Island",
+    outfit: "Green & White striped bikini top + Low-rise blue jeans + Left arm tattoo fully visible",
+    era: "Post-Timeskip",
+    rating: 5,
+    image: "/nami-arcs/media__1785778521085.jpg",
+    cost: 8,
+    power: "8500",
+    color: "from-emerald-950 to-zinc-950",
+    border: "border-emerald-500/30",
+    badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+    accent: "text-emerald-400",
     snippet: "Navigating Big Mom's sweet territory. Nami weaponized Lola's Vivre Card to command the Homies and hijacked Big Mom's cloud Zeus.",
     highlight: "Hijacked Zeus"
   },
@@ -795,13 +780,13 @@ export default function VideosPage() {
                 </div>
               </div>
 
-              {/* ROW 2: Post-Timeskip Era (5 Cards) */}
+              {/* ROW 2: Post-Timeskip Era (4 Cards) */}
               <div className="space-y-4 pt-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black text-amber-400 uppercase tracking-widest">Row 2: Post-Timeskip Era</h4>
-                  <span className="text-[10px] text-zinc-600 font-bold">5 Collectible Cards</span>
+                  <span className="text-[10px] text-zinc-600 font-bold">4 Collectible Cards</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {NAMI_ARC_CARDS.filter(c => c.era === "Post-Timeskip").map((card) => (
                     <div
                       key={card.arc}
