@@ -22,7 +22,7 @@ Built on a modern monorepo architecture featuring **Next.js 15 (Turbopack)** and
 ## ✨ Key Features & Capability Spotlight
 
 ### 🤖 1. Nami AI Chatbot (Google Gemini Powered)
-- **Straw Hat Navigator Persona**: Nami answers any question about anime recommendations, character trivia, plot breakdowns, or One Piece lore in her authentic voice without emojis.
+- **Straw Hat Navigator Persona**: Nami answers any question about anime recommendations, character trivia, plot breakdowns, or One Piece lore in her authentic witty tone.
 - **Dynamic AI Engine**: Powered by Google Gemini (`gemini-flash-latest` / `gemini-2.0-flash`) with fallback safety.
 - **Interactive Database Media Cards**: When Nami recommends anime, her responses automatically attach clickable AniVerse media cards (complete with cover art, rating scores, genres, and direct page links).
 - **Clear Chat & Bottom-Right Widget**: Glassmorphism UI anchored to the bottom-right corner with single-click chat clearing and official high-resolution Nami avatar artwork.
