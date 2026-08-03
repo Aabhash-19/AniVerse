@@ -168,5 +168,5 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 
 <p align="center">
   <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcjFqZnM3bTN0Ym1xcDhhMnJ1OHlyMmcwNDVlcnl6ZWJndnBhMDFwdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/L5aXkshtnAUmI/giphy.gif" width="300" style="border-radius: 15px;" /><br /><br />
-  Made with 🍊 & ❤️ by the <b>NamiVerse Team</b>
+  Made with 🍊 & ❤️ by a faithful <b>Nami</b> worshipper
 </p>
