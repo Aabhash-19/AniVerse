@@ -71,12 +71,12 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header role="banner" aria-label="AniVerse site header" className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900 px-4 sm:px-6 py-4">
+    <header role="banner" aria-label="NamiVerse site header" className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900 px-4 sm:px-6 py-4">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div className="flex items-center gap-8">
-          <Link href="/discover" aria-label="AniVerse — Go to homepage" className="flex items-center gap-2.5">
+          <Link href="/discover" aria-label="NamiVerse — Go to homepage" className="flex items-center gap-2.5">
             <span className="text-xl sm:text-2xl font-black bg-gradient-to-r from-purple-400 via-violet-300 to-indigo-500 bg-clip-text text-transparent tracking-wider">
-              ANIVERSE
+              NAMIVERSE
             </span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 hidden sm:inline-flex items-center gap-1">
               Navigated by Nami

@@ -16,11 +16,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "AniVerse — Anime Discovery, Media & Watchlist Platform",
-    template: "%s | AniVerse",
+    default: "NamiVerse — Anime Discovery, Media & Watchlist Platform",
+    template: "%s | NamiVerse",
   },
   description:
-    "AniVerse is an AI-powered anime discovery platform. Browse a verified catalogue, watch official trailers, track your watchlist, and get personalized recommendations — all for free.",
+    "NamiVerse is an AI-powered anime discovery platform. Browse a verified catalogue, watch official trailers, track your watchlist, and get personalized recommendations — all for free.",
   keywords: [
     "anime",
     "anime catalogue",
@@ -28,15 +28,15 @@ export const metadata: Metadata = {
     "anime trailers",
     "official anime media",
     "anime recommendation",
-    "AniVerse",
+    "NamiVerse",
   ],
-  authors: [{ name: "AniVerse Team" }],
+  authors: [{ name: "NamiVerse Team" }],
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://aniverse.app",
-    siteName: "AniVerse",
-    title: "AniVerse — Anime Discovery, Media & Watchlist Platform",
+    url: "https://namiverse.app",
+    siteName: "NamiVerse",
+    title: "NamiVerse — Anime Discovery, Media & Watchlist Platform",
     description:
       "AI-powered anime discovery with official media, verified catalogues, progress tracking, and recommendations.",
   },
@@ -47,8 +47,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "AniVerse — Anime Discovery Platform",
-    description: "Track, discover, and watch official anime media on AniVerse.",
+    title: "NamiVerse — Anime Discovery Platform",
+    description: "Track, discover, and watch official anime media on NamiVerse.",
   },
 };
 

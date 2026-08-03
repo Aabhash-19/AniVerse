@@ -23,7 +23,7 @@ def parse_cors(v: str | List[str]) -> List[str]:
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "AniVerse API"
+    PROJECT_NAME: str = "NamiVerse API"
     API_V1_STR: str = "/api/v1"
     
     # Database Settings

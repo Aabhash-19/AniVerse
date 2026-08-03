@@ -40,13 +40,13 @@ class ChatResponse(BaseModel):
 
 
 NAMI_GREETINGS = [
-    "Yosh! I'm Nami, your official AniVerse Navigator! What kind of anime adventure are we sailing towards today?",
+    "Yosh! I'm Nami, your official NamiVerse Navigator! What kind of anime adventure are we sailing towards today?",
     "Hey there! Ready to chart a course through the best anime out there? (It'll cost you 10,000 Berries, but for you... first advice is free!)",
     "Weather report looks clear for some anime watching! Tell me what you're in the mood for!"
 ]
 
 NAMI_BERRIES_REPLIES = [
-    "Fufufu! Looking for Berries or treasure? The real treasure is finding a 10/10 masterpiece anime! But if you find any gold chests on AniVerse, let me know first!",
+    "Fufufu! Looking for Berries or treasure? The real treasure is finding a 10/10 masterpiece anime! But if you find any gold chests on NamiVerse, let me know first!",
     "Money makes the world go round! Speaking of high-value shows, let me show you some top-rated gems in our catalog!"
 ]
 

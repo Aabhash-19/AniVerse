@@ -619,7 +619,7 @@ export default function VideosPage() {
                 <img src="/nami-wano-avatar.jpg" alt="Nami Mascot" className="w-full h-full object-cover scale-110" />
               </div>
               <div className="relative z-10 text-center md:text-left">
-                <div className="text-[11px] font-black text-amber-400 uppercase tracking-[0.2em] mb-1">AniVerse Official Mascot</div>
+                <div className="text-[11px] font-black text-amber-400 uppercase tracking-[0.2em] mb-1">NamiVerse Official Mascot</div>
                 <h2 className="text-3xl md:text-4xl font-extrabold text-white">Nami's Lounge</h2>
                 <p className="text-zinc-400 text-sm mt-2 max-w-xl leading-relaxed">
                   Your dedicated corner of the Grand Line. Navigate through Nami's lore, watch the best One Piece clips,
@@ -861,7 +861,7 @@ export default function VideosPage() {
                   <div>
                     <h4 className="text-2xl font-extrabold text-white">Navigator's Knowledge Test</h4>
                     <p className="text-zinc-400 text-sm mt-2 max-w-sm">
-                      Think you know everything about Nami? Prove your worth as a Straw Hat crew member with {QUIZ_QUESTIONS.length} questions about AniVerse's mascot.
+                      Think you know everything about Nami? Prove your worth as a Straw Hat crew member with {QUIZ_QUESTIONS.length} questions about NamiVerse's mascot.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3 justify-center text-xs text-zinc-400">

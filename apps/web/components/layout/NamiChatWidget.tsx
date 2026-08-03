@@ -37,7 +37,7 @@ export default function NamiChatWidget() {
     {
       id: "welcome-1",
       sender: "nami",
-      text: "Yosh! I'm Nami, your official AniVerse Navigator! Looking for your next 10/10 anime adventure or a top-tier recommendation?",
+      text: "Yosh! I'm Nami, your official NamiVerse Navigator! Looking for your next 10/10 anime adventure or a top-tier recommendation?",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -59,7 +59,7 @@ export default function NamiChatWidget() {
       {
         id: `welcome-${Date.now()}`,
         sender: "nami",
-        text: "Yosh! I'm Nami, your official AniVerse Navigator! Looking for your next 10/10 anime adventure or a top-tier recommendation?",
+        text: "Yosh! I'm Nami, your official NamiVerse Navigator! Looking for your next 10/10 anime adventure or a top-tier recommendation?",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);

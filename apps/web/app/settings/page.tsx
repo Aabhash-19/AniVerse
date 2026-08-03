@@ -107,7 +107,7 @@ export default function SettingsPage() {
         <div className="bg-zinc-900/20 border border-zinc-900 rounded-2xl p-6 shadow-xl space-y-6">
           <div>
             <h2 className="text-lg font-bold text-zinc-200">Data Controls & Export</h2>
-            <p className="text-xs text-zinc-550 mt-1">Download or clear your data footprints from AniVerse databases.</p>
+            <p className="text-xs text-zinc-550 mt-1">Download or clear your data footprints from NamiVerse databases.</p>
           </div>
 
           <div className="space-y-4">

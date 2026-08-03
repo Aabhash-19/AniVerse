@@ -47,7 +47,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md rounded-2xl p-8 shadow-2xl relative z-10">
         <div className="text-center mb-8">
           <Link href="/discover" className="text-3xl font-black bg-gradient-to-r from-purple-400 to-indigo-500 bg-clip-text text-transparent tracking-widest">
-            ANIVERSE
+            NAMIVERSE
           </Link>
           <h2 className="text-xl font-bold mt-4 text-zinc-200">Welcome Back</h2>
           <p className="text-zinc-500 text-xs mt-1">Access your watchlist and personalized recommendations.</p>

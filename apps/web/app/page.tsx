@@ -11,7 +11,7 @@ export default function Home() {
         {/* Animated Brand Logo */}
         <div className="flex flex-col gap-2">
           <span className="text-5xl md:text-7xl font-black bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-500 bg-clip-text text-transparent tracking-widest animate-pulse">
-            ANIVERSE
+            NAMIVERSE
           </span>
           <span className="text-xs uppercase font-extrabold tracking-[0.3em] text-zinc-500">
             AI-Powered Discovery Platform

@@ -37,7 +37,7 @@ export default function CookieBanner() {
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-2xl shadow-black/60">
         <p className="text-xs font-semibold text-zinc-200 mb-1">Cookie Notice</p>
         <p className="text-[11px] text-zinc-400 leading-relaxed mb-4">
-          AniVerse uses session cookies for authentication and YouTube&apos;s IFrame API for trailer playback.
+          NamiVerse uses session cookies for authentication and YouTube&apos;s IFrame API for trailer playback.
           We do not use advertising trackers.{" "}
           <Link href="/privacy" className="text-purple-400 hover:text-purple-300 transition-colors">
             Privacy Policy
