@@ -51,9 +51,12 @@ app.add_middleware(SecurityMiddleware, redis_url=settings.REDIS_URL)
 
 # Setup CORS Origins
 if settings.BACKEND_CORS_ORIGINS:
+    # Ensure allow_origins is list of origins (not wildcard if allow_credentials is True)
+    origins = list(settings.BACKEND_CORS_ORIGINS) if isinstance(settings.BACKEND_CORS_ORIGINS, (list, tuple)) else [settings.BACKEND_CORS_ORIGINS]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.BACKEND_CORS_ORIGINS,
+        allow_origins=origins,
+        allow_origin_regex=r"https://.*\.vercel\.app|https://.*namiverse\..*|http://localhost:\d+",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
