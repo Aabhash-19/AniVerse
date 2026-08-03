@@ -714,11 +714,11 @@ export default function VideosPage() {
                   <h4 className="text-xs font-black text-amber-400 uppercase tracking-widest">Row 1: Pre-Timeskip Era</h4>
                   <span className="text-[10px] text-zinc-600 font-bold">4 Collectible Cards</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {NAMI_ARC_CARDS.filter(c => c.era === "Pre-Timeskip").map((card) => (
                     <div
                       key={card.arc}
-                      className={`relative w-full aspect-[3/4.2] rounded-3xl overflow-hidden border ${card.border} shadow-2xl group hover:border-amber-500/50 hover:shadow-[0_0_25px_rgba(245,158,11,0.25)] transition-all duration-500 bg-zinc-950`}
+                      className={`relative w-full aspect-[3/4.2] rounded-2xl md:rounded-3xl overflow-hidden border ${card.border} shadow-2xl group hover:border-amber-500/50 hover:shadow-[0_0_25px_rgba(245,158,11,0.25)] transition-all duration-500 bg-zinc-950`}
                     >
                       {/* Card Image with high-definition styling */}
                       <img
@@ -729,22 +729,22 @@ export default function VideosPage() {
                       />
 
                       {/* Power Emblem (Top Right) */}
-                      <div className="absolute top-3 right-3 bg-amber-500 text-black px-2 py-0.5 rounded font-black text-[9px] shadow-lg z-10 select-none tracking-wider uppercase">
+                      <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-amber-500 text-black px-1.5 py-0.5 md:px-2 md:py-0.5 rounded font-black text-[8px] sm:text-[9px] shadow-lg z-10 select-none tracking-wider uppercase">
                         {card.power} PWR
                       </div>
 
                       {/* Era Label */}
-                      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md border border-white/10 px-2 py-0.5 rounded text-[8px] font-black text-zinc-300 z-10 select-none tracking-widest uppercase">
+                      <div className="absolute top-2 left-2 md:top-3 md:left-3 bg-black/60 backdrop-blur-md border border-white/10 px-1.5 py-0.5 md:px-2 md:py-0.5 rounded text-[8px] font-black text-zinc-300 z-10 select-none tracking-widest uppercase">
                         {card.era}
                       </div>
 
                       {/* Gradient overlay for readability */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent pointer-events-none" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent pointer-events-none" />
 
                       {/* Information Box */}
-                      <div className="absolute bottom-0 inset-x-0 p-4 flex flex-col gap-1.5 z-10">
+                      <div className="absolute bottom-0 inset-x-0 p-3 md:p-4 flex flex-col gap-1 md:gap-1.5 z-10">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-black text-white tracking-wide uppercase group-hover:text-amber-400 transition-colors">
+                          <h4 className="text-xs sm:text-sm font-black text-white tracking-wide uppercase group-hover:text-amber-400 transition-colors">
                             {card.arc}
                           </h4>
                           <div className="flex gap-0.5">
@@ -756,13 +756,13 @@ export default function VideosPage() {
                           </div>
                         </div>
                         
-                        <p className="text-[10px] text-zinc-400 line-clamp-2 leading-relaxed">
+                        <p className="text-[9px] sm:text-[10px] text-zinc-400 line-clamp-2 leading-relaxed">
                           {card.snippet}
                         </p>
 
-                        <div className="bg-black/40 border border-white/5 rounded-xl p-2 mt-0.5">
+                        <div className="bg-black/40 border border-white/5 rounded-xl p-1.5 md:p-2 mt-0.5">
                           <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest block">Featured Outfit</span>
-                          <span className="text-[9px] text-amber-300 font-semibold leading-snug line-clamp-1">{card.outfit}</span>
+                          <span className="text-[8px] sm:text-[9px] text-amber-300 font-semibold leading-snug line-clamp-1">{card.outfit}</span>
                         </div>
 
                         <div className="flex items-center gap-1.5 mt-0.5">
@@ -781,11 +781,11 @@ export default function VideosPage() {
                   <h4 className="text-xs font-black text-amber-400 uppercase tracking-widest">Row 2: Post-Timeskip Era</h4>
                   <span className="text-[10px] text-zinc-600 font-bold">4 Collectible Cards</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {NAMI_ARC_CARDS.filter(c => c.era === "Post-Timeskip").map((card) => (
                     <div
                       key={card.arc}
-                      className={`relative w-full aspect-[3/4.2] rounded-3xl overflow-hidden border ${card.border} shadow-2xl group hover:border-amber-500/50 hover:shadow-[0_0_25px_rgba(245,158,11,0.25)] transition-all duration-500 bg-zinc-950`}
+                      className={`relative w-full aspect-[3/4.2] rounded-2xl md:rounded-3xl overflow-hidden border ${card.border} shadow-2xl group hover:border-amber-500/50 hover:shadow-[0_0_25px_rgba(245,158,11,0.25)] transition-all duration-500 bg-zinc-950`}
                     >
                       {/* Card Image with high-definition styling */}
                       <img
@@ -796,22 +796,22 @@ export default function VideosPage() {
                       />
 
                       {/* Power Emblem (Top Right) */}
-                      <div className="absolute top-3 right-3 bg-amber-500 text-black px-2 py-0.5 rounded font-black text-[9px] shadow-lg z-10 select-none tracking-wider uppercase">
+                      <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-amber-500 text-black px-1.5 py-0.5 md:px-2 md:py-0.5 rounded font-black text-[8px] sm:text-[9px] shadow-lg z-10 select-none tracking-wider uppercase">
                         {card.power} PWR
                       </div>
 
                       {/* Era Label */}
-                      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md border border-white/10 px-2 py-0.5 rounded text-[8px] font-black text-zinc-300 z-10 select-none tracking-widest uppercase">
+                      <div className="absolute top-2 left-2 md:top-3 md:left-3 bg-black/60 backdrop-blur-md border border-white/10 px-1.5 py-0.5 md:px-2 md:py-0.5 rounded text-[8px] font-black text-zinc-300 z-10 select-none tracking-widest uppercase">
                         {card.era}
                       </div>
 
                       {/* Gradient overlay for readability */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent pointer-events-none" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent pointer-events-none" />
 
                       {/* Information Box */}
-                      <div className="absolute bottom-0 inset-x-0 p-4 flex flex-col gap-1.5 z-10">
+                      <div className="absolute bottom-0 inset-x-0 p-3 md:p-4 flex flex-col gap-1 md:gap-1.5 z-10">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-black text-white tracking-wide uppercase group-hover:text-amber-400 transition-colors">
+                          <h4 className="text-xs sm:text-sm font-black text-white tracking-wide uppercase group-hover:text-amber-400 transition-colors">
                             {card.arc}
                           </h4>
                           <div className="flex gap-0.5">
@@ -823,13 +823,13 @@ export default function VideosPage() {
                           </div>
                         </div>
                         
-                        <p className="text-[10px] text-zinc-400 line-clamp-2 leading-relaxed">
+                        <p className="text-[9px] sm:text-[10px] text-zinc-400 line-clamp-2 leading-relaxed">
                           {card.snippet}
                         </p>
 
-                        <div className="bg-black/40 border border-white/5 rounded-xl p-2 mt-0.5">
+                        <div className="bg-black/40 border border-white/5 rounded-xl p-1.5 md:p-2 mt-0.5">
                           <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest block">Featured Outfit</span>
-                          <span className="text-[9px] text-amber-300 font-semibold leading-snug line-clamp-1">{card.outfit}</span>
+                          <span className="text-[8px] sm:text-[9px] text-amber-300 font-semibold leading-snug line-clamp-1">{card.outfit}</span>
                         </div>
 
                         <div className="flex items-center gap-1.5 mt-0.5">
