@@ -70,7 +70,7 @@ def get_anime_videos(anime_id: int, db: Session = Depends(get_db)):
 
 def run_videos_sync(db_session_factory):
     """
-    Refreshes top 50 trending trailers from AniList.
+    Refreshes top 50 trailers for currently airing and upcoming anime from AniList.
     Upserts new trailers and marks existing ones as updated.
     Prunes stale trailers that haven't been seen in the trending list for over 7 days.
     """
@@ -79,10 +79,14 @@ def run_videos_sync(db_session_factory):
         from app.ingestion.anilist import AniListClient
         from app.anime.models import Anime
         client = AniListClient()
-        gql_query = """
+        
+        media_list = []
+        
+        # 1. Fetch upcoming trending/popular trailers
+        gql_upcoming = """
         query {
-          Page(page: 1, perPage: 50) {
-            media(type: ANIME, sort: [TRENDING_DESC, POPULARITY_DESC]) {
+          Page(page: 1, perPage: 25) {
+            media(type: ANIME, status: NOT_YET_RELEASED, sort: [TRENDING_DESC, POPULARITY_DESC]) {
               id
               title { english romaji native }
               trailer { id site thumbnail }
@@ -90,12 +94,48 @@ def run_videos_sync(db_session_factory):
           }
         }
         """
-        res = client._execute_query(gql_query, {})
-        media_list = res.get("data", {}).get("Page", {}).get("media", [])
+        try:
+            res_up = client._execute_query(gql_upcoming, {})
+            media_list.extend(res_up.get("data", {}).get("Page", {}).get("media", []))
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to fetch upcoming trailers: {e}")
+
+        # 2. Fetch currently airing trending/popular trailers
+        gql_releasing = """
+        query {
+          Page(page: 1, perPage: 25) {
+            media(type: ANIME, status: RELEASING, sort: [TRENDING_DESC, POPULARITY_DESC]) {
+              id
+              title { english romaji native }
+              trailer { id site thumbnail }
+            }
+          }
+        }
+        """
+        try:
+            res_rel = client._execute_query(gql_releasing, {})
+            media_list.extend(res_rel.get("data", {}).get("Page", {}).get("media", []))
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to fetch releasing trailers: {e}")
+
         client.close()
 
-        imported = 0
+        if not media_list:
+            return
+
+        # De-duplicate media items by id
+        seen_ids = set()
+        unique_media = []
         for m in media_list:
+            if m and m.get("id") and m.get("id") not in seen_ids:
+                seen_ids.add(m["id"])
+                unique_media.append(m)
+
+        imported = 0
+        refreshed_ids = []
+        for m in unique_media:
             tr = m.get("trailer")
             if not tr or tr.get("site") != "youtube" or not tr.get("id"):
                 continue
@@ -124,11 +164,11 @@ def run_videos_sync(db_session_factory):
             else:
                 # Update timestamp to mark it as active
                 existing.updated_at = datetime.utcnow()
+                refreshed_ids.append(existing.id)
                 
         db.commit()
 
-        # Prune older videos that are no longer trending (haven't been seen in 7 days)
-        # This keeps the video library clean and aligned with currently trending anime.
+        # Prune older videos that are no longer trending (haven't been seen/refreshed in 7 days)
         seven_days_ago = datetime.utcnow() - timedelta(days=7)
         db.query(Video).filter(Video.updated_at < seven_days_ago).delete(synchronize_session=False)
         db.commit()
@@ -149,27 +189,29 @@ def list_all_videos(
     video_type: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
+    refresh: bool = Query(False, description="Force sync latest trailers in background"),
     db: Session = Depends(get_db)
 ):
     """
     List all approved official videos in the media hub.
     Automatically refreshes trending trailers in the background if the library has
-    not been updated in over 24 hours.
+    not been updated in over 24 hours, or if refresh=true is passed.
     """
     # Clean up any leftover mock IDs
     db.query(Video).filter(Video.provider_video_id.like("MOCK_%")).delete(synchronize_session=False)
     db.commit()
 
-    # Trigger background sync if library is stale (> 24 hours since last update)
+    # Trigger background sync if library is stale (> 24 hours since last update) or force-requested
     latest_video = db.query(Video).order_by(Video.updated_at.desc()).first()
-    should_refresh = False
+    should_refresh = refresh
     
-    if not latest_video:
-        should_refresh = True
-    else:
-        elapsed = (datetime.utcnow() - latest_video.updated_at).total_seconds()
-        if elapsed > 86400: # 24 hours
+    if not should_refresh:
+        if not latest_video:
             should_refresh = True
+        else:
+            elapsed = (datetime.utcnow() - latest_video.updated_at).total_seconds()
+            if elapsed > 86400: # 24 hours
+                should_refresh = True
 
     if should_refresh and page == 1:
         from app.shared.cache import get_cached_json, set_cached_json
