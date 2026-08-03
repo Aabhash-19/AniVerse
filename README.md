@@ -1,199 +1,203 @@
-# 🌌 AniVerse — Next-Gen AI Anime Discovery, Official Media & Watchlist Platform
+# 🍊 🌌 NamiVerse — Next-Gen AI Anime Discovery, Official Media & Watchlist Platform
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Next.js-15%20(Turbopack)-black?style=for-the-badge&logo=next.js" alt="Next.js 15" />
-  <img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi" alt="FastAPI" />
-  <img src="https://img.shields.io/badge/Google%20Gemini-1.5%2F2.0-4285F4?style=for-the-badge&logo=google" alt="Google Gemini AI" />
-  <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql" alt="PostgreSQL" />
-  <img src="https://img.shields.io/badge/Redis-Cache-DC382D?style=for-the-badge&logo=redis" alt="Redis" />
-  <img src="https://img.shields.io/badge/AniList-GraphQL-02A9FF?style=for-the-badge" alt="AniList GraphQL" />
-</p>
+[![Next.js](https://img.shields.io/badge/Next.js-16.2-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-336791?style=for-the-badge&logo=postgresql)](https://neon.tech/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4.0-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![Gemini AI](https://img.shields.io/badge/Gemini_AI-1.5_/_2.5-8E44AD?style=for-the-badge&logo=google)](https://ai.google.dev/)
+[![Deploys](https://img.shields.io/badge/Vercel_%2B_Render-Live-success?style=for-the-badge&logo=vercel)](https://nami-verse.vercel.app)
 
----
-
-## 🌟 Executive Overview
-
-**AniVerse** is a full-stack, enterprise-grade web application built for anime enthusiasts to discover, track, watch verified trailers, and engage in spoiler-controlled community discussions. 
-
-Built on a modern monorepo architecture featuring **Next.js 15 (Turbopack)** and a high-performance **FastAPI (Python 3.13)** backend, AniVerse offers an unmatched user experience powered by **Google Gemini AI**, **Server-Sent Events (SSE) real-time streaming**, an automated **YouTube video curation pipeline**, and a multi-tiered **community social feed**.
+> **Navigated by Nami 🍊** — An enterprise-grade, full-stack anime discovery platform featuring AI-powered semantic vector search, real-time airing calendars, spoiler-controlled community forums, official media clip vault, and Nami: your official AI Straw Hat Navigator!
 
 ---
 
-## ✨ Key Features & Capability Spotlight
+## 🚀 Live Demo & Production URLs
 
-### 🤖 1. Nami AI Chatbot (Google Gemini Powered)
-- **Straw Hat Navigator Persona**: Nami answers any question about anime recommendations, character trivia, plot breakdowns, or One Piece lore in her authentic witty tone.
-- **Dynamic AI Engine**: Powered by Google Gemini (`gemini-flash-latest` / `gemini-2.0-flash`) with fallback safety.
-- **Interactive Database Media Cards**: When Nami recommends anime, her responses automatically attach clickable AniVerse media cards (complete with cover art, rating scores, genres, and direct page links).
-- **Clear Chat & Bottom-Right Widget**: Glassmorphism UI anchored to the bottom-right corner with single-click chat clearing and official high-resolution Nami avatar artwork.
-
-### ⚡ 2. Real-Time Streaming AniList Watchlist Import
-- **Server-Sent Events (SSE) Progress Modal**: Real-time import process displaying total entry count, percentage progress bar, active title card preview, and scrolling live activity logs.
-- **Score Normalization (100-Point Scale Handling)**: Handles AniList `POINT_100`, `POINT_10_DECIMAL`, and custom ratings, safely fitting PostgreSQL `NUMERIC(5,2)` constraints.
-- **Custom List Matching**: Resolves custom AniList names (e.g. *"Dropped Shows"*) and entry-level list statuses.
-
-### 🗓️ 3. Airing Schedule & Interactive Calendar
-- **Airing Schedule View**: Weekly calendar grid with release countdown timers, episode numbers, airing status badges, and timezone calculations.
-- **Multi-View Modes**: Switch between **Airing Schedule**, **List View**, and **My Calendar**.
-
-### 📽️ 4. Official Video & Trailer Curation Pipeline
-- **Automated Discovery Crawling**: Background rules engine scores YouTube trailers, PVs, openings, and endings based on title relevance, official channel verification, and keyword heuristics.
-- **Curator Moderation Queue**: High-confidence candidates (80%+) are auto-published, while borderline candidates are queued in the `/admin` curation portal.
-- **Custom IFrame Player**: Embeds official media in a dark glassmorphism video player modal.
-
-### 🔍 5. Advanced Catalogue & Multi-Filter Search
-- **Comprehensive Catalogue Filters**: Multi-select filter panel by genre, season, format (TV, Movie, OVA), score range, and sorting rules (Popularity, Score, Trending, Title).
-- **Universal Resolver**: Handles searches by local ID, AniList ID, hyphenated slug-ID strings, or raw title slugs with automatic on-demand AniList backfilling.
-
-### 📊 6. Watchlist & Progress Management
-- **List Status Categories**: Track shows across `Watching`, `Completed`, `Planning`, `Paused`, `Dropped`, and `Rewatching`.
-- **Incremental Episode Counter**: Single-click `+1` progress tracking with score sliders and favorite pinning.
-- **Public & Private List Controls**: Configure visibility settings per user profile.
-
-### 💬 7. Multi-Tier Community Social Layer
-- **Multi-Tier Social Feed**: Fetches real-time community posts from Kitsu API, falls back to AniList GraphQL `TextActivity` feeds, and provides curated anime discussions.
-- **Spoiler-Controlled Reviews**: User writeups with 1-100 scoring, spoiler blur tags, nested comment trees, and emoji reactions.
+- 🌐 **Web Platform**: [https://nami-verse.vercel.app](https://nami-verse.vercel.app)
+- ⚡ **API Service**: `https://namiverse-api.onrender.com/api/v1`
+- 🩺 **System Health Check**: `https://namiverse-api.onrender.com/api/v1/health`
 
 ---
 
-## 🏗️ System Architecture & Data Flow
+## 🎨 Key Features & System Modules
 
 ```mermaid
 graph TD
-    User([User Browser]) <--> |HTTP / WebSocket / SSE| WebApp[Next.js 15 Frontend]
-    WebApp <--> |REST API / JWT Cookies| FastAPI[FastAPI Backend Server]
-    
-    FastAPI <--> |ORM Queries| Postgres[(PostgreSQL 16 Database)]
-    FastAPI <--> |Cache & Rate Limiting| Redis[(Redis Cache)]
-    
-    FastAPI <--> |Nami AI Chat Prompt| Gemini[Google Gemini 1.5/Flash API]
-    FastAPI <--> |Catalogue & Schedule Sync| AniList[AniList GraphQL API]
-    FastAPI <--> |Community Social Feed| Kitsu[Kitsu REST API]
-    FastAPI <--> |Trailer Candidate Discovery| YouTube[YouTube Search API]
+    Client[User / Browser] -->|Next.js 16 Web Interface| App[NamiVerse Frontend]
+    App -->|JSON APIs / JWT Auth| API[FastAPI Backend]
+    API -->|Vector Cosine Search| PG[Neon PostgreSQL + pgvector]
+    API -->|Key-Value Rate Limiting| Redis[Upstash Redis Cache]
+    API -->|Generative Chatbot| Gemini[Google Gemini AI]
+    API -->|Catalog Sync| AniList[AniList GraphQL API]
 ```
+
+### 1. 🤖 Nami AI Chatbot (Official Navigator)
+- **Persona & Context**: Powered by Google Gemini AI with a customized One Piece navigator persona. Nami responds to inquiries about anime recommendations, plot details, and lore.
+- **Dynamic Recommendation Cards**: Nami automatically attaches interactive anime recommendation cards directly inside the chat stream.
+- **Contextual Awareness**: Remembers session conversations and allows quick resets.
+
+### 2. 🧠 AI Semantic Search & Hybrid Vector Recommendation Engine
+- **Dense Vector Embeddings**: Uses SentenceTransformers (`all-MiniLM-L6-v2`) to project anime themes, synopses, and genres into 384-dimensional vector space.
+- **pgvector Integration**: Executes high-speed cosine distance similarity (`1 - cosine_distance`) queries directly inside PostgreSQL.
+- **Hybrid Scoring**: Merges semantic similarity with popularity metrics and user taste preferences.
+
+### 3. 🌊 Airing Horizon Radar & Weather Report
+- **Real-Time Airing Countdowns**: Displays exact days, hours, and minutes remaining for upcoming episodes.
+- **Weekly Schedule Grid**: Filter airing shows by day of the week (Monday through Sunday).
+- **Timezone Intelligence**: Automatically formats broadcast times according to the user's local browser timezone.
+
+### 4. 🎬 Nami's Lounge & Video Media Vault
+- **Official Media Clips**: High-definition trailer streaming powered by YouTube IFrame integration.
+- **Interactive Trivia Quiz**: A 5-question One Piece & Nami trivia game featuring instant score calculations, feedback alerts, and retry options.
+
+### 5. 💬 Spoiler-Controlled Community Discussions & Reviews
+- **Threaded Forums**: Create discussions, reply to comments, and upvote community posts.
+- **Spoiler Protection**: Content tagged with spoilers is blurred by default with explicit click-to-reveal overlays.
+- **Review Distributions**: View score breakdowns, written reviews, and community sentiment metrics.
+
+### 6. 📑 User Watchlist & Progress Tracking
+- **Custom Status Management**: Organize titles into *Watching*, *Completed*, *Plan to Watch*, *On Hold*, and *Dropped*.
+- **Episode & Score Logs**: Track current episode progress and rate titles on a 1–10 scale.
+- **User Profiles & Data Export**: Personalize profile avatars, review activity stats, and export user data in JSON format.
+
+### 7. ⚙️ Admin Curator Queue & Dynamic Ingestion
+- **Automated Catalog Backfilling**: Dynamic fallback fetching ensures that opening un-indexed titles seamlessly fetches and caches full metadata from AniList.
+- **Security & Rate Limiting**: Built-in `SecurityMiddleware` protects endpoints with token bucket rate-limiting and security headers.
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Layer | Technologies & Tools |
-| :--- | :--- |
-| **Frontend Framework** | **Next.js 15** (Turbopack, App Router) + **React 19** + **TypeScript** |
-| **Styling & Design** | **Tailwind CSS** + Vanilla CSS Design System + Dark Glassmorphism Aesthetics |
-| **Backend Framework** | **FastAPI (Python 3.13)** + **Uvicorn** (ASGI server) + **Pydantic v2** |
-| **Databases & Cache** | **PostgreSQL 16** (Primary DB) + **Redis 7** (Query caching & Rate limit sliding window) |
-| **ORM & Migrations** | **SQLAlchemy 2.0** + **Alembic** |
-| **AI Chatbot Engine** | **Google Gemini 1.5 / 2.0 Flash API** (`gemini-flash-latest`) |
-| **Real-Time Streaming** | **Server-Sent Events (SSE)** (`ssev2` streaming protocol) |
-| **External APIs** | **AniList GraphQL v2 API** + **Kitsu JSON API** + **YouTube IFrame API** |
-| **Authentication** | **JWT HttpOnly Cookie Security** + bcrypt password hashing |
+| Layer | Technology | Description |
+| :--- | :--- | :--- |
+| **Frontend Framework** | **Next.js 16 (App Router)** | Built with React 19, TypeScript, and Turbopack |
+| **Styling** | **Tailwind CSS v4** | Modern dark-mode palette, glassmorphism, and responsive layout |
+| **Backend API** | **FastAPI (Python 3.11+)** | Asynchronous RESTful API with Pydantic V2 & SQLAlchemy ORM |
+| **Database** | **PostgreSQL 16 + pgvector** | Serverless relational database with vector similarity extension |
+| **Caching & Limits** | **Redis (Upstash / Memory)** | Token bucket rate limiting and session caching |
+| **AI Models** | **Google Gemini AI + SentenceTransformers** | Generative conversational chatbot & 384d semantic vector search |
+| **Deployment** | **Vercel + Render** | Global edge frontend deployment & containerized API web service |
 
 ---
 
-## 📂 Repository Directory Structure
+## 🛠️ Monorepo Directory Structure
 
 ```text
-AniVerse/
+NamiVerse/
 ├── apps/
-│   ├── web/                           # Next.js 15 Frontend Application
+│   ├── api/                      # FastAPI Python Backend
 │   │   ├── app/
-│   │   │   ├── (auth)/                # Login & Registration pages
-│   │   │   ├── (user)/                # Watchlist, Favourites & AniList Sync
-│   │   │   ├── admin/                 # Video Curator & Moderation Portal
-│   │   │   ├── anime/[slug]/          # Detailed Anime View (Synopsis, Characters, Media)
-│   │   │   ├── calendar/              # Airing Schedule Calendar
-│   │   │   ├── discover/              # Multi-Filter Catalogue Search
-│   │   │   ├── settings/              # User Profile & Visibility Settings
-│   │   │   ├── upcoming/              # Upcoming Season Catalogue
-│   │   │   └── videos/                # Official Video & Social Feed Hub
-│   │   ├── components/
-│   │   │   ├── community/             # Discussion & Review Sections
-│   │   │   └── layout/                # Header, CookieBanner, NamiChatWidget
-│   │   └── lib/                       # Auth wrappers & API helpers
+│   │   │   ├── admin/            # Curator Queue & Catalog Sync
+│   │   │   ├── anime/            # Anime Catalog & Search Endpoints
+│   │   │   ├── auth/             # User Auth & JWT Management
+│   │   │   ├── chat/             # Nami Gemini AI Chatbot Router
+│   │   │   ├── community/        # Discussions, Reviews & Comments
+│   │   │   ├── lists/            # Watchlists & Progress Tracking
+│   │   │   ├── media/            # Video Vault & Airing Schedules
+│   │   │   ├── notifications/    # User System Notifications
+│   │   │   ├── recommendations/  # pgvector Semantic Search Engine
+│   │   │   ├── shared/           # Cache, Security & Middleware
+│   │   │   ├── config.py         # App Environment Configurations
+│   │   │   ├── database.py       # SQLAlchemy Engine & Session
+│   │   │   └── main.py           # FastAPI Application Entrypoint
+│   │   ├── requirements.txt      # Python Dependencies
+│   │   └── seed_anilist.py       # Catalog Seeding Utility
 │   │
-│   └── api/                           # FastAPI Python Backend Application
-│       ├── app/
-│       │   ├── admin/                 # Curator queue endpoints
-│       │   ├── anime/                 # Anime detail, search & character routers
-│       │   ├── auth/                  # JWT security & session dependencies
-│       │   ├── chat/                  # Nami AI Chatbot router (Google Gemini)
-│       │   ├── community/             # Reviews, discussions & comment threads
-│       │   ├── ingestion/             # AniList GraphQL sync & SSE import service
-│       │   ├── lists/                 # Watchlist CRUD & stats
-│       │   ├── media/                 # YouTube trailer candidate discovery engine
-│       │   ├── notifications/         # Real-time alert notifications
-│       │   ├── recommendations/       # Hybrid recommendation algorithms
-│       │   ├── shared/                # Security middleware & rate limiters
-│       │   ├── config.py              # Pydantic Settings configuration
-│       │   └── main.py                # FastAPI entry point
-│       └── requirements.txt           # Python dependencies
+│   └── web/                      # Next.js 16 Frontend
+│       ├── app/                  # Next.js App Router Pages
+│       │   ├── (auth)/           # Login & Register Modals
+│       │   ├── (user)/           # Watchlist & User Dashboard
+│       │   ├── admin/            # Admin Curator Dashboard
+│       │   ├── anime/[slug]/     # Anime Detail & Media Page
+│       │   ├── calendar/         # Airing Weekly Schedule Grid
+│       │   ├── discover/         # Catalog Search & Filters
+│       │   ├── discussions/      # Community Discussion Threads
+│       │   ├── profile/          # Public User Profiles
+│       │   ├── settings/         # Data Export & Privacy Controls
+│       │   ├── upcoming/         # Horizon Radar Airing Countdowns
+│       │   └── videos/           # Nami's Lounge & Video Vault
+│       ├── components/           # Reusable UI Components & Headers
+│       ├── lib/                  # Auth Helpers & API Client Utils
+│       ├── package.json          # Node Dependencies
+│       └── tsconfig.json         # TypeScript Configuration
 │
-└── docker-compose.yml                 # PostgreSQL & Redis container config
+├── docs/                         # Deployment & Architecture Guides
+├── docker-compose.yml            # Local Multi-Container Setup
+└── README.md                     # Project Documentation
 ```
 
 ---
 
-## ⚙️ Local Development Setup
+## ⚙️ Environment Variables Reference
 
-### 1. Prerequisites
-Ensure you have the following installed:
-- **Node.js (v18+)**
-- **Python (v3.13+)**
-- **Docker Desktop**
+### Backend (`apps/api/.env`)
+```env
+PROJECT_NAME="NamiVerse API"
+API_V1_STR="/api/v1"
+DATABASE_URL="postgresql://user:password@localhost:5432/namiverse_db"
+REDIS_URL="redis://localhost:6379/0"
+JWT_SECRET="your-super-secret-jwt-key"
+GEMINI_API_KEY="your-google-gemini-api-key"
+BACKEND_CORS_ORIGINS="https://nami-verse.vercel.app,http://localhost:3000"
+```
+
+### Frontend (`apps/web/.env.local`)
+```env
+NEXT_PUBLIC_API_URL="https://namiverse-api.onrender.com/api/v1"
+```
 
 ---
 
-### 2. Launch Database & Cache Containers
-Start PostgreSQL and Redis:
+## 💻 Local Development Setup
+
+### 1. Clone the Repository
 ```bash
-docker-compose up -d
+git clone https://github.com/Aabhash-19/NamiVerse.git
+cd NamiVerse
 ```
 
----
-
-### 3. Backend (FastAPI) Setup
-Navigate to `apps/api`, create python virtual environment, install requirements, and run server:
+### 2. Backend Setup (`apps/api`)
 ```bash
 cd apps/api
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Create .env file and add your Gemini API key (optional for AI Chatbot)
-echo "GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE" >> .env
-
-# Launch Uvicorn Server with hot-reload
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+# Start local FastAPI server
+PYTHONPATH=. uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-Interactive Swagger Docs will be available at [http://127.0.0.1:8000/api/v1/docs](http://127.0.0.1:8000/api/v1/docs).
 
----
-
-### 4. Frontend (Next.js) Setup
-Navigate to `apps/web`, install dependencies, and launch dev server:
+### 3. Frontend Setup (`apps/web`)
 ```bash
 cd apps/web
 npm install
+
+# Start Next.js development server
 npm run dev
 ```
-Open browser and navigate to [http://localhost:3000](http://localhost:3000).
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 🌐 API Endpoint Highlights
+## ☁️ Free Production Deployment Architecture
 
-| Route Prefix | Method | Description |
-| :--- | :---: | :--- |
-| `/api/v1/anime` | `GET` | Filter, search, and list anime with genre/season options |
-| `/api/v1/anime/{id}` | `GET` | Get detailed anime metadata, characters, and relations |
-| `/api/v1/chat/nami` | `POST` | Talk with **Nami AI Chatbot** (Gemini AI + DB Cards) |
-| `/api/v1/lists/sync/anilist/stream` | `GET` | Real-time SSE streaming AniList watchlist import |
-| `/api/v1/lists` | `GET/POST` | User watchlist CRUD operations & stats |
-| `/api/v1/media/social-feed` | `GET` | Multi-tier community social feed (Kitsu + AniList + Curated) |
-| `/api/v1/community/reviews` | `GET/POST` | Fetch and post spoiler-blur anime reviews |
+The NamiVerse platform is deployed **100% for free** using serverless tiers:
+
+1. **Vercel** (Frontend): Deploys `apps/web` on git push with instant edge caching.
+2. **Render** (Backend): Hosts `apps/api` FastAPI service with automatic HTTPS.
+3. **Neon** (PostgreSQL): Serverless Postgres database with native `pgvector` support.
+4. **Upstash** (Redis): Serverless key-value caching & rate limiting.
+5. **Cron-Job.org** (Keep-Alive): Pings `https://namiverse-api.onrender.com/api/v1/health` every 10 minutes to prevent Render free-tier cold starts.
 
 ---
 
-## 📜 License & Acknowledgements
+## 📜 License
 
-Distributed under the **MIT License**. Data provided by **AniList GraphQL API**, **Kitsu REST API**, and **YouTube IFrame API**.
+Distributed under the **MIT License**. See `LICENSE` for more information.
+
+---
+
+<p align="center">
+  Made with ❤️ & 🍊 by the <b>NamiVerse Team</b>
+</p>
