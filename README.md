@@ -42,33 +42,6 @@
 
 ---
 
-## 👗 Nami Wardrobe Across the Arcs
-
-<table align="center">
-  <thead>
-    <tr>
-      <th align="center">East Blue</th>
-      <th align="center">Alabasta</th>
-      <th align="center">Skypiea</th>
-      <th align="center">Whole Cake</th>
-      <th align="center">Wano Kuni</th>
-      <th align="center">Egghead</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="center" valign="bottom"><img src="./apps/web/public/nami-outfits/east-blue-new.png" height="150" alt="East Blue" /></td>
-      <td align="center" valign="bottom"><img src="./apps/web/public/nami-outfits/alabasta.png" height="150" alt="Alabasta" /></td>
-      <td align="center" valign="bottom"><img src="./apps/web/public/nami-outfits/skypiea.png" height="150" alt="Skypiea" /></td>
-      <td align="center" valign="bottom"><img src="./apps/web/public/nami-outfits/whole-cake.png" height="150" alt="Whole Cake" /></td>
-      <td align="center" valign="bottom"><img src="./apps/web/public/nami-outfits/wano.png" height="150" alt="Wano Kuni" /></td>
-      <td align="center" valign="bottom"><img src="./apps/web/public/nami-outfits/egghead.png" height="150" alt="Egghead" /></td>
-    </tr>
-  </tbody>
-</table>
-
----
-
 ## ⚡ Key Modules & Platform Features
 
 ```mermaid
