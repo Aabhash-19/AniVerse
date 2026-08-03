@@ -126,8 +126,8 @@ const NAMI_ARC_CARDS = [
     outfit: "Blue & White Striped Bikini Top + Jeans",
     era: "Pre-Timeskip",
     rating: 4,
-    // Official One Piece Wiki artwork — Arlong Park Arc outfit
-    imgUrl: "https://static.wikia.nocookie.net/onepiece/images/8/89/Nami%27s_Outfit_Arlong_Park_Arc.png/revision/latest?cb=20221209074945",
+    // Official One Piece Wiki artwork — Arlong Park Arc outfit (locally served)
+    imgUrl: "/nami-outfits/east-blue.png",
     borderColor: "#38bdf8",
     badgeBg: "rgba(14,165,233,0.2)",
     badgeText: "#7dd3fc",
@@ -140,8 +140,8 @@ const NAMI_ARC_CARDS = [
     outfit: "Blue & Purple Halter + Pink Shroud + Long Skirt",
     era: "Pre-Timeskip",
     rating: 5,
-    // Official One Piece Wiki artwork — Alabasta belly dancer outfit
-    imgUrl: "https://static.wikia.nocookie.net/onepiece/images/7/76/Nami_Second_Arabasta_Outfit.png/revision/latest?cb=20220107083944",
+    // Official One Piece Wiki artwork — Alabasta belly dancer outfit (locally served)
+    imgUrl: "/nami-outfits/alabasta.png",
     borderColor: "#f59e0b",
     badgeBg: "rgba(245,158,11,0.2)",
     badgeText: "#fcd34d",
@@ -154,8 +154,8 @@ const NAMI_ARC_CARDS = [
     outfit: "Cloud-Pattern Blue Bikini Top + Maroon Trousers",
     era: "Pre-Timeskip",
     rating: 4,
-    // Official One Piece Wiki artwork — Skypiea Arc outfit
-    imgUrl: "https://static.wikia.nocookie.net/onepiece/images/2/20/Nami%27s_Outfit_Skypiea_Arc.png/revision/latest?cb=20220406165838",
+    // Official One Piece Wiki artwork — Skypiea Arc outfit (locally served)
+    imgUrl: "/nami-outfits/skypiea.png",
     borderColor: "#22d3ee",
     badgeBg: "rgba(34,211,238,0.2)",
     badgeText: "#67e8f9",
@@ -168,8 +168,8 @@ const NAMI_ARC_CARDS = [
     outfit: "Red & White Dirndl-style Corset Dress",
     era: "Post-Timeskip",
     rating: 4,
-    // Official One Piece Wiki artwork — WCI outfit
-    imgUrl: "https://static.wikia.nocookie.net/onepiece/images/2/29/Nami_5th_WCI_Outfit_Full.png/revision/latest?cb=20220106050011",
+    // Official One Piece Wiki artwork — WCI outfit (locally served)
+    imgUrl: "/nami-outfits/whole-cake.png",
     borderColor: "#ec4899",
     badgeBg: "rgba(236,72,153,0.2)",
     badgeText: "#f9a8d4",
@@ -182,8 +182,8 @@ const NAMI_ARC_CARDS = [
     outfit: "Kunoichi Kimono + Ninja-inspired Layered Silhouette",
     era: "Post-Timeskip",
     rating: 5,
-    // Official One Piece Wiki artwork — Wano kunoichi outfit
-    imgUrl: "https://static.wikia.nocookie.net/onepiece/images/6/6f/Nami%27s_Second_Wano_Country_Arc_Outfit.png/revision/latest?cb=20220104222549",
+    // Official One Piece Wiki artwork — Wano kunoichi outfit (locally served)
+    imgUrl: "/nami-outfits/wano.png",
     borderColor: "#f43f5e",
     badgeBg: "rgba(244,63,94,0.2)",
     badgeText: "#fda4af",
@@ -196,8 +196,8 @@ const NAMI_ARC_CARDS = [
     outfit: "White SSG Hooded Leotard Bodysuit + Pink DOM Shoes",
     era: "Post-Timeskip",
     rating: 5,
-    // Official One Piece Wiki artwork — Egghead outfit
-    imgUrl: "https://static.wikia.nocookie.net/onepiece/images/e/ee/Nami_Egghead_Outfit.png/revision/latest?cb=20240218135820",
+    // Official One Piece Wiki artwork — Egghead outfit (locally served)
+    imgUrl: "/nami-outfits/egghead.png",
     borderColor: "#a78bfa",
     badgeBg: "rgba(167,139,250,0.2)",
     badgeText: "#c4b5fd",
