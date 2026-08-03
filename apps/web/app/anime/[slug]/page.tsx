@@ -690,7 +690,6 @@ export default function AnimeDetailPage() {
                               src={char.image_url}
                               alt={char.first_name}
                               referrerPolicy="no-referrer"
-                              crossOrigin="anonymous"
                               loading="lazy"
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -723,7 +722,6 @@ export default function AnimeDetailPage() {
                                 src={char.voice_actor_image}
                                 alt={char.voice_actor_name}
                                 referrerPolicy="no-referrer"
-                                crossOrigin="anonymous"
                                 loading="lazy"
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
