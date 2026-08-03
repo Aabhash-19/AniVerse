@@ -1,6 +1,6 @@
 from typing import List, Optional
-from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from datetime import datetime, timedelta
+from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -68,8 +68,84 @@ def get_anime_videos(anime_id: int, db: Session = Depends(get_db)):
     ]
 
 
+def run_videos_sync(db_session_factory):
+    """
+    Refreshes top 50 trending trailers from AniList.
+    Upserts new trailers and marks existing ones as updated.
+    Prunes stale trailers that haven't been seen in the trending list for over 7 days.
+    """
+    db: Session = db_session_factory()
+    try:
+        from app.ingestion.anilist import AniListClient
+        from app.anime.models import Anime
+        client = AniListClient()
+        gql_query = """
+        query {
+          Page(page: 1, perPage: 50) {
+            media(type: ANIME, sort: [TRENDING_DESC, POPULARITY_DESC]) {
+              id
+              title { english romaji native }
+              trailer { id site thumbnail }
+            }
+          }
+        }
+        """
+        res = client._execute_query(gql_query, {})
+        media_list = res.get("data", {}).get("Page", {}).get("media", [])
+        client.close()
+
+        imported = 0
+        for m in media_list:
+            tr = m.get("trailer")
+            if not tr or tr.get("site") != "youtube" or not tr.get("id"):
+                continue
+            yt_id = tr["id"]
+            if not yt_id or len(yt_id) < 5:
+                continue
+            title_str = (m.get("title", {}).get("english") or m.get("title", {}).get("romaji") or "Anime") + " – Official Trailer"
+            local_anime = db.query(Anime).filter(Anime.anilist_id == m["id"]).first()
+            anime_id_to_use = local_anime.id if local_anime else 1
+
+            existing = db.query(Video).filter(Video.provider_video_id == yt_id).first()
+            if not existing:
+                db.add(Video(
+                    anime_id=anime_id_to_use,
+                    provider=VideoProvider.YOUTUBE,
+                    provider_video_id=yt_id,
+                    video_type=VideoType.TRAILER,
+                    title=title_str,
+                    description=f"Official YouTube trailer for {title_str}.",
+                    thumbnail_url=f"https://i.ytimg.com/vi/{yt_id}/hqdefault.jpg",
+                    language="Japanese",
+                    verification_status=VerificationStatus.VERIFIED,
+                    confidence_score=95.00
+                ))
+                imported += 1
+            else:
+                # Update timestamp to mark it as active
+                existing.updated_at = datetime.utcnow()
+                
+        db.commit()
+
+        # Prune older videos that are no longer trending (haven't been seen in 7 days)
+        # This keeps the video library clean and aligned with currently trending anime.
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        db.query(Video).filter(Video.updated_at < seven_days_ago).delete(synchronize_session=False)
+        db.commit()
+        
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Background video sync error: {e}")
+    finally:
+        # Clear lock key on completion or error
+        from app.shared.cache import set_cached_json
+        set_cached_json("videos_sync_lock", None, expire_seconds=1)
+        db.close()
+
+
 @router.get("/videos", response_model=List[VideoResponse])
 def list_all_videos(
+    background_tasks: BackgroundTasks,
     video_type: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
@@ -77,11 +153,32 @@ def list_all_videos(
 ):
     """
     List all approved official videos in the media hub.
-    Auto-syncs from AniList trending trailers if the library is sparse (< 20 videos).
+    Automatically refreshes trending trailers in the background if the library has
+    not been updated in over 24 hours.
     """
     # Clean up any leftover mock IDs
     db.query(Video).filter(Video.provider_video_id.like("MOCK_%")).delete(synchronize_session=False)
     db.commit()
+
+    # Trigger background sync if library is stale (> 24 hours since last update)
+    latest_video = db.query(Video).order_by(Video.updated_at.desc()).first()
+    should_refresh = False
+    
+    if not latest_video:
+        should_refresh = True
+    else:
+        elapsed = (datetime.utcnow() - latest_video.updated_at).total_seconds()
+        if elapsed > 86400: # 24 hours
+            should_refresh = True
+
+    if should_refresh and page == 1:
+        from app.shared.cache import get_cached_json, set_cached_json
+        lock_key = "videos_sync_lock"
+        is_locked = get_cached_json(lock_key)
+        if not is_locked:
+            set_cached_json(lock_key, True, expire_seconds=300) # lock for 5 mins
+            from app.database import SessionLocal
+            background_tasks.add_task(run_videos_sync, SessionLocal)
 
     query = db.query(Video)
     if video_type:
@@ -89,65 +186,6 @@ def list_all_videos(
 
     offset = (page - 1) * limit
     videos = query.order_by(Video.id.desc()).offset(offset).limit(limit).all()
-
-    # Auto-sync trending trailers from AniList if library is sparse (< 20 videos)
-    total_videos = db.query(Video).count()
-    if total_videos < 20 and page == 1:
-        try:
-            from app.ingestion.anilist import AniListClient
-            from app.anime.models import Anime
-            client = AniListClient()
-            gql_query = """
-            query {
-              Page(page: 1, perPage: 50) {
-                media(type: ANIME, sort: [TRENDING_DESC, POPULARITY_DESC]) {
-                  id
-                  title { english romaji native }
-                  trailer { id site thumbnail }
-                }
-              }
-            }
-            """
-            res = client._execute_query(gql_query, {})
-            media_list = res.get("data", {}).get("Page", {}).get("media", [])
-            client.close()
-
-            imported = 0
-            for m in media_list:
-                tr = m.get("trailer")
-                if not tr or tr.get("site") != "youtube" or not tr.get("id"):
-                    continue
-                yt_id = tr["id"]
-                # Skip obviously bad/test IDs
-                if not yt_id or len(yt_id) < 5:
-                    continue
-                title_str = (m.get("title", {}).get("english") or m.get("title", {}).get("romaji") or "Anime") + " – Official Trailer"
-                local_anime = db.query(Anime).filter(Anime.anilist_id == m["id"]).first()
-                anime_id_to_use = local_anime.id if local_anime else 1
-
-                existing = db.query(Video).filter(Video.provider_video_id == yt_id).first()
-                if not existing:
-                    db.add(Video(
-                        anime_id=anime_id_to_use,
-                        provider=VideoProvider.YOUTUBE,
-                        provider_video_id=yt_id,
-                        video_type=VideoType.TRAILER,
-                        title=title_str,
-                        description=f"Official YouTube trailer for {title_str}.",
-                        thumbnail_url=f"https://i.ytimg.com/vi/{yt_id}/hqdefault.jpg",
-                        language="Japanese",
-                        verification_status=VerificationStatus.VERIFIED,
-                        confidence_score=95.00
-                    ))
-                    imported += 1
-            if imported > 0:
-                db.commit()
-                import logging
-                logging.getLogger(__name__).info(f"Auto-synced {imported} trailers from AniList trending.")
-            videos = query.order_by(Video.id.desc()).offset(offset).limit(limit).all()
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"Video auto-sync error: {e}")
 
     return [
         VideoResponse(
