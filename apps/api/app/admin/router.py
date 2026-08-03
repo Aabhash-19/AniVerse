@@ -158,6 +158,25 @@ def get_ingestion_jobs(
     return db.query(IngestionJob).order_by(IngestionJob.started_at.desc()).limit(limit).all()
 
 
+@router.post("/jobs/reset-stuck")
+def reset_stuck_jobs(db: Session = Depends(get_db)):
+    """
+    Mark all RUNNING or PENDING jobs as FAILED.
+    Use this after a server restart to clear ghost jobs that were killed
+    mid-execution so that new sync jobs can be triggered immediately.
+    """
+    stuck_jobs = db.query(IngestionJob).filter(
+        IngestionJob.status.in_([JobStatus.RUNNING, JobStatus.PENDING])
+    ).all()
+    count = len(stuck_jobs)
+    for job in stuck_jobs:
+        job.status = JobStatus.FAILED
+        job.error_summary = "Killed by server restart / manual reset"
+        job.completed_at = datetime.utcnow()
+    db.commit()
+    return {"message": f"Reset {count} stuck job(s) to FAILED", "count": count}
+
+
 @router.post("/airing/sync")
 def trigger_airing_sync(
     background_tasks: BackgroundTasks,
