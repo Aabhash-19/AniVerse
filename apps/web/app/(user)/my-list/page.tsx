@@ -345,8 +345,9 @@ export default function MyListPage() {
         ) : filteredEntries.length === 0 ? (
           <div className="bg-zinc-900/40 border border-amber-500/30 rounded-3xl p-12 text-center flex flex-col items-center gap-4 max-w-lg mx-auto shadow-2xl backdrop-blur-xl">
             <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-amber-500 shadow-xl bg-purple-950">
-              <img src="/nami-avatar.png" alt="Nami Mascot" className="w-full h-full object-cover" />
+              <img src="/nami-wano-avatar.jpg" alt="Nami Mascot" className="w-full h-full object-cover" />
             </div>
+
             <div>
               <p className="text-zinc-200 font-black text-lg">Your {activeTab} map is empty!</p>
               <p className="text-zinc-400 text-xs mt-1 leading-relaxed">

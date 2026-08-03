@@ -12,10 +12,11 @@ export default function NotFound() {
         {/* Nami Mascot Avatar Badge */}
         <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-amber-500 shadow-xl bg-purple-950">
           <img
-            src="/nami-avatar.png"
+            src="/nami-wano-avatar.jpg"
             alt="Navigator Nami"
             className="w-full h-full object-cover"
           />
+
         </div>
 
         <div>

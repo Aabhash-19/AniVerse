@@ -602,8 +602,9 @@ export default function AnimeDetailPage() {
             {/* Nami's Mascot Review Callout */}
             <div className="mt-4 bg-gradient-to-r from-zinc-900 via-amber-950/20 to-zinc-900 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-4 shadow-lg max-w-4xl">
               <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-amber-500 shadow-md flex-shrink-0 bg-purple-950">
-                <img src="/nami-avatar.png" alt="Nami Mascot" className="w-full h-full object-cover" />
+                <img src="/nami-wano-avatar.jpg" alt="Nami Mascot" className="w-full h-full object-cover" />
               </div>
+
               <div className="flex-1 min-w-0">
                 <div className="text-[11px] font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
                   Nami's Navigator Log

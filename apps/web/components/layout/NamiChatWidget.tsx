@@ -27,8 +27,9 @@ export default function NamiChatWidget() {
   const [loading, setLoading] = useState(false);
   const [showHint, setShowHint] = useState(true);
 
-  // Cute post-timeskip Nami avatar image
-  const NAMI_AVATAR = "/nami-avatar.png";
+  // Cute post-timeskip Wano Nami avatar image provided by user
+  const NAMI_AVATAR = "/nami-wano-avatar.jpg";
+
 
 
 
