@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any, Union
 from jose import jwt
 import bcrypt
+import uuid
 from app.config import settings
 
 ALGORITHM = "HS256"
@@ -31,7 +32,7 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta = Non
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         
-    to_encode = {"exp": expire, "sub": str(subject), "type": "access"}
+    to_encode = {"exp": expire, "sub": str(subject), "type": "access", "jti": str(uuid.uuid4())}
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -45,7 +46,8 @@ def create_refresh_token(subject: Union[str, Any], expires_delta: timedelta = No
     else:
         expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         
-    to_encode = {"exp": expire, "sub": str(subject), "type": "refresh"}
+    import uuid
+    to_encode = {"exp": expire, "sub": str(subject), "type": "refresh", "jti": str(uuid.uuid4())}
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET, algorithm=ALGORITHM)
     return encoded_jwt
 

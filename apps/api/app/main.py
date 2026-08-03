@@ -28,12 +28,17 @@ from app.community.router import router as community_router
 from app.recommendations.router import router as recommendations_router
 from app.notifications.router import router as notifications_router
 
+from app.shared.security_middleware import SecurityMiddleware
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url=f"{settings.API_V1_STR}/docs",
     redoc_url=f"{settings.API_V1_STR}/redoc",
 )
+
+# Register Security, Headers & Rate Limiting Middleware
+app.add_middleware(SecurityMiddleware, redis_url=settings.REDIS_URL)
 
 # Setup CORS Origins
 if settings.BACKEND_CORS_ORIGINS:

@@ -1,0 +1,73 @@
+name: AniVerse CI/CD Hardening Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: aniverse_user
+          POSTGRES_PASSWORD: aniverse_password
+          POSTGRES_DB: aniverse_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v3
+
+      # --- Backend Validation ---
+      - name: Setup Python environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          cd apps/api
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest httpx pyjwt cryptography passlib[bcrypt]
+
+      - name: Run Backend Pytest Suite
+        run: |
+          cd apps/api
+          PYTHONPATH=. pytest
+
+      # --- Frontend Validation ---
+      - name: Setup Node.js runtime
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'apps/web/package-lock.json'
+
+      - name: Install web client dependencies
+        run: |
+          cd apps/web
+          npm install
+
+      - name: Compile and Build web client
+        run: |
+          cd apps/web
+          npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1

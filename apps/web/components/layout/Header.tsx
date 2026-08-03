@@ -132,6 +132,10 @@ export default function Header() {
                 {user.display_name || user.username}
               </Link>
               
+              <Link href="/settings" className="text-xs font-bold text-zinc-400 hover:text-zinc-200 transition-all">
+                Settings
+              </Link>
+              
               <button 
                 onClick={handleLogout}
                 className="text-xs px-3.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold transition-all border border-zinc-850"

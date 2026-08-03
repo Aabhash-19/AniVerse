@@ -1,0 +1,9 @@
+# robots.txt for AniVerse
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /settings
+Disallow: /notifications
+Disallow: /api/
+
+Sitemap: http://localhost:3000/sitemap.xml

@@ -2,13 +2,14 @@ import hashlib
 import uuid
 from typing import Optional
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.auth.models import User, UserPreference, UserSession, UserRole, UserStatus
-from app.auth.security import get_password_hash, verify_password, create_access_token, create_refresh_token
+from app.auth.security import get_password_hash, verify_password, create_access_token, create_refresh_token, verify_token
 from app.auth.dependencies import get_current_user
+from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["User Authentication"])
 
@@ -225,4 +226,138 @@ def get_public_profile(username: str, db: Session = Depends(get_db)):
         "role": user.role.value,
         "created_at": user.created_at,
     }
+
+
+@router.post("/refresh")
+def refresh_token_rotation(request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+    Validate refresh token cookie, rotate access and refresh tokens, and update session hash.
+    """
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="Refresh token missing. Please login again.")
+
+    # Decode and verify token signature
+    user_id = verify_token(refresh_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Refresh token expired or invalid.")
+
+    # Verify session hash in database to prevent reuse attacks
+    rt_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
+    session = db.query(UserSession).filter(
+        UserSession.user_id == user_id,
+        UserSession.refresh_token_hash == rt_hash
+    ).first()
+
+    if not session or session.expires_at < datetime.utcnow():
+        if session:
+            db.delete(session)
+            db.commit()
+        raise HTTPException(status_code=401, detail="Session expired or revoked.")
+
+    # Generate new access & refresh tokens
+    new_access_token = create_access_token(user_id)
+    new_refresh_token = create_refresh_token(user_id)
+    
+    # Rotate token hash in database session
+    new_rt_hash = hashlib.sha256(new_refresh_token.encode()).hexdigest()
+    session.refresh_token_hash = new_rt_hash
+    session.expires_at = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    
+    # Update last login time
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        user.last_login_at = datetime.utcnow()
+    db.commit()
+
+    # Set new secure HttpOnly cookies
+    response.set_cookie(
+        key="access_token",
+        value=new_access_token,
+        httponly=True,
+        max_age=1800,  # 30 mins
+        samesite="lax",
+        secure=False   # Set True in production
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        httponly=True,
+        max_age=604800, # 7 days
+        samesite="lax",
+        secure=False
+    )
+
+    return {"message": "Session refreshed successfully"}
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(response: Response, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Permanently deletes the currently authenticated user's account and revokes all active cookies.
+    """
+    # Delete user from DB. Cascading rules clean up list entries, subscriptions, events etc.
+    db.delete(current_user)
+    db.commit()
+
+    # Delete browser cookies
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    return None
+
+
+@router.get("/me/export")
+def export_user_data(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Compiles and exports all user-generated records and preferences.
+    """
+    # Load user's watchlists
+    from app.lists.models import AnimeListEntry
+    list_entries = db.query(AnimeListEntry).filter(AnimeListEntry.user_id == current_user.id).all()
+    serialized_lists = [{
+        "anime_id": entry.anime_id,
+        "status": entry.status.value if entry.status else None,
+        "progress": entry.progress,
+        "score": float(entry.score) if entry.score else None,
+        "rewatch_count": entry.rewatch_count,
+        "updated_at": entry.updated_at.isoformat() if entry.updated_at else None
+    } for entry in list_entries]
+
+    # Load notifications preferences
+    from app.notifications.models import NotificationPreference
+    pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == current_user.id).first()
+    serialized_prefs = {
+        "episodes_enabled": pref.episodes_enabled,
+        "trailers_enabled": pref.trailers_enabled,
+        "movies_enabled": pref.movies_enabled,
+        "replies_enabled": pref.replies_enabled,
+        "followers_enabled": pref.followers_enabled,
+        "emails_enabled": pref.emails_enabled,
+        "push_enabled": pref.push_enabled
+    } if pref else None
+
+    # Load anime subscriptions (following)
+    from app.notifications.models import AnimeSubscription
+    subs = db.query(AnimeSubscription).filter(AnimeSubscription.user_id == current_user.id).all()
+    serialized_subs = [{
+        "anime_id": sub.anime_id,
+        "trailer_alerts": sub.trailer_alerts,
+        "episode_alerts": sub.episode_alerts,
+        "news_alerts": sub.news_alerts
+    } for sub in subs]
+
+    return {
+        "user_profile": {
+            "id": str(current_user.id),
+            "username": current_user.username,
+            "email": current_user.email,
+            "display_name": current_user.display_name,
+            "role": current_user.role.value,
+            "created_at": current_user.created_at.isoformat() if current_user.created_at else None
+        },
+        "watchlist": serialized_lists,
+        "subscriptions": serialized_subs,
+        "notification_preferences": serialized_prefs
+    }
+
 
