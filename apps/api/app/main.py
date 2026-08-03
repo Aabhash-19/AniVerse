@@ -71,6 +71,45 @@ app.include_router(notifications_router, prefix=settings.API_V1_STR)
 app.include_router(chat_router, prefix=settings.API_V1_STR)
 
 
+@app.on_event("startup")
+def startup_autoseed():
+    """
+    On backend startup, check if the database is sparse/empty (<10 anime).
+    If so, launch a background task to auto-seed top popular anime from AniList.
+    """
+    import threading
+    def _seed_task():
+        try:
+            from app.database import SessionLocal
+            from app.anime.models import Anime
+            from app.ingestion.anilist import AniListClient
+            from app.ingestion.service import import_anime_payload
+            
+            db = SessionLocal()
+            try:
+                count = db.query(Anime).count()
+                if count < 10:
+                    print("Fresh database detected (<10 titles). Auto-seeding top popular anime from AniList...")
+                    client = AniListClient()
+                    try:
+                        res = client.fetch_anime_page(page=1, per_page=50)
+                        media_list = res.get("data", {}).get("Page", {}).get("media", [])
+                        for media in media_list:
+                            try:
+                                import_anime_payload(db, media)
+                                db.commit()
+                            except Exception:
+                                db.rollback()
+                        print(f"Auto-seeded {len(media_list)} popular anime into database.")
+                    finally:
+                        client.close()
+            finally:
+                db.close()
+        except Exception as err:
+            print(f"Auto-seed background task notice: {err}")
+
+    threading.Thread(target=_seed_task, daemon=True).start()
+
 
 @app.get("/")
 def read_root():

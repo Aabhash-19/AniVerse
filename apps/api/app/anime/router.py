@@ -205,22 +205,45 @@ def list_anime(
             results = result_query.offset(offset).limit(limit).all()
 
 
-    # On-demand fallback: If upcoming status query yields no results, fetch directly from AniList
-    if not results and status and status.upper() == "NOT_YET_RELEASED":
+    # On-demand fallback: If query yields no results (fresh DB or un-indexed genre/season/status/format filter), fetch directly from AniList
+    if not results:
         try:
             from app.ingestion.anilist import AniListClient
             from app.ingestion.service import import_anime_payload
             client = AniListClient()
             try:
-                media_list = client.fetch_upcoming_anime(page=1, per_page=50)
+                if status and status.upper() == "NOT_YET_RELEASED":
+                    media_list = client.fetch_upcoming_anime(page=1, per_page=50)
+                else:
+                    res = client.fetch_anime_page(page=1, per_page=50)
+                    media_list = res.get("data", {}).get("Page", {}).get("media", [])
+                
                 for media in media_list:
-                    import_anime_payload(db, media)
-                db.commit()
+                    try:
+                        import_anime_payload(db, media)
+                        db.commit()
+                    except Exception:
+                        db.rollback()
             finally:
                 client.close()
-            results = result_query.offset(offset).limit(limit).all()
-        except Exception:
-            pass
+
+            # Re-collect matching IDs & query results
+            matching_ids = [row[0] for row in query.with_entities(Anime.id).distinct().all()]
+            if matching_ids:
+                result_query = db.query(Anime).filter(Anime.id.in_(matching_ids))
+                if sort == "score":
+                    result_query = result_query.order_by(
+                        case({Anime.status == AnimeStatus.FINISHED: 0}, else_=1),
+                        desc(Anime.average_score).nulls_last(),
+                        Anime.id
+                    )
+                elif sort == "title":
+                    result_query = result_query.order_by(Anime.title_english, Anime.title_romaji, Anime.id)
+                else:
+                    result_query = result_query.order_by(desc(Anime.popularity).nulls_last(), Anime.id)
+                results = result_query.offset(offset).limit(limit).all()
+        except Exception as fallback_err:
+            logger.warning(f"On-demand fallback fetch notice: {fallback_err}")
 
     # Build response schema summaries
     summaries = []
