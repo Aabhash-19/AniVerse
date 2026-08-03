@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.auth.dependencies import get_current_user
 from app.auth.models import User, UserRole
-from app.media.models import Video, VideoCandidate, OfficialChannel, CandidateStatus, VideoProvider, VideoType
+from app.media.models import Video, VideoCandidate, OfficialChannel, CandidateStatus, VideoProvider, VideoType, VerificationStatus
 from app.anime.models import Anime
 from app.media.discovery import score_video_candidate, create_mock_candidates, OFFICIAL_CHANNELS
 
