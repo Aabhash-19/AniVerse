@@ -295,6 +295,11 @@ def run_videos_sync(db_session_factory):
         db.close()
 
 
+@router.get("/videos/debug-animethemes")
+def debug_animethemes(anilist_id: int):
+    return fetch_animethemes_videos(anilist_id)
+
+
 @router.get("/videos", response_model=List[VideoResponse])
 def list_all_videos(
     background_tasks: BackgroundTasks,
