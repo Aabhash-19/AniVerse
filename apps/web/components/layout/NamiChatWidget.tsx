@@ -25,9 +25,11 @@ export default function NamiChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showHint, setShowHint] = useState(true);
 
   // Cute post-timeskip Nami avatar image
   const NAMI_AVATAR = "/nami-avatar.png";
+
 
 
   const [messages, setMessages] = useState<Message[]>([
@@ -114,12 +116,32 @@ export default function NamiChatWidget() {
 
   return (
     <div className="fixed bottom-6 right-6 z-50 font-sans">
+      {/* Proactive Speech Bubble Hint */}
+      {!isOpen && showHint && (
+        <div className="absolute -top-10 right-0 bg-gradient-to-r from-zinc-900 via-purple-950 to-zinc-900 border border-purple-500/40 text-purple-200 text-[11px] font-bold px-3 py-1.5 rounded-2xl shadow-xl whitespace-nowrap flex items-center gap-2 animate-bounce">
+          <span>Need recommendations? Ask Nami!</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowHint(false);
+            }}
+            className="text-zinc-400 hover:text-white text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Floating Toggle Button anchored at Bottom-Right */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            setIsOpen(true);
+            setShowHint(false);
+          }}
           className="group flex items-center gap-3 bg-zinc-900/95 hover:bg-zinc-850 border-2 border-purple-500/60 hover:border-purple-400 text-white p-2.5 pr-4 rounded-full shadow-2xl backdrop-blur-xl transition-all duration-300 hover:scale-105"
         >
+
           <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-amber-500 shadow-lg bg-purple-950">
             <img
               src={NAMI_AVATAR}

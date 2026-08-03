@@ -309,6 +309,24 @@ export default function CalendarPage() {
           </div>
         </div>
 
+        {/* Nami's Airing Weather Report Banner */}
+        <div className="bg-gradient-to-r from-zinc-900 via-amber-950/20 to-zinc-900 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-4 shadow-lg">
+          <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-amber-500 shadow-md flex-shrink-0 bg-purple-950">
+            <img src="/nami-avatar.png" alt="Nami Navigator" className="w-full h-full object-cover" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+              Nami's Airing Weather Report 🍊
+            </div>
+            <p className="text-xs text-zinc-300 font-medium mt-0.5 truncate">
+              {events.length > 0
+                ? `Clear skies today across the Grand Line! We have ${events.length} episode airings scheduled on the radar.`
+                : "Forecast looks clear! Select any date on the calendar to chart upcoming releases."}
+            </p>
+          </div>
+        </div>
+
+
         {/* LOGGED OUT CALLOUT FOR MY CALENDAR */}
         {viewMode === "personal" && !currentUser && (
           <div className="bg-gradient-to-r from-purple-950/60 via-zinc-900 to-zinc-950 border border-purple-800/40 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">

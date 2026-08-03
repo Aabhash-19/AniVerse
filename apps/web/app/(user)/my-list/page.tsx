@@ -343,22 +343,25 @@ export default function MyListPage() {
             <p className="text-sm mt-1">{error}</p>
           </div>
         ) : filteredEntries.length === 0 ? (
-          <div className="bg-zinc-900/20 border border-zinc-850 rounded-2xl p-16 text-center">
-            <svg className="w-12 h-12 text-zinc-650 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-            <p className="text-zinc-400 font-bold text-lg">No entries here</p>
-            <p className="text-sm text-zinc-600 mt-1 max-w-sm mx-auto">
-              Nothing is listed under this status. Browse discover page to find and add new anime!
-            </p>
+          <div className="bg-zinc-900/40 border border-amber-500/30 rounded-3xl p-12 text-center flex flex-col items-center gap-4 max-w-lg mx-auto shadow-2xl backdrop-blur-xl">
+            <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-amber-500 shadow-xl bg-purple-950">
+              <img src="/nami-avatar.png" alt="Nami Mascot" className="w-full h-full object-cover" />
+            </div>
+            <div>
+              <p className="text-zinc-200 font-black text-lg">Your {activeTab} map is empty!</p>
+              <p className="text-zinc-400 text-xs mt-1 leading-relaxed">
+                "Don't leave this section blank! Explore the catalogue or ask me in the bottom-right chat for a top-tier recommendation to add."
+              </p>
+            </div>
             <Link
               href="/discover"
-              className="mt-6 inline-block px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold transition-all shadow-lg shadow-purple-900/20"
+              className="mt-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all shadow-lg"
             >
-              Discover Anime
+              Explore Catalogue
             </Link>
           </div>
         ) : (
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredEntries.map((entry) => {
               const displayTitle = entry.anime.title.english || entry.anime.title.romaji || entry.anime.title.native || "Unknown Title";

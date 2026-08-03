@@ -413,6 +413,13 @@ export default function DiscoverPage() {
                       <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs">No Cover</div>
                     )}
                     
+                    {/* Nami's Log Pose Choice badge for top rated shows */}
+                    {anime.average_score && anime.average_score >= 84 && (
+                      <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-md text-[9px] font-extrabold text-zinc-950 shadow-md flex items-center gap-1">
+                        Nami's Pick 🍊
+                      </div>
+                    )}
+
                     {/* Score badge / Similarity match */}
                     {anime.similarity != null ? (
                       <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-purple-600/90 backdrop-blur-sm border border-purple-500/20 text-xs font-bold text-white">
@@ -423,6 +430,7 @@ export default function DiscoverPage() {
                         ⭐ {anime.average_score}%
                       </div>
                     ) : null}
+
 
                     {anime.format && (
                       <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-zinc-950/80 backdrop-blur-sm border border-zinc-800 text-[10px] font-bold text-zinc-400">
