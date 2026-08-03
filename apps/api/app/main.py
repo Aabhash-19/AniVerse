@@ -6,8 +6,15 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 import redis
 
-# Auto create tables on startup
+# Auto create extensions & tables on startup
 from app.database import engine, Base, get_db
+
+try:
+    with engine.begin() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+except Exception as e:
+    print(f"Warning: Could not enable vector extension: {e}")
+
 # Import models to register them in metadata
 import app.anime.models
 import app.admin.models
