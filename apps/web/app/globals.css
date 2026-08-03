@@ -60,8 +60,48 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-/* Subtle focus outline that matches the theme */
+/* ───────────────────────────────────────────────
+   A11y: Accessibility Utilities
+   ─────────────────────────────────────────────── */
+
+/* Screen-reader only helper (used by skip-nav) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+.focus\:not-sr-only:focus {
+  position: fixed;
+  width: auto;
+  height: auto;
+  padding: revert;
+  margin: revert;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* Strong, visible focus ring that matches the purple theme */
 *:focus-visible {
-  outline: 2px solid rgba(124, 58, 237, 0.6);
-  outline-offset: 2px;
+  outline: 2px solid #7c3aed;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Remove focus ring for mouse users while keeping it for keyboard */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Ensure interactive elements always have a cursor */
+button,
+[role="button"],
+a {
+  cursor: pointer;
 }

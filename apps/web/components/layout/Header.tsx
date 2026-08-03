@@ -61,16 +61,16 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900 px-6 py-4">
+    <header role="banner" aria-label="AniVerse site header" className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900 px-6 py-4">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div className="flex items-center gap-8">
-          <Link href="/discover" className="flex items-center gap-2">
+          <Link href="/discover" aria-label="AniVerse — Go to homepage" className="flex items-center gap-2">
             <span className="text-2xl font-black bg-gradient-to-r from-purple-400 to-indigo-500 bg-clip-text text-transparent tracking-wider">
               ANIVERSE
             </span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-6 text-sm">
+          <nav role="navigation" aria-label="Main navigation" className="hidden md:flex items-center gap-6 text-sm">
             <Link 
               href="/discover" 
               className={`font-semibold transition-all ${pathname === "/discover" ? "text-purple-400" : "text-zinc-400 hover:text-zinc-200"}`}
@@ -110,7 +110,7 @@ export default function Header() {
           {user ? (
             <div className="flex items-center gap-4">
               {/* Notification Bell */}
-              <Link href="/notifications" className="relative p-1 text-zinc-400 hover:text-zinc-200 transition-all">
+              <Link href="/notifications" aria-label={`Notifications${unreadCount > 0 ? ` — ${unreadCount} unread` : ""}`} className="relative p-1 text-zinc-400 hover:text-zinc-200 transition-all">
                 <span className="text-xl">🔔</span>
                 {unreadCount > 0 && (
                   <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-black leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-purple-600 rounded-full">
@@ -138,6 +138,7 @@ export default function Header() {
               
               <button 
                 onClick={handleLogout}
+                aria-label="Log out of your account"
                 className="text-xs px-3.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold transition-all border border-zinc-850"
               >
                 Logout

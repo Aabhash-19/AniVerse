@@ -204,7 +204,7 @@ export default function DiscoverPage() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-900/10 rounded-full blur-[120px] pointer-events-none" />
       <Header />
 
-      <main className="max-w-7xl mx-auto px-6 py-10 relative z-10 space-y-10">
+      <main id="main-content" role="main" className="max-w-7xl mx-auto px-6 py-10 relative z-10 space-y-10">
         
         {/* Title row */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
