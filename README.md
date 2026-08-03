@@ -199,5 +199,5 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 ---
 
 <p align="center">
-  Made with ❤️ & 🍊 by the <b>NamiVerse Team</b>
+  Made with ❤️ & 🍊 for all weeblets especially worshipping <b> NAMI</b>
 </p>
