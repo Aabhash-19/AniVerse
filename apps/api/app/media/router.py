@@ -112,32 +112,10 @@ def fetch_animethemes_videos(anilist_id: int) -> list:
     return results
 
 
-def fetch_animethemes_videos_parallel(anilist_ids: list) -> dict:
-    """
-    Fetch Animethemes videos for multiple AniList IDs in parallel using a ThreadPoolExecutor.
-    """
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    
-    results = {}
-    def worker(anilist_id):
-        return anilist_id, fetch_animethemes_videos(anilist_id)
-        
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(worker, aid) for aid in anilist_ids]
-        for fut in as_completed(futures):
-            try:
-                aid, themes = fut.result()
-                if themes:
-                    results[aid] = themes
-            except Exception:
-                pass
-    return results
-
-
 def run_videos_sync(db_session_factory):
     """
     Refreshes top 50 trailers for currently airing and upcoming anime from AniList.
-    Also discovers and imports official clean OPs/EDs from Animethemes.moe in parallel.
+    Also discovers and imports official clean OPs/EDs from Animethemes.moe for all trending titles.
     Prunes any trailers/videos that are no longer in this active list.
     """
     db: Session = db_session_factory()
@@ -237,19 +215,17 @@ def run_videos_sync(db_session_factory):
                 existing.updated_at = datetime.utcnow()
                 refreshed_ids.append(existing.id)
 
-        # Part B: Import OPs and EDs in parallel using Animethemes API
-        unique_ids = [m["id"] for m in unique_media]
-        all_themes = fetch_animethemes_videos_parallel(unique_ids)
-        
-        for m in unique_media:
+        # Part B: Import OPs and EDs for the top 10 unique anime using Animethemes API
+        for m in unique_media[:10]:
             anime_title = m.get("title", {}).get("english") or m.get("title", {}).get("romaji")
-            if not anime_title or m["id"] not in all_themes:
+            if not anime_title:
                 continue
                 
             local_anime = db.query(Anime).filter(Anime.anilist_id == m["id"]).first()
             anime_id_to_use = local_anime.id if local_anime else 1
             
-            themes = all_themes[m["id"]]
+            # Fetch from Animethemes
+            themes = fetch_animethemes_videos(m["id"])
             for t in themes:
                 t_type = t["type"]
                 url_str = t["url"]
