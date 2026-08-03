@@ -70,40 +70,50 @@ def get_anime_videos(anime_id: int, db: Session = Depends(get_db)):
 
 def fetch_youtube_video(query: str, bad_keywords: list = None) -> tuple:
     """
-    Scrapes YouTube search results to find the best official video matching the query.
-    Returns (video_id, video_title) or (None, None).
+    Search YouTube videos via public Invidious instances (bypassing datacenter blocks).
+    Automatically tries up to 3 healthy Invidious instances dynamically.
     """
     import urllib.request
     import urllib.parse
-    import re
+    import json
     
     if bad_keywords is None:
         bad_keywords = ["reaction", "reacting", "react", "amv", "cover", "remix", "fanmade", "fan-made", "review", "comparison", "parody"]
         
+    # Get active/healthy public instances dynamically
+    instances = ["https://inv.zoomerville.com", "https://yewtu.be", "https://invidious.flokinet.to"]
     try:
-        url = 'https://www.youtube.com/results?search_query=' + urllib.parse.quote(query)
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'})
-        with urllib.request.urlopen(req, timeout=5) as response:
-            html = response.read().decode('utf-8')
-            
-        matches = re.findall(r'\"videoRenderer\":\{(.*?)\"navigationEndpoint\"', html)
-        for m in matches:
-            vid_id_m = re.search(r'\"videoId\":\"([^\"]+)\"', m)
-            title_m = re.search(r'\"title\":\{\"runs\":\[\{\"text\":\"([^\"]+)\"\}', m)
-            if vid_id_m and title_m:
-                v_id = vid_id_m.group(1)
-                v_title = title_m.group(1)
-                
-                # Filter out obvious fan edits / covers / reactions
-                title_lower = v_title.lower()
-                if any(kw in title_lower for kw in bad_keywords):
-                    continue
-                    
-                return v_id, v_title
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"YouTube scrape failed for '{query}': {e}")
+        req = urllib.request.Request("https://api.invidious.io/instances.json", headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            healthy_uris = [inst[1]['uri'] for inst in data if inst[1].get('type') == 'https' and inst[1].get('api') == True and inst[1].get('monitor', {}).get('down') == False]
+            if healthy_uris:
+                instances = healthy_uris[:5]
+    except Exception:
+        # Fallback to static list if instances directory is down
+        pass
         
+    for inst in instances:
+        try:
+            url = f"{inst}/api/v1/search?q={urllib.parse.quote(query)}&type=video"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                results = json.loads(resp.read().decode('utf-8'))
+                
+            if not isinstance(results, list):
+                continue
+                
+            for res in results:
+                vid_id = res.get("videoId")
+                title = res.get("title")
+                if vid_id and title:
+                    title_lower = title.lower()
+                    if any(kw in title_lower for kw in bad_keywords):
+                        continue
+                    return vid_id, title
+        except Exception:
+            continue
+            
     return None, None
 
 
