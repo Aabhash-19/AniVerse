@@ -93,6 +93,8 @@ export default function AnimeDetailPage() {
   const [anilistRecs, setAnilistRecs] = useState<any[]>([]);
   const [anilistVideos, setAnilistVideos] = useState<{ trailer: any; streamingEpisodes: any[] }>({ trailer: null, streamingEpisodes: [] });
   const [loadingTabContent, setLoadingTabContent] = useState(false);
+  const [similarRecs, setSimilarRecs] = useState<any[]>([]);
+  const [loadingSimilar, setLoadingSimilar] = useState<boolean>(false);
 
 
   // Subscription (Follow) states
