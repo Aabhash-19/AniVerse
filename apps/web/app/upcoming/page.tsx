@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Header from "@/components/layout/Header";
-import { getApiUrl } from "@/lib/auth";
+import { getApiUrl, fetchWithCredentials } from "@/lib/auth";
 
 interface AnimeSummary {
   id: number;
@@ -58,7 +58,7 @@ export default function UpcomingPage() {
       if (sort) params.append("sort", sort);
       params.append("limit", "50");
 
-      const res = await fetch(getApiUrl(`/anime?${params.toString()}`));
+      const res = await fetchWithCredentials(getApiUrl(`/anime?${params.toString()}`));
       if (res.ok) {
         setAnimeList(await res.json());
         setFeaturedIndex(0);

@@ -62,7 +62,7 @@ export default function DiscussionsSection({ animeId, currentUser }: Discussions
     setLoading(true);
     try {
       const ep = episodeFilter ? `&episode=${episodeFilter}` : "";
-      const res = await fetch(getApiUrl(`/anime/${animeId}/discussions?per_page=10${ep}`));
+      const res = await fetchWithCredentials(getApiUrl(`/anime/${animeId}/discussions?per_page=10${ep}`));
       if (res.ok) {
         const data = await res.json();
         setDiscussions(data.items);

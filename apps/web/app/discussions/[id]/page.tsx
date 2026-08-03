@@ -73,7 +73,7 @@ function CommentItem({
   const fetchReplies = async () => {
     setLoadingReplies(true);
     try {
-      const res = await fetch(getApiUrl(`/comments/${comment.id}/replies`));
+      const res = await fetchWithCredentials(getApiUrl(`/comments/${comment.id}/replies`));
       if (res.ok) {
         const data = await res.json();
         setReplies(data);
@@ -312,7 +312,7 @@ export default function DiscussionDetailPage({ params }: { params: Promise<{ id:
 
   const fetchDiscussion = async () => {
     try {
-      const res = await fetch(getApiUrl(`/discussions/${discussionId}`));
+      const res = await fetchWithCredentials(getApiUrl(`/discussions/${discussionId}`));
       if (res.ok) {
         const data = await res.json();
         setDiscussion(data);
@@ -326,7 +326,7 @@ export default function DiscussionDetailPage({ params }: { params: Promise<{ id:
 
   const fetchComments = async () => {
     try {
-      const res = await fetch(getApiUrl(`/discussions/${discussionId}/comments?per_page=50`));
+      const res = await fetchWithCredentials(getApiUrl(`/discussions/${discussionId}/comments?per_page=50`));
       if (res.ok) {
         const data = await res.json();
         setComments(data.items);

@@ -49,7 +49,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch(getApiUrl(`/auth/profile/${username}`));
+      const res = await fetchWithCredentials(getApiUrl(`/auth/profile/${username}`));
       if (!res.ok) {
         setError("User not found.");
         setLoading(false);
@@ -73,7 +73,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(getApiUrl(`/anime-lists/public/${username}`));
+      const res = await fetchWithCredentials(getApiUrl(`/anime-lists/public/${username}`));
       if (res.ok) {
         const entries = await res.json();
         const s: WatchlistStats = { watching: 0, completed: 0, planning: 0, dropped: 0, paused: 0 };

@@ -206,7 +206,7 @@ export default function DiscoverPage() {
   const handleTriggerSync = async () => {
     setSyncLoading(true);
     try {
-      const res = await fetch(getApiUrl("/admin/catalogue/sync?limit=40"), { method: "POST" });
+      const res = await fetchWithCredentials(getApiUrl("/admin/catalogue/sync?limit=40"), { method: "POST" });
       if (!res.ok) throw new Error("Sync failed to trigger");
       setTimeout(() => {
         fetchCatalog();

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { getApiUrl } from "@/lib/auth";
+import { getApiUrl, fetchWithCredentials } from "@/lib/auth";
 
 interface RecommendedAnime {
   id: number;
@@ -82,9 +82,8 @@ export default function NamiChatWidget() {
 
     try {
       const history = messages.map((m) => ({ sender: m.sender, text: m.text }));
-      const res = await fetch(getApiUrl("/chat/nami"), {
+      const res = await fetchWithCredentials(getApiUrl("/chat/nami"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: textToSend, history })
       });
 

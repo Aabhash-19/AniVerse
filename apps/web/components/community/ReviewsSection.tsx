@@ -84,7 +84,7 @@ export default function ReviewsSection({ animeId, currentUser }: ReviewsSectionP
   const fetchReviews = async () => {
     setLoading(true);
     try {
-      const res = await fetch(getApiUrl(`/anime/${animeId}/reviews?per_page=10`));
+      const res = await fetchWithCredentials(getApiUrl(`/anime/${animeId}/reviews?per_page=10`));
       if (res.ok) {
         const data = await res.json();
         setReviews(data.items);

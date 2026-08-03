@@ -117,7 +117,7 @@ export default function AnimeDetailPage() {
     if (!anime) return;
     setLoadingSimilar(true);
     try {
-      const res = await fetch(getApiUrl(`/recommendations/similar/${anime.id}`));
+      const res = await fetchWithCredentials(getApiUrl(`/recommendations/similar/${anime.id}`));
       if (res.ok) setSimilarRecs(await res.json());
     } finally {
       setLoadingSimilar(false);
@@ -171,21 +171,21 @@ export default function AnimeDetailPage() {
       try {
         if (activeTab === "reviews" && anilistReviews.length === 0) {
           setLoadingTabContent(true);
-          const res = await fetch(getApiUrl(`/anime/${animeId}/reviews`));
+          const res = await fetchWithCredentials(getApiUrl(`/anime/${animeId}/reviews`));
           if (res.ok) {
             const data = await res.json();
             setAnilistReviews(Array.isArray(data) ? data : []);
           }
         } else if (activeTab === "recommendations" && anilistRecs.length === 0) {
           setLoadingTabContent(true);
-          const res = await fetch(getApiUrl(`/anime/${animeId}/anilist-recommendations`));
+          const res = await fetchWithCredentials(getApiUrl(`/anime/${animeId}/anilist-recommendations`));
           if (res.ok) {
             const data = await res.json();
             setAnilistRecs(Array.isArray(data) ? data : []);
           }
         } else if (activeTab === "videos" && !anilistVideos.trailer && anilistVideos.streamingEpisodes.length === 0) {
           setLoadingTabContent(true);
-          const res = await fetch(getApiUrl(`/anime/${animeId}/anilist-videos`));
+          const res = await fetchWithCredentials(getApiUrl(`/anime/${animeId}/anilist-videos`));
           if (res.ok) {
             const data = await res.json();
             if (data && typeof data === "object") setAnilistVideos(data);
@@ -314,9 +314,9 @@ export default function AnimeDetailPage() {
       setError("");
       try {
         // Fetch Details (try animeId first, fallback to full slug)
-        let detRes = await fetch(getApiUrl(`/anime/${animeId || slug}`));
+        let detRes = await fetchWithCredentials(getApiUrl(`/anime/${animeId || slug}`));
         if (!detRes.ok && slug) {
-          detRes = await fetch(getApiUrl(`/anime/${slug}`));
+          detRes = await fetchWithCredentials(getApiUrl(`/anime/${slug}`));
         }
         if (!detRes.ok) throw new Error("Could not load anime metadata. Please try again.");
         const detData = await detRes.json();
@@ -327,9 +327,9 @@ export default function AnimeDetailPage() {
         // Fetch user status, characters, relations, and videos in parallel
         const [authRes, charRes, relRes, vidRes] = await Promise.all([
           fetchWithCredentials(getApiUrl("/auth/me")),
-          fetch(getApiUrl(`/anime/${realId}/characters`)),
-          fetch(getApiUrl(`/anime/${realId}/relations`)),
-          fetch(getApiUrl(`/anime/${realId}/videos`))
+          fetchWithCredentials(getApiUrl(`/anime/${realId}/characters`)),
+          fetchWithCredentials(getApiUrl(`/anime/${realId}/relations`)),
+          fetchWithCredentials(getApiUrl(`/anime/${realId}/videos`))
         ]);
 
         // Process user session if logged in
