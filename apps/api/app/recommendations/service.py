@@ -2,7 +2,7 @@ import numpy as np
 import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime, date
-from sqlalchemy import text, or_
+from sqlalchemy import text, or_, desc
 from sqlalchemy.orm import Session
 import uuid
 
@@ -41,23 +41,54 @@ def log_user_event(db: Session, user_id: Optional[uuid.UUID], session_id: Option
     db.add(event)
     db.commit()
 
-def run_full_text_search(db: Session, query_str: str, limit: int = 20) -> List[Anime]:
+def run_full_text_search(
+    db: Session,
+    query_str: str,
+    limit: int = 20,
+    *,
+    genre: Optional[str] = None,
+    season: Optional[str] = None,
+    format: Optional[str] = None,
+    sort: str = "popularity",
+) -> List[Anime]:
     search_pattern = f"%{query_str.strip().lower()}%"
-    
-    # Match title fields, description, genres, tags, studios, character names, or voice actor names
-    results = db.query(Anime).join(Anime.genres, isouter=True).join(Anime.tags, isouter=True).join(Anime.studios, isouter=True).filter(
-        or_(
-            Anime.title_english.ilike(search_pattern),
-            Anime.title_romaji.ilike(search_pattern),
-            Anime.title_native.ilike(search_pattern),
-            Anime.description.ilike(search_pattern),
-            Genre.name.ilike(search_pattern),
-            Tag.name.ilike(search_pattern),
-            Studio.name.ilike(search_pattern)
+
+    # Base: match title fields, description, genres, tags, or studios
+    query = (
+        db.query(Anime)
+        .join(Anime.genres, isouter=True)
+        .join(Anime.tags, isouter=True)
+        .join(Anime.studios, isouter=True)
+        .filter(
+            or_(
+                Anime.title_english.ilike(search_pattern),
+                Anime.title_romaji.ilike(search_pattern),
+                Anime.title_native.ilike(search_pattern),
+                Anime.description.ilike(search_pattern),
+                Genre.name.ilike(search_pattern),
+                Tag.name.ilike(search_pattern),
+                Studio.name.ilike(search_pattern),
+            )
         )
-    ).distinct().limit(limit).all()
-    
-    return results
+    )
+
+    # Optional filters (same as /anime listing endpoint)
+    if genre:
+        query = query.filter(Genre.name.ilike(genre.strip()))
+    if season:
+        query = query.filter(Anime.season == season.upper())
+    if format:
+        query = query.filter(Anime.format == format.upper())
+
+    # Sorting
+    if sort == "score":
+        query = query.order_by(desc(Anime.average_score), Anime.id)
+    elif sort == "title":
+        query = query.order_by(Anime.title_english, Anime.title_romaji, Anime.id)
+    else:
+        query = query.order_by(desc(Anime.popularity), Anime.id)
+
+    return query.distinct().limit(limit).all()
 
 def run_semantic_search(db: Session, query_str: str, limit: int = 20) -> List[Dict[str, Any]]:
     query_vector = get_query_embedding(query_str)

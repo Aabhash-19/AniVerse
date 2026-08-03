@@ -361,3 +361,117 @@ def process_relations(db: Session, relations_map: Dict[int, List[Dict[str, Any]]
                     relation_type=rel_type
                 ))
     db.commit()
+
+
+def sync_airing_schedule(db: Session, days_ahead: int = 30) -> int:
+    """
+    Pull upcoming airing episodes from AniList and upsert them into the
+    Episode table so the calendar and notification system have real data.
+
+    For each schedule entry the function:
+    1. Looks up the anime in our database by AniList ID.
+    2. If not found, fetches and imports the anime automatically.
+    3. Upserts the Episode row (anime_id + episode_number are unique).
+
+    Returns the number of episode rows processed.
+    """
+    import time as _time
+    from datetime import timedelta
+    from app.anime.models import Episode
+    from app.ingestion.anilist import AniListClient
+
+    client = AniListClient()
+    now = datetime.utcnow()
+    end = now + timedelta(days=days_ahead)
+
+    start_ts = int(now.timestamp())
+    end_ts = int(end.timestamp())
+
+    page = 1
+    total = 0
+
+    try:
+        while True:
+            try:
+                response = client.fetch_airing_schedule(start_ts, end_ts, page=page, per_page=50)
+            except Exception as e:
+                logger.error(f"AniList airing schedule fetch error (page {page}): {e}")
+                break
+
+            schedules = (
+                response.get("data", {})
+                .get("Page", {})
+                .get("airingSchedules", [])
+            )
+            if not schedules:
+                break
+
+            for sched in schedules:
+                anilist_id = sched.get("mediaId")
+                episode_number = sched.get("episode")
+                airing_ts = sched.get("airingAt")
+
+                if not anilist_id or not episode_number or not airing_ts:
+                    continue
+
+                airing_dt = datetime.utcfromtimestamp(airing_ts)
+
+                # 1. Find anime in DB
+                anime = db.query(Anime).filter(Anime.anilist_id == anilist_id).first()
+
+                # 2. Auto-import if missing
+                if not anime:
+                    media_data = sched.get("media")
+                    if media_data:
+                        try:
+                            # Build a minimal payload the importer can handle
+                            anime = import_anime_payload(db, media_data)
+                            db.commit()
+                        except Exception as e:
+                            logger.warning(f"Could not auto-import anime {anilist_id}: {e}")
+                            db.rollback()
+                            continue
+
+                if not anime:
+                    continue
+
+                # 3. Upsert Episode row
+                try:
+                    existing_ep = db.query(Episode).filter(
+                        Episode.anime_id == anime.id,
+                        Episode.episode_number == episode_number,
+                    ).first()
+
+                    if existing_ep:
+                        existing_ep.airing_at = airing_dt
+                    else:
+                        ep_title = f"Episode {episode_number}"
+                        db.add(Episode(
+                            anime_id=anime.id,
+                            episode_number=episode_number,
+                            title=ep_title,
+                            airing_at=airing_dt,
+                            metadata_source="anilist",
+                        ))
+
+                    db.commit()
+                    total += 1
+                except Exception as e:
+                    logger.warning(f"Episode upsert failed anime={anilist_id} ep={episode_number}: {e}")
+                    db.rollback()
+
+            has_next = (
+                response.get("data", {})
+                .get("Page", {})
+                .get("pageInfo", {})
+                .get("hasNextPage", False)
+            )
+            if not has_next:
+                break
+            page += 1
+
+    finally:
+        client.close()
+
+    logger.info(f"Airing schedule sync complete: {total} episodes processed.")
+    return total

@@ -157,3 +157,36 @@ def get_ingestion_jobs(
     """
     jobs = db.query(IngestionJob).order_index = IngestionJob.started_at.desc()
     return db.query(IngestionJob).order_by(IngestionJob.started_at.desc()).limit(limit).all()
+
+
+@router.post("/airing/sync")
+def trigger_airing_sync(
+    background_tasks: BackgroundTasks,
+    days_ahead: int = Query(default=30, description="How many days ahead to sync airing schedules"),
+    db: Session = Depends(get_db),
+):
+    """
+    Trigger airing schedule sync from AniList.
+    Pulls upcoming episode air-times and upserts them into the Episode table
+    so the calendar and notifications work with real data.
+    Runs as a background task to avoid blocking the request.
+    """
+    from app.database import SessionLocal
+    from app.ingestion.service import sync_airing_schedule
+
+    def _run(days: int, factory):
+        _db = factory()
+        try:
+            count = sync_airing_schedule(_db, days_ahead=days)
+            logger.info(f"Airing sync background task finished: {count} episodes")
+        except Exception as e:
+            logger.error(f"Airing sync background task failed: {e}")
+        finally:
+            _db.close()
+
+    background_tasks.add_task(_run, days_ahead, SessionLocal)
+
+    return {
+        "message": f"Airing schedule sync triggered for next {days_ahead} days",
+        "status": "RUNNING",
+    }

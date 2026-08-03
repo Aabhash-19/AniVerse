@@ -24,14 +24,19 @@ router = APIRouter(tags=["AI Search & Recommendations"])
 @router.get("/search")
 def full_text_search_endpoint(
     q: str = Query(..., min_length=1),
+    genre: Optional[str] = Query(None, description="Filter by genre name"),
+    season: Optional[str] = Query(None, description="Filter by season (WINTER, SPRING, SUMMER, FALL)"),
+    format: Optional[str] = Query(None, description="Filter by format (TV, MOVIE, OVA, etc.)"),
+    sort: str = Query("popularity", description="Sort by: popularity, score, title"),
     limit: int = Query(20, ge=1, le=50),
     db: Session = Depends(get_db)
 ):
     """
     Full-text and metadata search by keyword matching titles, descriptions, genres, tags, and studios.
+    Supports the same genre/season/format/sort filters as the catalogue listing endpoint.
     """
     start_time = time.time()
-    results = run_full_text_search(db, q, limit)
+    results = run_full_text_search(db, q, limit, genre=genre, season=season, format=format, sort=sort)
     latency_ms = (time.time() - start_time) * 1000
 
     items = []
@@ -41,6 +46,7 @@ def full_text_search_endpoint(
             "romaji": anime.title_romaji,
             "native": anime.title_native
         }
+        genres_list = [g.name for g in anime.genres]
         items.append({
             "id": anime.id,
             "slug": anime.slug,
@@ -48,7 +54,10 @@ def full_text_search_endpoint(
             "cover_url": anime.cover_large_url,
             "format": anime.format.value if anime.format else None,
             "status": anime.status.value if anime.status else None,
-            "average_score": float(anime.average_score) if anime.average_score else None
+            "season": anime.season.value if anime.season else None,
+            "season_year": anime.season_year,
+            "average_score": float(anime.average_score) if anime.average_score else None,
+            "genres": genres_list
         })
 
     # Track search metrics telemetry
@@ -56,10 +65,10 @@ def full_text_search_endpoint(
         db,
         user_id=None,
         session_id=None,
-        event_type=UserEventType.SHARE,  # Using SHARE as general analytical telemetry
+        event_type=UserEventType.SHARE,
         entity_type="search_query",
         entity_id=q,
-        metadata={"results_count": len(items), "latency_ms": latency_ms, "search_type": "keyword"}
+        metadata={"results_count": len(items), "latency_ms": latency_ms, "search_type": "keyword", "filters": {"genre": genre, "season": season, "format": format}}
     )
 
     return {"total": len(items), "items": items, "latency_ms": latency_ms}

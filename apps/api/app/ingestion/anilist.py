@@ -143,6 +143,36 @@ query ($page: Int, $perPage: Int, $id: Int) {
 }
 """
 
+# ── Airing Schedule Query ──────────────────────────────────────────────────────
+AIRING_SCHEDULE_QUERY = """
+query ($start: Int, $end: Int, $page: Int, $perPage: Int) {
+  Page (page: $page, perPage: $perPage) {
+    pageInfo {
+      hasNextPage
+    }
+    airingSchedules (airingAt_greater: $start, airingAt_less: $end, sort: TIME_ASC) {
+      id
+      airingAt
+      episode
+      mediaId
+      media {
+        id
+        title { romaji english native }
+        coverImage { large medium }
+        format
+        status
+        season
+        seasonYear
+        genres
+        averageScore
+        popularity
+      }
+    }
+  }
+}
+"""
+
+
 class AniListClient:
     def __init__(self):
         self.client = httpx.Client(timeout=30.0)
@@ -164,6 +194,21 @@ class AniListClient:
         if media_list:
             return media_list[0]
         return None
+
+    def fetch_airing_schedule(
+        self, start_timestamp: int, end_timestamp: int, page: int = 1, per_page: int = 50
+    ) -> Dict[str, Any]:
+        """
+        Fetch upcoming airing episodes within a Unix timestamp window.
+        Returns AiringSchedule entries with embedded minimal media info.
+        """
+        variables = {
+            "start": start_timestamp,
+            "end": end_timestamp,
+            "page": page,
+            "perPage": per_page,
+        }
+        return self._execute_query(AIRING_SCHEDULE_QUERY, variables)
 
     def fetch_user_lists(self, username: str) -> Dict[str, Any]:
         """
