@@ -24,7 +24,7 @@
 <table align="center">
   <tr>
     <td width="35%" align="center">
-      <img src="./apps/web/public/nami-outfits/wano.png" alt="Nami Wano Outfit" width="220" />
+      <img src="./apps/web/public/nami-outfits/wano.png" alt="Nami Wano Outfit" height="230" />
     </td>
     <td width="65%">
       <h3><i>"Yosh! Welcome aboard NamiVerse!"</i> ⛵</h3>
@@ -38,6 +38,33 @@
       </ul>
     </td>
   </tr>
+</table>
+
+---
+
+## 👗 Nami Wardrobe Across the Arcs
+
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center">East Blue</th>
+      <th align="center">Alabasta</th>
+      <th align="center">Skypiea</th>
+      <th align="center">Whole Cake</th>
+      <th align="center">Wano Kuni</th>
+      <th align="center">Egghead</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center" valign="bottom"><img src="./apps/web/public/nami-outfits/east-blue-new.png" height="150" alt="East Blue" /></td>
+      <td align="center" valign="bottom"><img src="./apps/web/public/nami-outfits/alabasta.png" height="150" alt="Alabasta" /></td>
+      <td align="center" valign="bottom"><img src="./apps/web/public/nami-outfits/skypiea.png" height="150" alt="Skypiea" /></td>
+      <td align="center" valign="bottom"><img src="./apps/web/public/nami-outfits/whole-cake.png" height="150" alt="Whole Cake" /></td>
+      <td align="center" valign="bottom"><img src="./apps/web/public/nami-outfits/wano.png" height="150" alt="Wano Kuni" /></td>
+      <td align="center" valign="bottom"><img src="./apps/web/public/nami-outfits/egghead.png" height="150" alt="Egghead" /></td>
+    </tr>
+  </tbody>
 </table>
 
 ---
@@ -82,30 +109,6 @@ graph TD
 - **Custom Status Categories**: Organize shows into *Watching*, *Completed*, *Plan to Watch*, *On Hold*, and *Dropped*.
 - **Episode & Score Logging**: Track episode counts and log 1–10 scores.
 - **Data Export**: Export user data and watchlist footprints in JSON format.
-
----
-
-## 👗 Nami Wardrobe Across the Arcs
-
-NamiVerse features custom transparent artwork for Nami across major One Piece story arcs:
-
-<p align="center">
-  <img src="./apps/web/public/nami-outfits/east-blue-new.png" width="130" title="East Blue Arc" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="./apps/web/public/nami-outfits/alabasta.png" width="130" title="Alabasta Arc" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="./apps/web/public/nami-outfits/skypiea.png" width="130" title="Skypiea Arc" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="./apps/web/public/nami-outfits/whole-cake.png" width="130" title="Whole Cake Island Arc" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="./apps/web/public/nami-outfits/wano.png" width="130" title="Wano Kuni Arc" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="./apps/web/public/nami-outfits/egghead.png" width="130" title="Egghead Arc" />
-</p>
-
-<p align="center">
-  <b>East Blue &nbsp;•&nbsp; Alabasta &nbsp;•&nbsp; Skypiea &nbsp;•&nbsp; Whole Cake Island &nbsp;•&nbsp; Wano Kuni &nbsp;•&nbsp; Egghead</b>
-</p>
 
 ---
 
