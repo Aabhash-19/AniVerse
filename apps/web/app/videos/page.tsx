@@ -126,25 +126,27 @@ const NAMI_ARC_CARDS = [
     outfit: "Blue & White Striped Bikini Top + Jeans",
     era: "Pre-Timeskip",
     rating: 4,
-    color: "from-sky-900/60 to-zinc-900",
-    border: "border-sky-500/40",
-    badge: "bg-sky-500/20 text-sky-300 border-sky-500/30",
-    accent: "text-sky-400",
-    dot: "bg-sky-400",
+    // Official One Piece Wiki artwork — Arlong Park Arc outfit
+    imgUrl: "https://static.wikia.nocookie.net/onepiece/images/8/89/Nami%27s_Outfit_Arlong_Park_Arc.png/revision/latest?cb=20221209074945",
+    borderColor: "#38bdf8",
+    badgeBg: "rgba(14,165,233,0.2)",
+    badgeText: "#7dd3fc",
+    accentColor: "#38bdf8",
     snippet: "The arc that defined Nami's origin. Betrayed by Arlong, she fought alone for years to buy back her village — proving her steel before the crew even knew her full story.",
     highlight: "Saved Cocoyasi Village",
   },
   {
     arc: "Alabasta",
-    outfit: "Blue & Purple Halter Top + Pink Shroud + Long Skirt",
+    outfit: "Blue & Purple Halter + Pink Shroud + Long Skirt",
     era: "Pre-Timeskip",
     rating: 5,
-    color: "from-amber-900/60 to-zinc-900",
-    border: "border-amber-500/40",
-    badge: "bg-amber-500/20 text-amber-300 border-amber-500/30",
-    accent: "text-amber-400",
-    dot: "bg-amber-400",
-    snippet: "Nami's most iconic early arc look — a desert-inspired belly dancer outfit. She first wielded the Clima-Tact and defeated Miss Doublefinger in a standout solo fight.",
+    // Official One Piece Wiki artwork — Alabasta belly dancer outfit
+    imgUrl: "https://static.wikia.nocookie.net/onepiece/images/7/76/Nami_Second_Arabasta_Outfit.png/revision/latest?cb=20220107083944",
+    borderColor: "#f59e0b",
+    badgeBg: "rgba(245,158,11,0.2)",
+    badgeText: "#fcd34d",
+    accentColor: "#f59e0b",
+    snippet: "Nami's most iconic early look — a desert belly dancer outfit. She first wielded the Clima-Tact and defeated Miss Doublefinger in a standout solo fight.",
     highlight: "Defeated Miss Doublefinger",
   },
   {
@@ -152,51 +154,55 @@ const NAMI_ARC_CARDS = [
     outfit: "Cloud-Pattern Blue Bikini Top + Maroon Trousers",
     era: "Pre-Timeskip",
     rating: 4,
-    color: "from-cyan-900/60 to-zinc-900",
-    border: "border-cyan-500/40",
-    badge: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
-    accent: "text-cyan-400",
-    dot: "bg-cyan-400",
-    snippet: "Set against the heavens, Nami's sky island look reflected the cloud aesthetic perfectly. Her weather expertise proved vital in reading Skypiea's unpredictable climate.",
+    // Official One Piece Wiki artwork — Skypiea Arc outfit
+    imgUrl: "https://static.wikia.nocookie.net/onepiece/images/2/20/Nami%27s_Outfit_Skypiea_Arc.png/revision/latest?cb=20220406165838",
+    borderColor: "#22d3ee",
+    badgeBg: "rgba(34,211,238,0.2)",
+    badgeText: "#67e8f9",
+    accentColor: "#22d3ee",
+    snippet: "Set against the heavens, Nami's sky island look reflected the cloud aesthetic perfectly. Her navigation skills proved vital reading Skypiea's unpredictable climate.",
     highlight: "Mastered Sorcery Clima-Tact",
-  },
-  {
-    arc: "Wano",
-    outfit: "Kunoichi Kimono Attire + Ninja-inspired layered silhouette",
-    era: "Post-Timeskip",
-    rating: 5,
-    color: "from-rose-900/60 to-zinc-900",
-    border: "border-rose-500/40",
-    badge: "bg-rose-500/20 text-rose-300 border-rose-500/30",
-    accent: "text-rose-400",
-    dot: "bg-rose-400",
-    snippet: "Nami fully embraced Wano's feudal aesthetic in kimono-inspired kunoichi outfits. Zeus permanently joined her in this arc, supercharging her Clima-Tact to devastating levels.",
-    highlight: "Zeus became her permanent partner",
   },
   {
     arc: "Whole Cake Island",
     outfit: "Red & White Dirndl-style Corset Dress",
     era: "Post-Timeskip",
     rating: 4,
-    color: "from-pink-900/60 to-zinc-900",
-    border: "border-pink-500/40",
-    badge: "bg-pink-500/20 text-pink-300 border-pink-500/30",
-    accent: "text-pink-400",
-    dot: "bg-pink-400",
-    snippet: "A European storybook look for Big Mom's candy kingdom. Nami first borrowed Zeus here and demonstrated her tactical genius navigating Big Mom's treacherous territory.",
+    // Official One Piece Wiki artwork — WCI outfit
+    imgUrl: "https://static.wikia.nocookie.net/onepiece/images/2/29/Nami_5th_WCI_Outfit_Full.png/revision/latest?cb=20220106050011",
+    borderColor: "#ec4899",
+    badgeBg: "rgba(236,72,153,0.2)",
+    badgeText: "#f9a8d4",
+    accentColor: "#ec4899",
+    snippet: "A European storybook look for Big Mom's candy kingdom. Nami first borrowed Zeus here and showed her tactical genius navigating Big Mom's treacherous territory.",
     highlight: "First use of Zeus Clima-Tact",
+  },
+  {
+    arc: "Wano",
+    outfit: "Kunoichi Kimono + Ninja-inspired Layered Silhouette",
+    era: "Post-Timeskip",
+    rating: 5,
+    // Official One Piece Wiki artwork — Wano kunoichi outfit
+    imgUrl: "https://static.wikia.nocookie.net/onepiece/images/6/6f/Nami%27s_Second_Wano_Country_Arc_Outfit.png/revision/latest?cb=20220104222549",
+    borderColor: "#f43f5e",
+    badgeBg: "rgba(244,63,94,0.2)",
+    badgeText: "#fda4af",
+    accentColor: "#f43f5e",
+    snippet: "Nami embraced Wano's feudal aesthetic in kimono kunoichi outfits. Zeus permanently joined her here, supercharging her Clima-Tact attacks to devastating new levels.",
+    highlight: "Zeus became her permanent partner",
   },
   {
     arc: "Egghead",
     outfit: "White SSG Hooded Leotard Bodysuit + Pink DOM Shoes",
     era: "Post-Timeskip",
     rating: 5,
-    color: "from-violet-900/60 to-zinc-900",
-    border: "border-violet-500/40",
-    badge: "bg-violet-500/20 text-violet-300 border-violet-500/30",
-    accent: "text-violet-400",
-    dot: "bg-violet-400",
-    snippet: "Nami's sleekest look yet — a futuristic SSG bodysuit in the world of Dr. Vegapunk. Her evolved Zeus attacks reached their apex power level against the Seraphim here.",
+    // Official One Piece Wiki artwork — Egghead outfit
+    imgUrl: "https://static.wikia.nocookie.net/onepiece/images/e/ee/Nami_Egghead_Outfit.png/revision/latest?cb=20240218135820",
+    borderColor: "#a78bfa",
+    badgeBg: "rgba(167,139,250,0.2)",
+    badgeText: "#c4b5fd",
+    accentColor: "#a78bfa",
+    snippet: "Nami's sleekest look yet — a futuristic SSG bodysuit in Vegapunk's world. Her evolved Zeus attacks reached peak power level against the Seraphim on Egghead Island.",
     highlight: "Evolved Zeus reaches peak power",
   },
 ];
@@ -658,69 +664,94 @@ export default function VideosPage() {
               </div>
             </section>
 
-            {/* ─── NAMI ARC OUTFIT CARDS ───────────────────────────────────── */}
+            {/* ─── NAMI ARC OUTFIT CARDS (TCG STYLE) ───────────────────────── */}
             <section>
-              <div className="flex items-center gap-3 mb-5">
+              <div className="flex items-center gap-3 mb-6">
                 <div className="w-1 h-6 rounded-full bg-amber-500" />
                 <h3 className="text-lg font-extrabold text-white">Nami Through the Arcs — Outfit &amp; Rating Cards</h3>
                 <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">6 Arcs</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 {NAMI_ARC_CARDS.map((card) => (
                   <div
                     key={card.arc}
-                    className={`relative flex flex-col bg-gradient-to-br ${card.color} border ${card.border} rounded-2xl overflow-hidden shadow-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 group`}
+                    className="group relative flex flex-col rounded-xl overflow-hidden shadow-2xl hover:-translate-y-2 hover:shadow-amber-900/20 transition-all duration-300 cursor-default"
+                    style={{ border: `2px solid ${card.borderColor}`, background: "#0f0f11" }}
                   >
-                    {/* Card top stripe */}
-                    <div className={`h-1 w-full bg-gradient-to-r ${card.color.replace("from-", "from-").replace("/60", "").replace("to-zinc-900", "to-transparent")}`} />
+                    {/* TCG Card: Image area fills top ~65% */}
+                    <div className="relative w-full" style={{ aspectRatio: "2/3", maxHeight: "240px" }}>
+                      <img
+                        src={card.imgUrl}
+                        alt={`Nami ${card.arc} outfit`}
+                        className="w-full h-full object-contain object-top group-hover:scale-105 transition-transform duration-500"
+                        style={{ background: `linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(15,15,17,0.95) 100%)` }}
+                        onError={(e) => {
+                          // Fallback to a solid colored placeholder
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                      {/* Gradient fade at bottom of image into info panel */}
+                      <div className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none"
+                        style={{ background: "linear-gradient(to bottom, transparent, #0f0f11)" }}
+                      />
+                      {/* Era badge — top left */}
+                      <span
+                        className="absolute top-2 left-2 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border"
+                        style={{ background: card.badgeBg, color: card.badgeText, borderColor: card.borderColor }}
+                      >
+                        {card.era}
+                      </span>
+                      {/* Rating — top right */}
+                      <span
+                        className="absolute top-2 right-2 text-[10px] font-black px-1.5 py-0.5 rounded-full"
+                        style={{ background: "rgba(0,0,0,0.7)", color: card.accentColor }}
+                      >
+                        {card.rating}/5
+                      </span>
+                    </div>
 
-                    <div className="p-5 flex flex-col gap-3 flex-1">
-                      {/* Header row */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <span className={`text-[9px] font-black uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border ${card.badge}`}>
-                            {card.era}
-                          </span>
-                          <h4 className={`text-base font-extrabold mt-1.5 group-hover:${card.accent} transition-colors text-white`}>
-                            {card.arc}
-                          </h4>
-                        </div>
-                        {/* Avatar circle */}
-                        <div className={`w-9 h-9 rounded-full overflow-hidden border-2 flex-shrink-0 ${card.border}`}>
-                          <img src="/nami-wano-avatar.jpg" alt="Nami" className="w-full h-full object-cover scale-110" />
-                        </div>
+                    {/* TCG Card: Info panel at bottom */}
+                    <div className="flex flex-col gap-1.5 px-3 pt-1 pb-3">
+                      {/* Arc name */}
+                      <h4 className="text-xs font-extrabold text-white leading-tight group-hover:opacity-80 transition-opacity" style={{ color: card.accentColor }}>
+                        {card.arc}
+                      </h4>
+                      {/* Outfit label */}
+                      <p className="text-[9px] text-zinc-400 leading-snug font-medium line-clamp-2">{card.outfit}</p>
+
+                      {/* Star rating row */}
+                      <div className="flex gap-0.5 mt-0.5">
+                        {[1,2,3,4,5].map((star) => (
+                          <svg key={star} className={`w-2.5 h-2.5`} viewBox="0 0 24 24"
+                            style={{ fill: star <= card.rating ? "#f59e0b" : "#3f3f46" }}
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                          </svg>
+                        ))}
                       </div>
 
-                      {/* Outfit description */}
-                      <div className="bg-black/20 rounded-xl px-3 py-2.5">
-                        <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Outfit</div>
-                        <p className="text-[11px] text-zinc-200 font-semibold leading-snug">{card.outfit}</p>
+                      {/* Divider + highlight */}
+                      <div className="pt-1.5 mt-0.5 border-t" style={{ borderColor: `${card.borderColor}40` }}>
+                        <p className="text-[8px] font-black uppercase tracking-wider" style={{ color: card.accentColor }}>
+                          {card.highlight}
+                        </p>
                       </div>
 
-                      {/* Star rating */}
-                      <div className="flex items-center gap-1.5">
-                        <div className="flex gap-0.5">
-                          {[1,2,3,4,5].map((star) => (
-                            <svg key={star} className={`w-3.5 h-3.5 ${star <= card.rating ? "fill-amber-400 text-amber-400" : "fill-zinc-700 text-zinc-700"}`} viewBox="0 0 24 24">
-                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                            </svg>
-                          ))}
-                        </div>
-                        <span className={`text-[10px] font-black ${card.accent}`}>{card.rating}.0 / 5</span>
-                      </div>
-
-                      {/* Snippet */}
-                      <p className="text-[11px] text-zinc-400 leading-relaxed flex-1">{card.snippet}</p>
-
-                      {/* Highlight badge */}
-                      <div className="flex items-center gap-1.5 mt-auto pt-2 border-t border-white/5">
-                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${card.dot}`} />
-                        <span className="text-[10px] font-bold text-zinc-400">{card.highlight}</span>
+                      {/* CHARACTER label like the TCG card */}
+                      <div className="mt-1 pt-1 border-t text-center" style={{ borderColor: `${card.borderColor}30` }}>
+                        <span className="text-[8px] font-black uppercase tracking-[0.15em] text-zinc-500">CHARACTER</span>
+                        <p className="text-[10px] font-extrabold text-white mt-0.5">Nami</p>
+                        <p className="text-[8px] text-zinc-500">{card.arc} / Straw Hat Crew</p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+
+              {/* Expanded snippet on hover — shown below grid */}
+              <p className="text-[11px] text-zinc-500 mt-4 text-center italic">
+                Hover over a card to explore. Click any arc name in the Lore section above for full details.
+              </p>
             </section>
 
 
