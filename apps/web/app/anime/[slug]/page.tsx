@@ -5,8 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/layout/Header";
 import { fetchWithCredentials, getApiUrl } from "@/lib/auth";
-import ReviewsSection from "@/components/community/ReviewsSection";
-import DiscussionsSection from "@/components/community/DiscussionsSection";
+
 
 interface Title {
   english?: string;
@@ -57,11 +56,15 @@ interface Relation {
   relation_type: string;
   anime: {
     id: number;
+    anilist_id: number;
     slug: string;
     title: Title;
     cover_url?: string;
     format?: string;
     status?: string;
+    season?: string;
+    season_year?: number;
+    episode_count?: number;
     average_score?: number;
   };
 }
@@ -70,9 +73,11 @@ export default function AnimeDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
 
-  // Extract ID from the end of the slug segment (e.g., "attack-on-titan-16498" -> 16498)
+  // Extract ID from the end of the slug segment if numeric (e.g., "attack-on-titan-16498" -> 16498, else "love-unseen-beneath-the-clear-night-sky")
   const slugParts = slug ? slug.split("-") : [];
-  const animeId = slugParts[slugParts.length - 1];
+  const lastPart = slugParts[slugParts.length - 1];
+  const animeId = lastPart && /^\d+$/.test(lastPart) ? lastPart : slug;
+
 
   const [anime, setAnime] = useState<AnimeDetail | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -81,11 +86,14 @@ export default function AnimeDetailPage() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "characters" | "relations" | "videos" | "reviews" | "discussions" | "recommendations">("overview");
+  const [activeTab, setActiveTab] = useState<"characters" | "relations" | "videos" | "reviews" | "recommendations">("characters");
 
-  // Similar recommendations state
-  const [similarRecs, setSimilarRecs] = useState<any[]>([]);
-  const [loadingSimilar, setLoadingSimilar] = useState(false);
+  // Tab content states from AniList
+  const [anilistReviews, setAnilistReviews] = useState<any[]>([]);
+  const [anilistRecs, setAnilistRecs] = useState<any[]>([]);
+  const [anilistVideos, setAnilistVideos] = useState<{ trailer: any; streamingEpisodes: any[] }>({ trailer: null, streamingEpisodes: [] });
+  const [loadingTabContent, setLoadingTabContent] = useState(false);
+
 
   // Subscription (Follow) states
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -101,6 +109,7 @@ export default function AnimeDetailPage() {
   
   const [isFavourite, setIsFavourite] = useState<boolean>(false);
   const [togglingFavourite, setTogglingFavourite] = useState<boolean>(false);
+  const [expandedSynopsis, setExpandedSynopsis] = useState<boolean>(false);
 
   const fetchSimilar = async () => {
     if (!anime) return;
@@ -154,10 +163,43 @@ export default function AnimeDetailPage() {
   };
 
   useEffect(() => {
-    if (activeTab === "recommendations" && anime && similarRecs.length === 0) {
-      fetchSimilar();
-    }
-  }, [activeTab, anime]);
+    if (!animeId) return;
+
+    const loadTabData = async () => {
+      try {
+        if (activeTab === "reviews" && anilistReviews.length === 0) {
+          setLoadingTabContent(true);
+          const res = await fetch(getApiUrl(`/anime/${animeId}/reviews`));
+          if (res.ok) {
+            const data = await res.json();
+            setAnilistReviews(Array.isArray(data) ? data : []);
+          }
+        } else if (activeTab === "recommendations" && anilistRecs.length === 0) {
+          setLoadingTabContent(true);
+          const res = await fetch(getApiUrl(`/anime/${animeId}/anilist-recommendations`));
+          if (res.ok) {
+            const data = await res.json();
+            setAnilistRecs(Array.isArray(data) ? data : []);
+          }
+        } else if (activeTab === "videos" && !anilistVideos.trailer && anilistVideos.streamingEpisodes.length === 0) {
+          setLoadingTabContent(true);
+          const res = await fetch(getApiUrl(`/anime/${animeId}/anilist-videos`));
+          if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data === "object") setAnilistVideos(data);
+          }
+        }
+      } catch (_) {
+      } finally {
+        setLoadingTabContent(false);
+      }
+
+    };
+
+    loadTabData();
+  }, [activeTab, animeId]);
+
+
 
   const fetchWatchlistInfo = async (userId: string) => {
     try {
@@ -263,17 +305,22 @@ export default function AnimeDetailPage() {
   };
 
   useEffect(() => {
-    if (!animeId) return;
+    if (!slug) return;
 
     const fetchAllDetails = async () => {
       setLoading(true);
       setError("");
       try {
-        // Fetch Details
-        const detRes = await fetch(`http://localhost:8000/api/v1/anime/${animeId}`);
-        if (!detRes.ok) throw new Error("Anime not found in database");
+        // Fetch Details (try animeId first, fallback to full slug)
+        let detRes = await fetch(getApiUrl(`/anime/${animeId || slug}`));
+        if (!detRes.ok && slug) {
+          detRes = await fetch(getApiUrl(`/anime/${slug}`));
+        }
+        if (!detRes.ok) throw new Error("Could not load anime metadata. Please try again.");
         const detData = await detRes.json();
         setAnime(detData);
+
+        const realId = detData.id || animeId;
 
         // Check user session
         const authRes = await fetchWithCredentials(getApiUrl("/auth/me"));
@@ -286,35 +333,36 @@ export default function AnimeDetailPage() {
         }
 
         // Fetch Characters
-        const charRes = await fetch(`http://localhost:8000/api/v1/anime/${animeId}/characters`);
+        const charRes = await fetch(getApiUrl(`/anime/${realId}/characters`));
         if (charRes.ok) {
           const charData = await charRes.json();
           setCharacters(charData);
         }
 
         // Fetch Relations
-        const relRes = await fetch(`http://localhost:8000/api/v1/anime/${animeId}/relations`);
+        const relRes = await fetch(getApiUrl(`/anime/${realId}/relations`));
         if (relRes.ok) {
           const relData = await relRes.json();
           setRelations(relData);
         }
 
         // Fetch Videos
-        const vidRes = await fetch(`http://localhost:8000/api/v1/anime/${animeId}/videos`);
+        const vidRes = await fetch(getApiUrl(`/anime/${realId}/videos`));
         if (vidRes.ok) {
           const vidData = await vidRes.json();
           setVideos(vidData);
         }
 
       } catch (err: any) {
-        setError(err.message || "An error occurred");
+        setError(err.message || "An error occurred loading entry details.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchAllDetails();
-  }, [animeId]);
+  }, [slug, animeId]);
+
 
   if (loading) {
     return (
@@ -337,8 +385,9 @@ export default function AnimeDetailPage() {
     );
   }
 
-  const displayTitle = anime.title.english || anime.title.romaji || anime.title.native;
-  const secondaryTitle = anime.title.romaji !== displayTitle ? anime.title.romaji : anime.title.native;
+  const displayTitle = anime ? (anime.title.english || anime.title.romaji || anime.title.native) : "";
+  const secondaryTitle = anime ? (anime.title.romaji !== displayTitle ? anime.title.romaji : anime.title.native) : "";
+  const cleanSynopsisText = anime ? (anime.description || "").replace(/<[^>]*>?/gm, "").trim() : "";
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-purple-500 selection:text-white relative">
@@ -350,6 +399,7 @@ export default function AnimeDetailPage() {
           <img
             src={anime.banner_url}
             alt={displayTitle}
+            referrerPolicy="no-referrer"
             className="w-full h-full object-cover opacity-60"
           />
         ) : (
@@ -363,11 +413,12 @@ export default function AnimeDetailPage() {
         <div className="flex flex-col md:flex-row gap-8 items-start">
           {/* Left Column: Cover & Watchlist */}
           <div className="flex flex-col gap-4 w-[180px] md:w-[240px] flex-shrink-0 mx-auto md:mx-0">
-            <div className="w-full aspect-[3/4] bg-zinc-950 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800/80">
+            <div className="w-full aspect-[3/4] bg-zinc-950 rounded-2xl overflow-hidden shadow-2xl">
               {anime.cover_large_url ? (
                 <img
                   src={anime.cover_large_url}
                   alt={displayTitle}
+                  referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -376,7 +427,7 @@ export default function AnimeDetailPage() {
             </div>
 
             {/* Watchlist Interaction Widget */}
-            <div className="bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md rounded-2xl p-4 flex flex-col gap-4 text-sm shadow-xl">
+            <div className="bg-zinc-900/30 border border-zinc-900/40 backdrop-blur-md rounded-2xl p-4 flex flex-col gap-4 text-sm shadow-xl">
               <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">YOUR WATCHLIST</span>
               {user ? (
                 <div className="flex flex-col gap-3">
@@ -479,13 +530,14 @@ export default function AnimeDetailPage() {
                 <span className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 font-semibold">{anime.format}</span>
               )}
               {anime.status && (
-                <span className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 font-semibold">{anime.status}</span>
+                <span className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 font-semibold">{anime.status.replace(/_/g, " ")}</span>
               )}
+
               {anime.season_year && (
                 <span className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 font-semibold">{anime.season} {anime.season_year}</span>
               )}
               {anime.average_score && (
-                <span className="px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 font-bold">⭐ {anime.average_score}%</span>
+                <span className="px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 font-bold">{anime.average_score}% Score</span>
               )}
             </div>
 
@@ -518,7 +570,7 @@ export default function AnimeDetailPage() {
                       : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
-                  <span>{isSubscribed ? "✓ Following" : "🔔 Follow"}</span>
+                  <span>{isSubscribed ? "✓ Following" : "Follow"}</span>
                 </button>
               )}
 
@@ -536,12 +588,44 @@ export default function AnimeDetailPage() {
                 </a>
               )}
             </div>
+
+            {/* Synopsis Banner Block placed directly in Hero Header space */}
+            {cleanSynopsisText && (
+              <div className="mt-6 space-y-2 text-left">
+                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Synopsis</h3>
+                <div className="bg-zinc-900/30 backdrop-blur-md rounded-2xl p-4 md:p-5 text-xs md:text-sm text-zinc-300 leading-relaxed shadow-xl max-w-4xl whitespace-pre-line">
+                  {cleanSynopsisText}
+                </div>
+              </div>
+            )}
+
+            {/* Studio & Additional Metadata Pills */}
+            <div className="mt-4 flex flex-wrap gap-3 text-xs text-left">
+              {anime.studios && anime.studios.length > 0 && (
+                <div className="bg-zinc-900/50 px-3.5 py-2 rounded-xl flex flex-col justify-center">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Studio</span>
+                  <span className="text-zinc-200 font-extrabold">{anime.studios.slice(0, 2).join(", ")}</span>
+                </div>
+              )}
+              {anime.source_material && (
+                <div className="bg-zinc-900/50 px-3.5 py-2 rounded-xl flex flex-col justify-center">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Source</span>
+                  <span className="text-zinc-200 font-extrabold">{anime.source_material}</span>
+                </div>
+              )}
+              {anime.episode_count && (
+                <div className="bg-zinc-900/50 px-3.5 py-2 rounded-xl flex flex-col justify-center">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Episodes</span>
+                  <span className="text-zinc-200 font-extrabold">{anime.episode_count} eps ({anime.episode_duration || "24"}m)</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Tab Selection */}
         <div className="mt-12 border-b border-zinc-900 flex gap-6 text-sm overflow-x-auto whitespace-nowrap">
-          {["overview", "characters", "relations", "videos", "reviews", "discussions", "recommendations"].map((t) => (
+          {["characters", "relations", "videos", "reviews", "recommendations"].map((t) => (
             <button
               key={t}
               onClick={() => setActiveTab(t as any)}
@@ -551,6 +635,7 @@ export default function AnimeDetailPage() {
                   : "border-transparent text-zinc-400 hover:text-zinc-200"
               }`}
             >
+
               {t}
             </button>
           ))}
@@ -558,82 +643,24 @@ export default function AnimeDetailPage() {
 
         {/* Content Tabs */}
         <div className="py-10">
-          {/* Tab 1: Overview */}
-          {activeTab === "overview" && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-              {/* Left Column: Synopsis */}
-              <div className="lg:col-span-8 flex flex-col gap-6">
-                <div>
-                  <h2 className="text-xl font-bold mb-3 text-zinc-300">Synopsis</h2>
-                  <p className="text-zinc-400 leading-relaxed text-sm whitespace-pre-line">
-                    {anime.description || "No synopsis available."}
-                  </p>
-                </div>
-              </div>
-
-              {/* Right Column: Metadata Panel */}
-              <div className="lg:col-span-4 bg-zinc-900/20 border border-zinc-900/80 rounded-2xl p-6 flex flex-col gap-5 text-sm h-fit">
-                <div>
-                  <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1">Studios</span>
-                  <span className="text-zinc-300 font-medium">{anime.studios.join(", ") || "None"}</span>
-                </div>
-                {anime.source_material && (
-                  <div>
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1">Source Material</span>
-                    <span className="text-zinc-300 font-medium">{anime.source_material}</span>
-                  </div>
-                )}
-                {anime.episode_count && (
-                  <div>
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1">Episodes</span>
-                    <span className="text-zinc-300 font-medium">{anime.episode_count} episodes ({anime.episode_duration || "Unknown"} mins)</span>
-                  </div>
-                )}
-                {anime.genres.length > 0 && (
-                  <div>
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Genres</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {anime.genres.map((g) => (
-                        <span key={g} className="text-xs px-2.5 py-1 rounded-full bg-zinc-950 border border-zinc-900 text-zinc-400">
-                          {g}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {anime.tags.length > 0 && (
-                  <div>
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Tags</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {anime.tags.slice(0, 8).map((t) => (
-                        <span key={t} className="text-[11px] px-2 py-0.5 rounded-md bg-purple-950/20 border border-purple-900/10 text-purple-400">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Tab 2: Characters */}
           {activeTab === "characters" && (
             <div>
               {characters.length === 0 ? (
-                <div className="text-center py-10 text-zinc-500 text-sm">No character maps found for this anime.</div>
+                <div className="text-center py-10 text-zinc-500 text-sm">No mapped character log entries found.</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {characters.map((char) => (
                     <div
                       key={char.id}
-                      className="flex justify-between bg-zinc-900/30 border border-zinc-900 rounded-xl overflow-hidden p-3.5 hover:border-zinc-800 transition-all duration-300"
+                      className="flex items-center justify-between bg-zinc-900/40 border border-zinc-900 rounded-xl p-3 backdrop-blur-sm"
                     >
                       {/* Character Info */}
                       <div className="flex gap-3">
                         <div className="w-[60px] aspect-[3/4] rounded-lg overflow-hidden bg-zinc-950 flex-shrink-0">
                           {char.image_url ? (
-                            <img src={char.image_url} alt={char.first_name} className="w-full h-full object-cover" />
+                            <img src={char.image_url} alt={char.first_name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full bg-zinc-900" />
                           )}
@@ -656,7 +683,7 @@ export default function AnimeDetailPage() {
                           </div>
                           <div className="w-[60px] aspect-[3/4] rounded-lg overflow-hidden bg-zinc-950 flex-shrink-0">
                             {char.voice_actor_image ? (
-                              <img src={char.voice_actor_image} alt={char.voice_actor_name} className="w-full h-full object-cover" />
+                              <img src={char.voice_actor_image} alt={char.voice_actor_name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                             ) : (
                               <div className="w-full h-full bg-zinc-900" />
                             )}
@@ -671,43 +698,384 @@ export default function AnimeDetailPage() {
           )}
 
           {/* Tab 3: Relations */}
-          {activeTab === "relations" && (
+          {activeTab === "relations" && (() => {
+            const PRIORITY = new Set(["PREQUEL", "SEQUEL", "PARENT"]);
+            const LABEL_MAP: Record<string, string> = {
+              PREQUEL: "Prequel",
+              SEQUEL: "Sequel",
+              PARENT: "Parent Story",
+              SIDE_STORY: "Side Story",
+              SPIN_OFF: "Spin-off",
+              ALTERNATIVE: "Alternative Version",
+              CHARACTER: "Character Crossover",
+              ADAPTATION: "Adaptation",
+              COMPILATION: "Compilation",
+              CONTAINS: "Contains",
+              SUMMARY: "Summary",
+              SOURCE: "Source Material",
+              OTHER: "Other",
+            };
+            const COLOR_MAP: Record<string, string> = {
+              PREQUEL: "text-violet-400",
+              SEQUEL: "text-indigo-400",
+              PARENT: "text-blue-400",
+              SIDE_STORY: "text-emerald-400",
+              SPIN_OFF: "text-teal-400",
+              ALTERNATIVE: "text-sky-400",
+              CHARACTER: "text-pink-400",
+              ADAPTATION: "text-orange-400",
+              COMPILATION: "text-amber-400",
+              CONTAINS: "text-yellow-400",
+              SUMMARY: "text-lime-400",
+              SOURCE: "text-rose-400",
+              OTHER: "text-zinc-400",
+            };
+
+            const featured = relations.filter(r => PRIORITY.has(r.relation_type));
+            const rest = relations.filter(r => !PRIORITY.has(r.relation_type));
+
+            // Group the rest by relation type
+            const grouped: Record<string, typeof rest> = {};
+            for (const rel of rest) {
+              const key = rel.relation_type;
+              if (!grouped[key]) grouped[key] = [];
+              grouped[key].push(rel);
+            }
+
+            const renderCard = (rel: typeof relations[0], idx: number, large = false) => {
+              const relTitle = rel.anime.title.english || rel.anime.title.romaji || rel.anime.title.native || "Unknown";
+              // If local DB entry exists (id != anilist_id means it's local), link locally
+              const isLocal = rel.anime.id !== rel.anime.anilist_id;
+              const href = isLocal
+                ? `/anime/${rel.anime.slug}-${rel.anime.id}`
+                : `https://anilist.co/anime/${rel.anime.anilist_id}`;
+              const target = isLocal ? undefined : "_blank";
+              const labelColor = COLOR_MAP[rel.relation_type] || "text-zinc-400";
+              const labelText = LABEL_MAP[rel.relation_type] || rel.relation_type.replace("_", " ");
+
+              if (large) {
+                return (
+                  <a
+                    key={idx}
+                    href={href}
+                    target={target}
+                    rel={target ? "noopener noreferrer" : undefined}
+                    className="group flex gap-5 bg-zinc-900/40 border border-zinc-800/60 rounded-2xl p-4 hover:border-zinc-700 hover:-translate-y-0.5 transition-all duration-300 shadow-lg"
+                  >
+                    <div className="w-[80px] aspect-[3/4] rounded-xl overflow-hidden bg-zinc-950 flex-shrink-0 shadow-xl">
+                      {rel.anime.cover_url ? (
+                        <img src={rel.anime.cover_url} alt={relTitle} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
+                          <span className="text-zinc-700 text-xs text-center px-2">{relTitle.slice(0, 20)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col justify-center gap-1.5">
+                      <span className={`text-[11px] uppercase font-extrabold tracking-widest ${labelColor}`}>{labelText}</span>
+                      <span className="text-base font-bold text-zinc-100 line-clamp-2 group-hover:text-purple-300 transition-colors leading-snug">{relTitle}</span>
+                      <div className="flex items-center gap-2 text-xs text-zinc-500 flex-wrap">
+                        {rel.anime.format && <span className="bg-zinc-800 px-2 py-0.5 rounded-full font-medium">{rel.anime.format}</span>}
+                        {rel.anime.season_year && <span>{rel.anime.season_year}</span>}
+                        {rel.anime.status && <span className="bg-zinc-800/50 px-2 py-0.5 rounded-full">{rel.anime.status.replace("_", " ")}</span>}
+                        {rel.anime.average_score && (
+                          <span className="text-yellow-400 font-semibold">{rel.anime.average_score}%</span>
+                        )}
+                      </div>
+                    </div>
+                  </a>
+                );
+              }
+
+              return (
+                <a
+                  key={idx}
+                  href={href}
+                  target={target}
+                  rel={target ? "noopener noreferrer" : undefined}
+                  className="group flex gap-3.5 bg-zinc-900/25 border border-zinc-900/70 rounded-xl p-3 hover:border-zinc-800 hover:-translate-y-0.5 transition-all duration-300"
+                >
+                  <div className="w-[52px] aspect-[3/4] rounded-lg overflow-hidden bg-zinc-950 flex-shrink-0">
+                    {rel.anime.cover_url ? (
+                      <img src={rel.anime.cover_url} alt={relTitle} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
+                        <span className="text-zinc-700 text-[9px] text-center px-1">{relTitle.slice(0, 15)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col justify-center gap-0.5">
+                    <span className="text-sm font-semibold text-zinc-200 line-clamp-2 group-hover:text-purple-400 transition-colors leading-snug">{relTitle}</span>
+                    <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 flex-wrap">
+                      {rel.anime.format && <span>{rel.anime.format}</span>}
+                      {rel.anime.season_year && <><span className="w-0.5 h-0.5 rounded-full bg-zinc-700" /><span>{rel.anime.season_year}</span></>}
+                      {rel.anime.average_score && <><span className="w-0.5 h-0.5 rounded-full bg-zinc-700" /><span className="text-yellow-400 font-medium">{rel.anime.average_score}%</span></>}
+                    </div>
+                  </div>
+                </a>
+              );
+            };
+
+            return (
+              <div className="space-y-8">
+                {relations.length === 0 && (
+                  <div className="text-center py-10 text-zinc-500 text-sm">No related titles found.</div>
+                )}
+
+                {/* Featured: Prequels, Sequels, Parent */}
+                {featured.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">Main Timeline</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {featured.map((rel, idx) => renderCard(rel, idx, true))}
+                    </div>
+                  </div>
+                )}
+
+                {/* All other groups */}
+                {Object.entries(grouped).map(([type, items]) => (
+                  <div key={type} className="space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">
+                      {LABEL_MAP[type] || type.replace("_", " ")}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      {items.map((rel, idx) => renderCard(rel, idx, false))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Tab 4: Videos */}
+          {activeTab === "videos" && (
             <div>
-              {relations.length === 0 ? (
-                <div className="text-center py-10 text-zinc-500 text-sm">No mapped relation logs found.</div>
+              {loadingTabContent ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : !anilistVideos.trailer && (!anilistVideos.streamingEpisodes || anilistVideos.streamingEpisodes.length === 0) && videos.length === 0 ? (
+                <div className="text-center py-10 text-zinc-500 text-sm">No official videos or trailers found for this anime.</div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {relations.map((rel, idx) => {
-                    const relTitle = rel.anime.title.english || rel.anime.title.romaji || rel.anime.title.native;
+                <div className="space-y-8">
+                  {/* Official Trailer & Promotional Videos */}
+                  {anilistVideos.trailer && anilistVideos.trailer.site === "youtube" && (
+                    <div>
+                      <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Official Trailer</h3>
+                      <div
+                        onClick={() => setActiveVideoId(anilistVideos.trailer.id)}
+                        className="max-w-md cursor-pointer group flex flex-col bg-zinc-900/30 rounded-xl overflow-hidden hover:bg-zinc-900/60 transition-all duration-300 shadow-md"
+                      >
+                        <div className="aspect-video w-full bg-zinc-950 relative overflow-hidden">
+                          <img
+                            src={anilistVideos.trailer.thumbnail || `https://img.youtube.com/vi/${anilistVideos.trailer.id}/hqdefault.jpg`}
+                            alt="Official Trailer"
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                          <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/10 transition-all">
+                            <div className="w-11 h-11 rounded-full bg-purple-600 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                              <svg className="w-5 h-5 fill-current ml-0.5" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            </div>
+                          </div>
+                          <span className="absolute bottom-2 right-2 text-[10px] bg-black/80 px-2 py-0.5 rounded font-bold text-zinc-300">
+                            YouTube PV
+                          </span>
+                        </div>
+                        <div className="p-3 flex flex-col gap-0.5">
+                          <span className="text-xs font-bold text-zinc-200 group-hover:text-purple-400 transition-colors">
+                            Official Trailer • {anime?.title?.english || anime?.title?.romaji}
+                          </span>
+                          <span className="text-[11px] text-zinc-500">Tap to play inside AniVerse</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Episodes, Clips & Official YouTube Content */}
+                  {((anilistVideos.streamingEpisodes && anilistVideos.streamingEpisodes.length > 0) || videos.length > 0) && (
+                    <div>
+                      <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Official Episodes & Clips</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {anilistVideos.streamingEpisodes.map((ep: any, idx: number) => (
+                          <a
+                            key={idx}
+                            href={ep.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex flex-col bg-zinc-900/20 rounded-xl overflow-hidden hover:bg-zinc-900/50 transition-all"
+                          >
+                            <div className="aspect-video w-full bg-zinc-950 relative overflow-hidden">
+                              {ep.thumbnail ? (
+                                <img src={ep.thumbnail} alt={ep.title} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs font-semibold">Preview</div>
+                              )}
+                              <span className="absolute bottom-2 right-2 text-[10px] bg-black/80 text-zinc-300 px-2 py-0.5 rounded font-bold">
+                                {ep.site || "Stream"}
+                              </span>
+                            </div>
+                            <div className="p-2.5">
+                              <span className="text-xs font-bold text-zinc-300 line-clamp-1 group-hover:text-purple-400 transition-colors">
+                                {ep.title}
+                              </span>
+                            </div>
+                          </a>
+                        ))}
+                        {videos.map((vid: any) => (
+                          <div
+                            key={vid.id}
+                            onClick={() => setActiveVideoId(vid.provider_video_id)}
+                            className="cursor-pointer group flex flex-col bg-zinc-900/20 rounded-xl overflow-hidden hover:bg-zinc-900/50 transition-all"
+                          >
+                            <div className="aspect-video w-full bg-zinc-950 relative overflow-hidden">
+                              <img
+                                src={vid.thumbnail_url || `https://img.youtube.com/vi/${vid.provider_video_id}/0.jpg`}
+                                alt={vid.title}
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              />
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white shadow-lg">
+                                  <svg className="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="p-2.5">
+                              <span className="text-xs font-bold text-zinc-300 line-clamp-1 group-hover:text-purple-400 transition-colors">
+                                {vid.title}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* YouTube Search Link for More Official PVs */}
+                  {anime && (
+                    <div className="pt-2">
+                      <a
+                        href={`https://www.youtube.com/results?search_query=${encodeURIComponent((anime.title.english || anime.title.romaji) + " official PV trailer")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900/40 hover:bg-zinc-900 text-xs font-semibold text-zinc-400 hover:text-purple-400 rounded-xl transition-all"
+                      >
+                        <svg className="w-4 h-4 fill-current text-red-500" viewBox="0 0 24 24">
+                          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                        </svg>
+                        Search More Official PVs & Teasers on YouTube
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab 5: Reviews */}
+          {activeTab === "reviews" && (
+            <div>
+              {loadingTabContent ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : anilistReviews.length === 0 ? (
+                <div className="text-center py-12 text-zinc-500 text-sm">No community reviews found for this title yet.</div>
+              ) : (
+                <div className="space-y-6">
+                  {anilistReviews.map((rev: any) => (
+                    <div key={rev.id} className="bg-zinc-900/30 border border-zinc-900 rounded-2xl p-6 flex flex-col gap-4 hover:border-zinc-850 transition-all">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {rev.user?.avatar?.medium ? (
+                            <img src={rev.user.avatar.medium} alt={rev.user.name} className="w-10 h-10 rounded-full object-cover border border-zinc-800" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-sm">
+                              {rev.user?.name?.[0] || "?"}
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-sm font-bold text-zinc-200">{rev.user?.name || "Community Member"}</div>
+                            <div className="text-[11px] text-zinc-500">
+                              {new Date(rev.createdAt * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </div>
+                          </div>
+                        </div>
+                        {rev.score && (
+                          <div className="px-3 py-1 bg-purple-950/60 border border-purple-800/50 rounded-xl text-xs font-black text-purple-300">
+                            {rev.score} / 100
+                          </div>
+                        )}
+                      </div>
+                      {rev.summary && (
+                        <h4 className="text-sm font-bold text-zinc-200 italic">"{rev.summary}"</h4>
+                      )}
+                      <p className="text-xs text-zinc-400 leading-relaxed whitespace-pre-line line-clamp-6">
+                        {rev.body}
+                      </p>
+                      {rev.ratingAmount > 0 && (
+                        <div className="text-[11px] text-zinc-500 font-medium pt-2 border-t border-zinc-900/60">
+                          {rev.rating} of {rev.ratingAmount} members found this review helpful
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab 6: Recommendations */}
+          {activeTab === "recommendations" && (
+            <div>
+              {loadingTabContent ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : anilistRecs.length === 0 ? (
+                <div className="text-center py-12 text-zinc-500 text-sm">No community recommendations available for this title.</div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+                  {anilistRecs.map((item: any) => {
+                    const rec = item.mediaRecommendation;
+                    if (!rec) return null;
+                    const recTitle = rec.title.english || rec.title.romaji || rec.title.native;
+                    const cover = rec.coverImage?.large || rec.coverImage?.medium;
+                    const rawSlug = (rec.title.romaji || rec.title.english || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || `anime-${rec.id}`;
+
                     return (
                       <Link
-                        key={idx}
-                        href={`/anime/${rel.anime.slug}-${rel.anime.id}`}
-                        className="group flex gap-4 bg-zinc-900/30 border border-zinc-900 rounded-xl p-3.5 hover:border-zinc-800 hover:-translate-y-0.5 transition-all duration-300"
+                        key={item.id}
+                        href={`/anime/${rawSlug}-${rec.id}`}
+                        className="group bg-zinc-900/20 border border-zinc-900 hover:border-purple-500/50 rounded-2xl p-3 flex flex-col justify-between gap-3 transition-all duration-300"
                       >
-                        {/* Cover image */}
-                        <div className="w-[60px] aspect-[3/4] rounded-lg overflow-hidden bg-zinc-950 flex-shrink-0">
-                          {rel.anime.cover_url ? (
-                            <img src={rel.anime.cover_url} alt={relTitle} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full bg-zinc-900" />
-                          )}
-                        </div>
-                        <div className="flex flex-col justify-center">
-                          <span className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider mb-1">
-                            {rel.relation_type}
-                          </span>
-                          <span className="text-sm font-semibold text-zinc-200 line-clamp-2 group-hover:text-purple-400 transition-colors">
-                            {relTitle}
-                          </span>
-                          <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
-                            <span>{rel.anime.format || "Unknown"}</span>
-                            {rel.anime.average_score && (
-                              <>
-                                <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                                <span className="text-yellow-500 font-medium">⭐ {rel.anime.average_score}%</span>
-                              </>
+                        <div className="space-y-2.5">
+                          <div className="aspect-[3/4] rounded-xl overflow-hidden bg-zinc-950 relative">
+                            {cover ? (
+                              <img src={cover} alt={recTitle} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs">No Cover</div>
                             )}
+                            {item.rating > 0 && (
+                              <span className="absolute top-2 right-2 px-2 py-0.5 rounded-lg bg-purple-600/90 backdrop-blur-md text-[10px] font-black text-white shadow-md">
+                                +{item.rating} votes
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-zinc-200 group-hover:text-purple-400 transition-colors line-clamp-1">
+                              {recTitle}
+                            </h4>
+                            <div className="flex items-center gap-2 text-[10px] text-zinc-500 mt-1 font-medium">
+                              {rec.format && <span>{rec.format}</span>}
+                              {rec.seasonYear && <span>• {rec.seasonYear}</span>}
+                              {rec.averageScore && <span className="text-purple-400 font-bold">• {rec.averageScore}%</span>}
+                            </div>
                           </div>
                         </div>
                       </Link>
@@ -718,123 +1086,6 @@ export default function AnimeDetailPage() {
             </div>
           )}
 
-          {/* Tab 4: Videos */}
-          {activeTab === "videos" && (
-            <div>
-              {videos.length === 0 ? (
-                <div className="text-center py-10 text-zinc-500 text-sm">No official videos synced for this anime yet.</div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {videos.map((vid) => (
-                    <div
-                      key={vid.id}
-                      onClick={() => setActiveVideoId(vid.provider_video_id)}
-                      className="cursor-pointer group flex flex-col bg-zinc-900/30 border border-zinc-900 rounded-xl overflow-hidden hover:border-zinc-800 transition-all duration-300 shadow-lg"
-                    >
-                      <div className="aspect-video w-full bg-zinc-950 relative overflow-hidden">
-                        <img
-                          src={vid.thumbnail_url || `https://img.youtube.com/vi/${vid.provider_video_id}/0.jpg`}
-                          alt={vid.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        {/* Play button overlay */}
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-900/50">
-                            <svg className="w-6 h-6 fill-current ml-0.5" viewBox="0 0 24 24">
-                              <path d="M8 5v14l11-7z" />
-                            </svg>
-                          </div>
-                        </div>
-                        <span className="absolute bottom-2 right-2 text-[10px] bg-black/75 px-1.5 py-0.5 rounded font-bold tracking-wide">
-                          {vid.video_type}
-                        </span>
-                      </div>
-                      <div className="p-3.5 flex flex-col gap-1">
-                        <span className="text-sm font-semibold text-zinc-200 line-clamp-1 group-hover:text-purple-400 transition-colors">
-                          {vid.title}
-                        </span>
-                        <span className="text-[11px] text-zinc-500">Official Embed • YouTube</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Tab 5: Reviews */}
-          {activeTab === "reviews" && (
-            <ReviewsSection animeId={anime.id} currentUser={user} />
-          )}
-
-          {/* Tab 6: Discussions */}
-          {activeTab === "discussions" && (
-            <DiscussionsSection animeId={anime.id} currentUser={user} />
-          )}
-
-          {/* Tab 7: Recommendations */}
-          {activeTab === "recommendations" && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-lg font-bold text-zinc-250">Similar Titles</h2>
-                <p className="text-xs text-zinc-500 mt-1">AI vector-similarity matches based on themes, synopsis, and details.</p>
-              </div>
-
-              {loadingSimilar ? (
-                <div className="flex justify-center py-10">
-                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : similarRecs.length === 0 ? (
-                <div className="bg-zinc-900/10 border border-zinc-900 rounded-xl p-8 text-center text-zinc-500">
-                  No similar recommendations found for this title.
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {similarRecs.map((rec) => {
-                    const simTitle = rec.title.english || rec.title.romaji || rec.title.native;
-                    return (
-                      <div key={rec.id} className="bg-zinc-900/20 border border-zinc-900 rounded-xl p-3 flex flex-col justify-between space-y-3 group hover:border-zinc-800 transition-all">
-                        <Link href={`/anime/${rec.slug}-${rec.id}`} className="space-y-2">
-                          <div className="aspect-[3/4] rounded-lg overflow-hidden bg-zinc-950 relative">
-                            {rec.cover_url ? (
-                              <img src={rec.cover_url} alt={simTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs">No Cover</div>
-                            )}
-                            <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-purple-600 text-[10px] font-black text-white">
-                              {(rec.score * 100).toFixed(0)}% Similar
-                            </span>
-                          </div>
-                          <p className="text-xs font-bold text-zinc-300 group-hover:text-purple-400 transition-colors line-clamp-1">{simTitle}</p>
-                        </Link>
-
-                        {rec.reasons.length > 0 && (
-                          <p className="text-[10px] text-zinc-500 leading-tight">✓ {rec.reasons[0]}</p>
-                        )}
-
-                        {user && (
-                          <div className="flex gap-2 pt-1.5 border-t border-zinc-900">
-                            <button
-                              onClick={() => handleRecFeedback(rec.id, "INTERESTED")}
-                              className="text-[9px] font-bold text-zinc-400 hover:text-green-400 bg-zinc-950 hover:bg-green-500/10 border border-zinc-850 py-1 rounded flex-1 text-center"
-                            >
-                              👍 Yes
-                            </button>
-                            <button
-                              onClick={() => handleRecFeedback(rec.id, "NOT_INTERESTED")}
-                              className="text-[9px] font-bold text-zinc-400 hover:text-red-400 bg-zinc-950 hover:bg-red-500/10 border border-zinc-850 py-1 rounded flex-1 text-center"
-                            >
-                              👎 No
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </main>
@@ -843,15 +1094,15 @@ export default function AnimeDetailPage() {
       {activeVideoId && (
         <div 
           onClick={() => setActiveVideoId(null)}
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 md:p-8"
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 md:p-6"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-4xl aspect-video bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl relative"
+            className="w-full max-w-3xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative"
           >
             <button
               onClick={() => setActiveVideoId(null)}
-              className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-black/60 hover:bg-zinc-800/80 text-zinc-300 hover:text-white flex items-center justify-center text-xl font-bold transition-all border border-zinc-800"
+              className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/80 hover:bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-lg font-bold transition-all"
             >
               ×
             </button>
@@ -869,3 +1120,4 @@ export default function AnimeDetailPage() {
     </div>
   );
 }
+

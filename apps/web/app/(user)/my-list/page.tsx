@@ -58,30 +58,125 @@ export default function MyListPage() {
   const [blockedUsers, setBlockedUsers] = useState<{ blocked_id: string; username: string }[]>([]);
   const [unblocking, setUnblocking] = useState<string | null>(null);
 
+  // Streaming progress modal state
+  const [importProgress, setImportProgress] = useState<{
+    showModal: boolean;
+    username: string;
+    total: number;
+    current: number;
+    currentTitle: string;
+    currentCover?: string;
+    currentStatus?: string;
+    isComplete: boolean;
+    errorMessage?: string;
+    importedCount: number;
+    logItems: Array<{ id: string; title: string; status: string; progress?: number; score?: number }>;
+  }>({
+    showModal: false,
+    username: "",
+    total: 0,
+    current: 0,
+    currentTitle: "",
+    isComplete: false,
+    importedCount: 0,
+    logItems: [],
+  });
+
   const handleImportAniList = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!anilistUsername.trim()) return;
-    setImporting(true);
+    const uname = anilistUsername.trim();
+    if (!uname) return;
+
+    setImportProgress({
+      showModal: true,
+      username: uname,
+      total: 0,
+      current: 0,
+      currentTitle: "Connecting to AniList...",
+      isComplete: false,
+      importedCount: 0,
+      logItems: [],
+    });
+
     try {
-      const res = await fetchWithCredentials(getApiUrl("/me/lists/import/anilist"), {
-        method: "POST",
-        body: JSON.stringify({ username: anilistUsername.trim() }),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        alert(`Successfully synced ${result.imported_count} list entries from AniList!`);
-        setAnilistUsername("");
-        fetchWatchlist();
-      } else {
-        const err = await res.json();
-        alert(err.detail || "AniList profile import failed.");
+      const response = await fetchWithCredentials(
+        getApiUrl(`/me/lists/import/anilist/stream?username=${encodeURIComponent(uname)}`)
+      );
+
+      if (!response.ok) {
+        let errMessage = "AniList import failed";
+        try {
+          const errData = await response.json();
+          errMessage = errData.detail || errMessage;
+        } catch (_) {}
+        setImportProgress((prev) => ({ ...prev, errorMessage: errMessage }));
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            const cleanLine = line.trim();
+            if (cleanLine.startsWith("data: ")) {
+              try {
+                const payload = JSON.parse(cleanLine.replace("data: ", ""));
+                if (payload.type === "start") {
+                  setImportProgress((prev) => ({
+                    ...prev,
+                    total: payload.total,
+                    currentTitle: `Fetched ${payload.total} items...`,
+                  }));
+                } else if (payload.type === "progress") {
+                  setImportProgress((prev) => ({
+                    ...prev,
+                    current: payload.current,
+                    total: payload.total,
+                    currentTitle: payload.title,
+                    currentCover: payload.cover_url,
+                    currentStatus: payload.status,
+                    logItems: [
+                      {
+                        id: `${payload.current}-${payload.title}`,
+                        title: payload.title,
+                        status: payload.status,
+                        progress: payload.progress,
+                        score: payload.score,
+                      },
+                      ...prev.logItems.slice(0, 24),
+                    ],
+                  }));
+                } else if (payload.type === "complete") {
+                  setImportProgress((prev) => ({
+                    ...prev,
+                    current: payload.total,
+                    isComplete: true,
+                    importedCount: payload.imported_count,
+                  }));
+                  setAnilistUsername("");
+                  fetchWatchlist();
+                } else if (payload.type === "error") {
+                  setImportProgress((prev) => ({ ...prev, errorMessage: payload.message }));
+                }
+              } catch (_) {}
+            }
+          }
+        }
       }
     } catch (err: any) {
-      alert("Error importing AniList watchlist: " + err.message);
-    } finally {
-      setImporting(false);
+      setImportProgress((prev) => ({ ...prev, errorMessage: err.message || "Failed to reach backend service." }));
     }
   };
+
 
   const fetchWatchlist = async () => {
     setLoading(true);
@@ -172,7 +267,9 @@ export default function MyListPage() {
     { key: "COMPLETED", label: "Completed" },
     { key: "PAUSED", label: "Paused" },
     { key: "DROPPED", label: "Dropped" },
+    { key: "REWATCHING", label: "Rewatching" },
   ];
+
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-purple-500 selection:text-white relative overflow-hidden">
@@ -375,35 +472,134 @@ export default function MyListPage() {
             </div>
           </div>
         )}
-        {/* Blocked Users Section */}
-        {blockedUsers.length > 0 && (
-          <div className="mt-12">
-            <div className="flex items-center gap-3 mb-6">
-              <h2 className="text-xl font-extrabold tracking-tight text-zinc-200">Blocked Users</h2>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-bold">
-                {blockedUsers.length}
-              </span>
-            </div>
-            <div className="flex flex-col gap-3">
-              {blockedUsers.map((b) => (
-                <div key={b.blocked_id} className="flex items-center justify-between bg-zinc-900/30 border border-zinc-900 rounded-xl px-5 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-black text-zinc-400">
-                      {b.username[0].toUpperCase()}
-                    </div>
-                    <Link href={`/profile/${b.username}`} className="text-sm font-bold text-zinc-300 hover:text-purple-400 transition-colors">
-                      @{b.username}
-                    </Link>
-                  </div>
-                  <button
-                    onClick={() => handleUnblock(b.username)}
-                    disabled={unblocking === b.username}
-                    className="text-xs px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold border border-zinc-700 transition-all disabled:opacity-50"
-                  >
-                    {unblocking === b.username ? "..." : "Unblock"}
-                  </button>
+        {/* Live AniList Import Progress Modal */}
+        {importProgress.showModal && (
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6 relative overflow-hidden">
+              {/* Ambient purple lighting */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-600/10 rounded-full blur-2xl pointer-events-none" />
+
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-zinc-900 pb-4">
+                <div>
+                  <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                    <span>Syncing Watchlist</span>
+                    <span className="text-purple-400 font-mono text-sm">@{importProgress.username}</span>
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Importing your live public profile and ratings from AniList...
+                  </p>
                 </div>
-              ))}
+                {importProgress.isComplete || importProgress.errorMessage ? (
+                  <button
+                    onClick={() => setImportProgress((prev) => ({ ...prev, showModal: false }))}
+                    className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-sm font-bold"
+                  >
+                    ✕
+                  </button>
+                ) : (
+                  <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                )}
+              </div>
+
+              {/* Error state */}
+              {importProgress.errorMessage ? (
+                <div className="bg-red-950/20 border border-red-900/50 rounded-2xl p-4 text-center text-red-400 text-xs font-semibold">
+                  {importProgress.errorMessage}
+                </div>
+              ) : (
+                <>
+                  {/* Progress bar */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold text-zinc-300">
+                      <span>
+                        {importProgress.total > 0
+                          ? `${Math.round((importProgress.current / importProgress.total) * 100)}% Complete`
+                          : "Fetching profile..."}
+                      </span>
+                      <span className="text-purple-400 font-mono">
+                        {importProgress.current} / {importProgress.total || "?"}
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-zinc-900 border border-zinc-850 h-3 rounded-full overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-purple-600 via-purple-500 to-emerald-400 h-full rounded-full transition-all duration-300 shadow-lg shadow-purple-950/50"
+                        style={{
+                          width: `${
+                            importProgress.total > 0
+                              ? Math.min(100, Math.round((importProgress.current / importProgress.total) * 100))
+                              : 5
+                          }%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Currently Importing Anime Card */}
+                  {importProgress.currentTitle && !importProgress.isComplete && (
+                    <div className="bg-zinc-900/50 border border-purple-900/40 rounded-2xl p-3.5 flex items-center gap-3">
+                      {importProgress.currentCover ? (
+                        <img
+                          src={importProgress.currentCover}
+                          alt=""
+                          className="w-10 h-14 object-cover rounded-lg flex-shrink-0 shadow"
+                        />
+                      ) : (
+                        <div className="w-10 h-14 bg-zinc-850 rounded-lg flex items-center justify-center text-[9px] text-zinc-600">
+                          Cover
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-grow">
+                        <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider block">
+                          Currently Importing:
+                        </span>
+                        <p className="text-sm font-bold text-zinc-100 truncate mt-0.5">
+                          {importProgress.currentTitle}
+                        </p>
+                        {importProgress.currentStatus && (
+                          <span className="text-[10px] text-zinc-400 font-medium">
+                            Status: {importProgress.currentStatus}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Live Activity Log Stream */}
+                  <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1 text-xs font-mono">
+                    {importProgress.logItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between bg-zinc-900/40 border border-zinc-900 rounded-xl px-3 py-2 text-zinc-300"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="text-emerald-400">✓</span>
+                          <span className="truncate font-semibold text-zinc-200">{item.title}</span>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-850 border border-zinc-800 text-purple-300 font-bold flex-shrink-0">
+                          {item.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Completion Banner */}
+                  {importProgress.isComplete && (
+                    <div className="bg-emerald-950/20 border border-emerald-800/40 rounded-2xl p-4 text-center space-y-3">
+                      <p className="text-emerald-300 font-bold text-sm">
+                        ✓ Successfully imported {importProgress.importedCount} entries from AniList!
+                      </p>
+                      <button
+                        onClick={() => setImportProgress((prev) => ({ ...prev, showModal: false }))}
+                        className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-emerald-950/40"
+                      >
+                        View Updated Watchlist
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         )}
@@ -411,3 +607,4 @@ export default function MyListPage() {
     </div>
   );
 }
+

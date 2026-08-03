@@ -39,3 +39,14 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
         )
         
     return user
+
+
+def get_optional_user(request: Request, db: Session = Depends(get_db)) -> getattr(User, "__origin__", None) or User | None:
+    """
+    Dependency to retrieve active User if token is present and valid, else None.
+    """
+    try:
+        return get_current_user(request, db)
+    except HTTPException:
+        return None
+

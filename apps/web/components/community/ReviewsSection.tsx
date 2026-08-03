@@ -31,10 +31,10 @@ interface ReviewsSectionProps {
 }
 
 const REACTION_EMOJIS: Record<string, string> = {
-  LIKE: "👍",
-  LOVE: "❤️",
-  INSIGHTFUL: "💡",
-  FUNNY: "😂",
+  LIKE: "Like",
+  LOVE: "Love",
+  INSIGHTFUL: "Insightful",
+  FUNNY: "Funny",
 };
 
 function SpoilerBlock({ body }: { body: string }) {
@@ -46,10 +46,10 @@ function SpoilerBlock({ body }: { body: string }) {
       </div>
       {!revealed && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-          <span className="text-xs font-bold text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 rounded-full">⚠️ Spoiler</span>
+          <span className="text-xs font-bold text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 rounded-full">SPOILER</span>
           <button
             onClick={() => setRevealed(true)}
-            className="text-xs text-zinc-400 hover:text-zinc-200 font-semibold underline"
+            className="text-xs text-zinc-400 hover:text-zinc-200 font-semibold"
           >
             Click to reveal
           </button>

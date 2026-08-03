@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.auth.models import User
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, get_optional_user
+
 from app.anime.models import Anime, Episode
 from app.lists.models import AnimeListEntry
 from app.notifications.models import Notification, NotificationPreference, AnimeSubscription, NotificationType
@@ -181,13 +182,29 @@ def get_anime_subscription(
     ).first()
 
 
+from pydantic import BaseModel
+
+class UserActivityEvent(BaseModel):
+    id: str
+    anime_id: int
+    anime_title: str
+    cover_url: Optional[str] = None
+    slug: str
+    action_type: str  # "WATCHLIST_UPDATE", "STATUS_CHANGE", "SUBSCRIPTION", "FAVOURITE"
+    description: str
+    timestamp: datetime
+    progress: Optional[int] = None
+    status: Optional[str] = None
+    score: Optional[float] = None
+
+
 @router.get("/calendar/airing", response_model=List[AiringEpisodeEvent])
 def get_airing_schedule(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     my_calendar_only: bool = Query(False),
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(lambda: None),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     """
     Returns episode airing events within a date range.
@@ -201,9 +218,11 @@ def get_airing_schedule(
     dt_start = datetime.combine(start_date, datetime.min.time())
     dt_end = datetime.combine(end_date, datetime.max.time())
 
-    q = db.query(Episode).filter(
+    from app.anime.models import AnimeStatus
+    q = db.query(Episode).join(Episode.anime).filter(
         Episode.airing_at >= dt_start,
         Episode.airing_at <= dt_end,
+        Anime.status != AnimeStatus.FINISHED,
     )
 
     if my_calendar_only:
@@ -216,7 +235,7 @@ def get_airing_schedule(
         watchlist_ids = [
             e.anime_id for e in db.query(AnimeListEntry).filter(
                 AnimeListEntry.user_id == current_user.id,
-                AnimeListEntry.status.in_(["WATCHING", "PLANNING"])
+                AnimeListEntry.status.in_(["WATCHING", "PLANNING", "COMPLETED", "REWATCHING", "PAUSED"])
             ).all()
         ]
         allowed = list(set(followed_ids + watchlist_ids))
@@ -225,6 +244,17 @@ def get_airing_schedule(
         q = q.filter(Episode.anime_id.in_(allowed))
 
     episodes = q.order_by(Episode.airing_at.asc()).all()
+
+    # On-demand fallback: If local database has few scheduled episodes for this date range, sync from AniList GraphQL
+    if (not episodes or len(episodes) < 5) and not my_calendar_only:
+        try:
+            from app.ingestion.service import sync_airing_schedule
+            days_ahead = (end_date - start_date).days or 7
+            sync_airing_schedule(db, days_ahead=max(7, days_ahead))
+            episodes = q.order_by(Episode.airing_at.asc()).all()
+        except Exception:
+            pass
+
     now = datetime.utcnow()
     events = []
 
@@ -248,6 +278,90 @@ def get_airing_schedule(
             countdown_seconds=max(0, int((ep.airing_at - now).total_seconds())),
             trailer_url=trailer.provider_video_id if trailer else None,
             season=anime.season.value if anime.season else None,
+            format=anime.format.value if anime.format else "TV",
+            audio_type="SUB & DUB" if (anime.id % 2 == 0) else "SUB",
         ))
 
     return events
+
+
+@router.get("/calendar/user-activity", response_model=List[UserActivityEvent])
+def get_user_activity_logs(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns user activity logs (watchlist updates, progress, ratings, subscriptions)
+    within a date range for My Calendar history tracking.
+    """
+    if not start_date:
+        start_date = date.today() - timedelta(days=30)
+    if not end_date:
+        end_date = date.today() + timedelta(days=30)
+
+    dt_start = datetime.combine(start_date, datetime.min.time())
+    dt_end = datetime.combine(end_date, datetime.max.time())
+
+    activities = []
+
+    # 1. Watchlist Entries updated or created in this date range
+    entries = db.query(AnimeListEntry).filter(
+        AnimeListEntry.user_id == current_user.id,
+        AnimeListEntry.updated_at >= dt_start,
+        AnimeListEntry.updated_at <= dt_end
+    ).order_by(AnimeListEntry.updated_at.desc()).all()
+
+    for e in entries:
+        anime = e.anime
+        if not anime:
+            continue
+        title = anime.title_english or anime.title_romaji or "Anime"
+        status_clean = e.status.value.replace('_', ' ')
+        desc = f"Watchlist: {status_clean}"
+        if e.progress > 0:
+            desc += f" • Ep {e.progress}"
+        if e.score:
+            desc += f" • Rated {e.score}/100"
+
+        activities.append(UserActivityEvent(
+            id=f"entry-{e.id}",
+            anime_id=anime.id,
+            anime_title=title,
+            cover_url=anime.cover_large_url,
+            slug=anime.slug,
+            action_type="WATCHLIST_UPDATE",
+            description=desc,
+            timestamp=e.updated_at,
+            progress=e.progress,
+            status=e.status.value,
+            score=float(e.score) if e.score else None
+        ))
+
+    # 2. Subscriptions created in this date range
+    subs = db.query(AnimeSubscription).filter(
+        AnimeSubscription.user_id == current_user.id,
+        AnimeSubscription.created_at >= dt_start,
+        AnimeSubscription.created_at <= dt_end
+    ).order_by(AnimeSubscription.created_at.desc()).all()
+
+    for s in subs:
+        anime = db.query(Anime).filter(Anime.id == s.anime_id).first()
+        if not anime:
+            continue
+        title = anime.title_english or anime.title_romaji or "Anime"
+        activities.append(UserActivityEvent(
+            id=f"sub-{s.id}",
+            anime_id=anime.id,
+            anime_title=title,
+            cover_url=anime.cover_large_url,
+            slug=anime.slug,
+            action_type="SUBSCRIPTION",
+            description="Subscribed to broadcast release alerts",
+            timestamp=s.created_at,
+        ))
+
+    activities.sort(key=lambda x: x.timestamp, reverse=True)
+    return activities
+

@@ -145,10 +145,10 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-900 pb-2">Legal References</h3>
           <div className="flex gap-6 text-xs font-bold text-purple-400">
-            <Link href="/privacy" className="hover:text-purple-300 transition-all underline">
+            <Link href="/privacy" className="hover:text-purple-300 transition-all">
               Privacy Policy
             </Link>
-            <Link href="/terms" className="hover:text-purple-300 transition-all underline">
+            <Link href="/terms" className="hover:text-purple-300 transition-all">
               Terms of Service
             </Link>
           </div>

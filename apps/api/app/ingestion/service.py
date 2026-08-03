@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, date
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select, update, insert
 from slugify import slugify
@@ -15,7 +15,7 @@ from app.anime.models import (
 logger = logging.getLogger("ingestion_service")
 
 
-def parse_anilist_date(d: Dict[str, Any]) -> getattr(date, "date", None):
+def parse_anilist_date(d: Dict[str, Any]) -> Optional[date]:
     if not d or not d.get("year"):
         return None
     try:
@@ -68,6 +68,7 @@ def get_or_create_studio(db: Session, studio_data: Dict[str, Any]) -> Studio:
 def get_or_create_character(db: Session, char_data: Dict[str, Any]) -> Character:
     char_id = char_data["id"]
     char = db.query(Character).filter(Character.anilist_id == char_id).first()
+    img_url = char_data.get("image", {}).get("large") or char_data.get("image", {}).get("medium")
     if not char:
         name_data = char_data.get("name") or {}
         dob_data = char_data.get("dateOfBirth") or {}
@@ -78,18 +79,23 @@ def get_or_create_character(db: Session, char_data: Dict[str, Any]) -> Character
             last_name=name_data.get("last"),
             native_name=name_data.get("native"),
             description=char_data.get("description"),
-            image_url=char_data.get("image", {}).get("large"),
+            image_url=img_url,
             gender=char_data.get("gender"),
             date_of_birth=parse_anilist_date(dob_data)
         )
         db.add(char)
         db.flush()
+    else:
+        if img_url and char.image_url != img_url:
+            char.image_url = img_url
+            db.flush()
     return char
 
 
 def get_or_create_staff(db: Session, staff_data: Dict[str, Any]) -> Staff:
     staff_id = staff_data["id"]
     staff = db.query(Staff).filter(Staff.anilist_id == staff_id).first()
+    img_url = staff_data.get("image", {}).get("large") or staff_data.get("image", {}).get("medium")
     if not staff:
         name_data = staff_data.get("name") or {}
         staff = Staff(
@@ -99,10 +105,14 @@ def get_or_create_staff(db: Session, staff_data: Dict[str, Any]) -> Staff:
             last_name=name_data.get("last"),
             native_name=name_data.get("native"),
             description=staff_data.get("description"),
-            image_url=staff_data.get("image", {}).get("large")
+            image_url=img_url
         )
         db.add(staff)
         db.flush()
+    else:
+        if img_url and staff.image_url != img_url:
+            staff.image_url = img_url
+            db.flush()
     return staff
 
 
@@ -229,13 +239,21 @@ def import_anime_payload(db: Session, media: Dict[str, Any]) -> Anime:
 
     # Ingest genres
     db.query(AnimeGenre).filter(AnimeGenre.anime_id == anime.id).delete()
+    seen_genres = set()
     for g_name in media.get("genres") or []:
+        if g_name in seen_genres:
+            continue
+        seen_genres.add(g_name)
         genre = get_or_create_genre(db, g_name)
         db.add(AnimeGenre(anime_id=anime.id, genre_id=genre.id))
 
     # Ingest tags
     db.query(AnimeTag).filter(AnimeTag.anime_id == anime.id).delete()
+    seen_tags = set()
     for t_data in media.get("tags") or []:
+        if not t_data.get("id") or t_data["id"] in seen_tags:
+            continue
+        seen_tags.add(t_data["id"])
         tag = get_or_create_tag(db, t_data)
         db.add(AnimeTag(
             anime_id=anime.id,
@@ -246,9 +264,13 @@ def import_anime_payload(db: Session, media: Dict[str, Any]) -> Anime:
 
     # Ingest studios
     db.query(AnimeStudio).filter(AnimeStudio.anime_id == anime.id).delete()
-    for st_edge in media.get("studios", {}).get("edges") or []:
+    seen_studios = set()
+    for st_edge in (media.get("studios") or {}).get("edges") or []:
         st_data = st_edge.get("node")
-        if st_data:
+        if st_data and st_data.get("id"):
+            if st_data["id"] in seen_studios:
+                continue
+            seen_studios.add(st_data["id"])
             studio = get_or_create_studio(db, st_data)
             db.add(AnimeStudio(
                 anime_id=anime.id,
@@ -259,11 +281,16 @@ def import_anime_payload(db: Session, media: Dict[str, Any]) -> Anime:
     # Ingest characters and voice actors
     db.query(AnimeCharacter).filter(AnimeCharacter.anime_id == anime.id).delete()
     db.query(VoiceActor).filter(VoiceActor.anime_id == anime.id).delete()
+    seen_characters = set()
+    seen_va = set()
     
-    char_edges = media.get("characters", {}).get("edges") or []
+    char_edges = (media.get("characters") or {}).get("edges") or []
     for idx, char_edge in enumerate(char_edges):
         char_data = char_edge.get("node")
-        if char_data:
+        if char_data and char_data.get("id"):
+            if char_data["id"] in seen_characters:
+                continue
+            seen_characters.add(char_data["id"])
             character = get_or_create_character(db, char_data)
             role_str = char_edge.get("role") or "SUPPORTING"
             role_enum = CharacterRole.SUPPORTING
@@ -281,7 +308,13 @@ def import_anime_payload(db: Session, media: Dict[str, Any]) -> Anime:
             
             # Voice Actors
             for va_data in char_edge.get("voiceActors") or []:
+                if not va_data.get("id"):
+                    continue
                 va_staff = get_or_create_staff(db, va_data)
+                va_key = (anime.id, character.id, va_staff.id)
+                if va_key in seen_va:
+                    continue
+                seen_va.add(va_key)
                 db.add(VoiceActor(
                     anime_id=anime.id,
                     character_id=character.id,
@@ -291,12 +324,17 @@ def import_anime_payload(db: Session, media: Dict[str, Any]) -> Anime:
 
     # Ingest staff
     db.query(AnimeStaff).filter(AnimeStaff.anime_id == anime.id).delete()
-    staff_edges = media.get("staff", {}).get("edges") or []
+    seen_staff = set()
+    staff_edges = (media.get("staff") or {}).get("edges") or []
     for staff_edge in staff_edges:
         st_role = staff_edge.get("role")
         st_data = staff_edge.get("node")
-        if st_data and st_role:
+        if st_data and st_data.get("id") and st_role:
             staff_member = get_or_create_staff(db, st_data)
+            staff_key = (anime.id, staff_member.id, st_role)
+            if staff_key in seen_staff:
+                continue
+            seen_staff.add(staff_key)
             db.add(AnimeStaff(
                 anime_id=anime.id,
                 staff_id=staff_member.id,
@@ -363,9 +401,105 @@ def process_relations(db: Session, relations_map: Dict[int, List[Dict[str, Any]]
     db.commit()
 
 
-def sync_airing_schedule(db: Session, days_ahead: int = 30) -> int:
+def import_franchise_chain(
+    db: Session,
+    start_anilist_ids,           # int OR list[int]
+    max_hops: int = 20,
+    seen: set = None,            # shared seen set across multiple calls
+    client=None,                 # pre-opened AniListClient (caller must close)
+    include_all_relations: bool = False,  # if True, also traverse non-timeline rels
+) -> set:
     """
-    Pull upcoming airing episodes from AniList and upsert them into the
+    BFS-traverse relation chains starting from one or more AniList IDs and
+    import every ANIME entry that isn't already in the database.
+
+    - Supports multiple start_anilist_ids (list or single int) so all search
+      results can share one BFS pass with a shared 'seen' set.
+    - By default only follows PREQUEL / SEQUEL / PARENT links.
+    - Pass include_all_relations=True to also traverse SIDE_STORY / SPIN_OFF /
+      ALTERNATIVE / CHARACTER (useful for full-franchise discovery).
+    - Returns the final 'seen' set so callers can accumulate state.
+    """
+    from app.ingestion.anilist import AniListClient
+
+    TIMELINE_TYPES = {"PREQUEL", "SEQUEL", "PARENT"}
+    ALL_TYPES = TIMELINE_TYPES | {"SIDE_STORY", "SPIN_OFF", "ALTERNATIVE", "CHARACTER", "ADAPTATION", "COMPILATION", "CONTAINS", "SUMMARY"}
+    traverse_types = ALL_TYPES if include_all_relations else TIMELINE_TYPES
+
+    if seen is None:
+        seen = set()
+
+    # Normalise to list
+    if isinstance(start_anilist_ids, int):
+        start_anilist_ids = [start_anilist_ids]
+
+    owns_client = client is None
+    if owns_client:
+        client = AniListClient()
+
+    queue: list = [aid for aid in start_anilist_ids if aid not in seen]
+
+    try:
+        hops = 0
+        while queue and hops < max_hops:
+            hops += 1
+            next_queue: list = []
+
+            for anilist_id in queue:
+                if anilist_id in seen:
+                    continue
+                seen.add(anilist_id)
+
+                try:
+                    edges = client.fetch_relations_for_id(anilist_id)
+                except Exception as e:
+                    logger.warning(f"Relation fetch failed for {anilist_id}: {e}")
+                    continue
+
+                for edge in edges:
+                    rel_type = edge.get("relationType", "")
+                    if rel_type not in traverse_types:
+                        continue
+                    node = edge.get("node", {})
+                    target_id = node.get("id")
+                    if not target_id or target_id in seen:
+                        continue
+
+                    # Skip non-ANIME entries (MANGA, NOVEL, etc.)
+                    if node.get("type", "ANIME") != "ANIME":
+                        seen.add(target_id)
+                        continue
+
+                    # Import if not already in DB
+                    existing = db.query(Anime).filter(Anime.anilist_id == target_id).first()
+                    if not existing:
+                        try:
+                            media = client.fetch_anime_by_id(target_id)
+                            if media:
+                                import_anime_payload(db, media)
+                                db.commit()
+                                logger.info(f"Franchise chain: imported anilist_id={target_id}")
+                        except Exception as e:
+                            logger.warning(f"Franchise chain import failed for {target_id}: {e}")
+                            try:
+                                db.rollback()
+                            except Exception:
+                                pass
+
+                    next_queue.append(target_id)
+
+            queue = next_queue
+    finally:
+        if owns_client:
+            client.close()
+
+    return seen
+
+
+
+def sync_airing_schedule(db: Session, days_ahead: int = 30, days_past: int = 30) -> int:
+    """
+    Pull past and upcoming airing episodes from AniList and upsert them into the
     Episode table so the calendar and notification system have real data.
 
     For each schedule entry the function:
@@ -382,9 +516,10 @@ def sync_airing_schedule(db: Session, days_ahead: int = 30) -> int:
 
     client = AniListClient()
     now = datetime.utcnow()
+    start = now - timedelta(days=days_past)
     end = now + timedelta(days=days_ahead)
 
-    start_ts = int(now.timestamp())
+    start_ts = int(start.timestamp())
     end_ts = int(end.timestamp())
 
     page = 1

@@ -2,11 +2,11 @@ import numpy as np
 import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime, date
-from sqlalchemy import text, or_, desc
+from sqlalchemy import text, or_, desc, case
 from sqlalchemy.orm import Session
 import uuid
 
-from app.anime.models import Anime, Genre, Tag, Studio, Character, VoiceActor
+from app.anime.models import Anime, AnimeStatus, Genre, Tag, Studio, Character, VoiceActor
 from app.lists.models import AnimeListEntry
 from app.auth.models import User
 from app.recommendations.models import AnimeEmbedding, UserEmbedding, UserEvent, UserEventType, RecommendationResult
@@ -82,13 +82,37 @@ def run_full_text_search(
 
     # Sorting
     if sort == "score":
-        query = query.order_by(desc(Anime.average_score), Anime.id)
+        query = query.order_by(
+            case({Anime.status == AnimeStatus.FINISHED: 0}, else_=1),
+            desc(Anime.average_score).nulls_last(),
+            Anime.id
+        )
     elif sort == "title":
         query = query.order_by(Anime.title_english, Anime.title_romaji, Anime.id)
     else:
-        query = query.order_by(desc(Anime.popularity), Anime.id)
+        query = query.order_by(desc(Anime.popularity).nulls_last(), Anime.id)
 
-    return query.distinct().limit(limit).all()
+    results = query.distinct().limit(limit).all()
+
+    # On-demand fallback: If local database yields no results, query AniList API directly
+    if not results and query_str.strip():
+        try:
+            from app.ingestion.anilist import AniListClient
+            from app.ingestion.service import import_anime_payload
+            client = AniListClient()
+            try:
+                media_list = client.search_anime(query_str.strip(), page=1, per_page=10)
+                for media in media_list:
+                    import_anime_payload(db, media)
+                db.commit()
+            finally:
+                client.close()
+            # Re-query local database after importing matching anime
+            results = query.distinct().limit(limit).all()
+        except Exception as e:
+            logger.error(f"AniList search fallback error for '{query_str}': {e}")
+
+    return results
 
 def run_semantic_search(db: Session, query_str: str, limit: int = 20) -> List[Dict[str, Any]]:
     query_vector = get_query_embedding(query_str)

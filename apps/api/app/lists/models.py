@@ -5,6 +5,8 @@ from sqlalchemy import Column, Integer, BigInteger, String, Text, Boolean, DECIM
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.database import Base
+from app.anime.models import Anime
+
 
 
 class ListStatus(str, enum.Enum):
@@ -31,7 +33,8 @@ class AnimeListEntry(Base):
     anime_id = Column(BigInteger, ForeignKey("anime.id", ondelete="CASCADE"), nullable=False, index=True)
     status = Column(Enum(ListStatus, name="liststatus"), nullable=False, default=ListStatus.PLANNING)
     progress = Column(Integer, default=0, nullable=False)
-    score = Column(DECIMAL(4, 2), nullable=True)
+    score = Column(DECIMAL(5, 2), nullable=True)
+
     rewatch_count = Column(Integer, default=0, nullable=False)
     started_at = Column(Date, nullable=True)
     completed_at = Column(Date, nullable=True)

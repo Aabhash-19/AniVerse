@@ -197,7 +197,7 @@ export default function DiscussionsSection({ animeId, currentUser }: Discussions
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     {disc.is_pinned && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-black">📌 PINNED</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-black">PINNED</span>
                     )}
                     {disc.episode && (
                       <span className="text-[9px] px-2 py-0.5 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-400 font-bold">
@@ -205,15 +205,15 @@ export default function DiscussionsSection({ animeId, currentUser }: Discussions
                       </span>
                     )}
                     {disc.has_spoiler && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-black">⚠️ Spoiler</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-black">SPOILER</span>
                     )}
                   </div>
                   <p className="text-sm font-bold text-zinc-200 group-hover:text-white mt-1 line-clamp-1">{disc.title}</p>
                   <SpoilerPreview title={disc.title} body={disc.body} hasSpoiler={disc.has_spoiler} />
                   <div className="flex items-center gap-3 mt-2 text-[10px] text-zinc-600">
                     <span>by <Link href={`/profile/${disc.user.username}`} onClick={(e) => e.stopPropagation()} className="text-zinc-400 font-semibold hover:text-purple-400 transition-colors">{disc.user.username}</Link></span>
-                    <span>💬 {disc.comment_count}</span>
-                    <span>👁️ {disc.view_count}</span>
+                    <span>{disc.comment_count} comments</span>
+                    <span>{disc.view_count} views</span>
                     <span>{new Date(disc.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>

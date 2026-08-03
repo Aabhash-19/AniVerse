@@ -324,6 +324,8 @@ def react_to_review(
     if existing:
         if existing.reaction == reaction:
             db.delete(existing)
+            db.flush()
+            review.helpful_count = db.query(ReviewReaction).filter(ReviewReaction.review_id == review_id).count()
             db.commit()
             return {"message": "Reaction removed"}
         else:
@@ -333,6 +335,7 @@ def react_to_review(
     else:
         r = ReviewReaction(user_id=current_user.id, review_id=uuid.UUID(review_id), reaction=reaction)
         db.add(r)
+        db.flush()
         review.helpful_count = db.query(ReviewReaction).filter(ReviewReaction.review_id == review_id).count()
         db.commit()
         return {"message": "Reaction added"}
@@ -573,6 +576,8 @@ def delete_comment(
     is_mod = current_user.role in (UserRole.MODERATOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
     if not (is_owner or is_mod):
         raise HTTPException(status_code=403, detail="Permission denied.")
+    if comment.discussion:
+        comment.discussion.comment_count = max(0, comment.discussion.comment_count - 1)
     db.delete(comment)
     db.commit()
     return None

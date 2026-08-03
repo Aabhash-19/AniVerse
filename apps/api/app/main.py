@@ -27,6 +27,7 @@ from app.media.router import router as media_router
 from app.community.router import router as community_router
 from app.recommendations.router import router as recommendations_router
 from app.notifications.router import router as notifications_router
+from app.chat.router import router as chat_router
 
 from app.shared.security_middleware import SecurityMiddleware
 
@@ -59,6 +60,8 @@ app.include_router(media_router, prefix=settings.API_V1_STR)
 app.include_router(community_router, prefix=settings.API_V1_STR)
 app.include_router(recommendations_router, prefix=settings.API_V1_STR)
 app.include_router(notifications_router, prefix=settings.API_V1_STR)
+app.include_router(chat_router, prefix=settings.API_V1_STR)
+
 
 
 @app.get("/")

@@ -216,26 +216,198 @@ def import_watchlist_from_anilist(
     try:
         for user_list in lists:
             entries = user_list.get("entries", [])
+            user_list_status = (user_list.get("status") or "").upper()
+            user_list_name = (user_list.get("name") or "").upper()
+
             for entry in entries:
-                anilist_media_id = entry["media"]["id"]
-                
-                # Try finding anime in local DB first
-                anime = db.query(Anime).filter(Anime.anilist_id == anilist_media_id).first()
-                if not anime:
-                    try:
-                        media_payload = client.fetch_anime_by_id(anilist_media_id)
-                        if media_payload:
-                            anime = import_anime_payload(db, media_payload)
-                            db.flush()
-                    except Exception as e:
-                        logger.error(f"Failed to import anime {anilist_media_id} during list sync: {str(e)}")
+                try:
+                    media_payload = entry.get("media", {})
+                    anilist_media_id = media_payload.get("id") or entry.get("mediaId")
+                    if not anilist_media_id:
                         continue
+                    
+                    # Try finding anime in local DB first
+                    anime = db.query(Anime).filter(Anime.anilist_id == anilist_media_id).first()
+                    if not anime:
+                        try:
+                            if media_payload and media_payload.get("title"):
+                                anime = import_anime_payload(db, media_payload)
+                            else:
+                                fetched = client.fetch_anime_by_id(anilist_media_id)
+                                if fetched:
+                                    anime = import_anime_payload(db, fetched)
+                            db.flush()
+                        except Exception as e:
+                            logger.error(f"Failed to import anime {anilist_media_id} during list sync: {str(e)}")
+                            db.rollback()
+                            continue
+
+                    if not anime:
+                        continue
+
+                    # Robust status mapping: check entry status -> list status -> list name
+                    raw_status = (entry.get("status") or user_list_status or "").upper()
+                    if raw_status in status_mapping:
+                        mapped_status = status_mapping[raw_status]
+                    elif "DROP" in user_list_name or "DROPPED" in user_list_name:
+                        mapped_status = ListStatus.DROPPED
+                    elif "PAUSE" in user_list_name or "PAUSED" in user_list_name:
+                        mapped_status = ListStatus.PAUSED
+                    elif "COMPLET" in user_list_name or "COMPLETED" in user_list_name:
+                        mapped_status = ListStatus.COMPLETED
+                    elif "PLAN" in user_list_name or "PLANNING" in user_list_name:
+                        mapped_status = ListStatus.PLANNING
+                    elif "REPEAT" in user_list_name or "REWATCH" in user_list_name:
+                        mapped_status = ListStatus.REWATCHING
+                    else:
+                        mapped_status = status_mapping.get(raw_status, ListStatus.PLANNING)
+                    
+                    raw_score = entry.get("score")
+                    clean_score = None
+                    if raw_score is not None and str(raw_score).strip() != "":
+                        try:
+                            clean_score = min(100.0, max(0.0, float(raw_score)))
+                        except (ValueError, TypeError):
+                            clean_score = None
+
+                    local_entry = db.query(AnimeListEntry).filter(
+                        AnimeListEntry.user_id == current_user.id,
+                        AnimeListEntry.anime_id == anime.id
+                    ).first()
+
+                    if not local_entry:
+                        local_entry = AnimeListEntry(
+                            user_id=current_user.id,
+                            anime_id=anime.id,
+                            status=mapped_status,
+                            progress=entry.get("progress") or 0,
+                            score=clean_score,
+                            notes=entry.get("notes"),
+                            rewatch_count=entry.get("repeat") or 0
+                        )
+                        db.add(local_entry)
+                    else:
+                        local_entry.status = mapped_status
+                        local_entry.progress = entry.get("progress") or 0
+                        local_entry.score = clean_score
+                        local_entry.notes = entry.get("notes")
+                        local_entry.rewatch_count = entry.get("repeat") or 0
+
+                    db.commit()
+                    imported_count += 1
+                except Exception as entry_err:
+                    db.rollback()
+                    logger.warning(f"Skipped entry during AniList import due to error: {entry_err}")
+    finally:
+        client.close()
+
+    # Invalidate recommendations cache
+    from app.shared.cache import invalidate_cache
+    invalidate_cache(f"user:{current_user.id}:home")
+
+    return {"message": "Watchlist import completed successfully.", "imported_count": imported_count}
+
+
+from fastapi.responses import StreamingResponse
+import json
+
+@router.get("/import/anilist/stream")
+def stream_import_watchlist_from_anilist(
+    username: str = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Server-Sent Events (SSE) streaming endpoint that imports AniList watchlist
+    and emits real-time progress events with live title names and status updates.
+    """
+    def event_generator():
+        from app.ingestion.anilist import AniListClient
+        from app.ingestion.service import import_anime_payload
+
+        client = AniListClient()
+        try:
+            data = client.fetch_user_lists(username)
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            return
+        finally:
+            client.close()
+
+        collection = data.get("data", {}).get("MediaListCollection")
+        if not collection:
+            yield f"data: {json.dumps({'type': 'error', 'message': f'No AniList profile or watchlist found for @{username}'})}\n\n"
+            return
+
+        lists = collection.get("lists", [])
+        all_entries = []
+        for user_list in lists:
+            entries = user_list.get("entries", [])
+            for e in entries:
+                e["_list_status"] = user_list.get("status")
+                e["_list_name"] = user_list.get("name")
+                all_entries.append(e)
+
+        total_count = len(all_entries)
+        yield f"data: {json.dumps({'type': 'start', 'total': total_count, 'message': f'Fetched {total_count} entries from @{username}'})}\n\n"
+
+        status_mapping = {
+            "CURRENT": ListStatus.WATCHING,
+            "PLANNING": ListStatus.PLANNING,
+            "COMPLETED": ListStatus.COMPLETED,
+            "PAUSED": ListStatus.PAUSED,
+            "DROPPED": ListStatus.DROPPED,
+            "REPEATING": ListStatus.REWATCHING
+        }
+
+        imported_count = 0
+        for idx, entry in enumerate(all_entries):
+            try:
+                media_payload = entry.get("media", {})
+                anilist_media_id = media_payload.get("id") or entry.get("mediaId")
+                if not anilist_media_id:
+                    continue
+
+                anime = db.query(Anime).filter(Anime.anilist_id == anilist_media_id).first()
+                if not anime and media_payload:
+                    try:
+                        anime = import_anime_payload(db, media_payload)
+                        db.flush()
+                    except Exception as imp_err:
+                        db.rollback()
+                        logger.warning(f"Error importing anime payload {anilist_media_id}: {imp_err}")
 
                 if not anime:
                     continue
 
-                mapped_status = status_mapping.get(entry.get("status"), ListStatus.PLANNING)
+                title = anime.title_english or anime.title_romaji or "Anime"
                 
+                raw_status = (entry.get("status") or entry.get("_list_status") or "").upper()
+                list_name = (entry.get("_list_name") or "").upper()
+
+                if raw_status in status_mapping:
+                    mapped_status = status_mapping[raw_status]
+                elif "DROP" in list_name or "DROPPED" in list_name:
+                    mapped_status = ListStatus.DROPPED
+                elif "PAUSE" in list_name or "PAUSED" in list_name:
+                    mapped_status = ListStatus.PAUSED
+                elif "COMPLET" in list_name or "COMPLETED" in list_name:
+                    mapped_status = ListStatus.COMPLETED
+                elif "PLAN" in list_name or "PLANNING" in list_name:
+                    mapped_status = ListStatus.PLANNING
+                elif "REPEAT" in list_name or "REWATCH" in list_name:
+                    mapped_status = ListStatus.REWATCHING
+                else:
+                    mapped_status = status_mapping.get(raw_status, ListStatus.PLANNING)
+
+                raw_score = entry.get("score")
+                clean_score = None
+                if raw_score is not None and str(raw_score).strip() != "":
+                    try:
+                        clean_score = min(100.0, max(0.0, float(raw_score)))
+                    except Exception:
+                        clean_score = None
+
                 local_entry = db.query(AnimeListEntry).filter(
                     AnimeListEntry.user_id == current_user.id,
                     AnimeListEntry.anime_id == anime.id
@@ -247,7 +419,7 @@ def import_watchlist_from_anilist(
                         anime_id=anime.id,
                         status=mapped_status,
                         progress=entry.get("progress") or 0,
-                        score=entry.get("score"),
+                        score=clean_score,
                         notes=entry.get("notes"),
                         rewatch_count=entry.get("repeat") or 0
                     )
@@ -255,23 +427,34 @@ def import_watchlist_from_anilist(
                 else:
                     local_entry.status = mapped_status
                     local_entry.progress = entry.get("progress") or 0
-                    local_entry.score = entry.get("score")
+                    local_entry.score = clean_score
                     local_entry.notes = entry.get("notes")
                     local_entry.rewatch_count = entry.get("repeat") or 0
 
+                db.commit()
                 imported_count += 1
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database transaction failed during import: {str(e)}")
-    finally:
-        client.close()
 
-    # Invalidate recommendations cache
-    from app.shared.cache import invalidate_cache
-    invalidate_cache(f"user:{current_user.id}:home")
+                progress_data = {
+                    "type": "progress",
+                    "current": idx + 1,
+                    "total": total_count,
+                    "title": title,
+                    "status": mapped_status.value,
+                    "progress": entry.get("progress") or 0,
+                    "score": clean_score,
+                    "cover_url": anime.cover_large_url
+                }
+                yield f"data: {json.dumps(progress_data)}\n\n"
 
-    return {"message": "Watchlist import completed successfully.", "imported_count": imported_count}
+            except Exception as item_err:
+                db.rollback()
+                logger.warning(f"Error streaming item {idx+1}: {item_err}")
+
+        yield f"data: {json.dumps({'type': 'complete', 'imported_count': imported_count, 'total': total_count})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
 
 
 # --- Watchlist CRUD Endpoints ---

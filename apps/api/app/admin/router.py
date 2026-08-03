@@ -155,7 +155,6 @@ def get_ingestion_jobs(
     """
     List ingestion history status.
     """
-    jobs = db.query(IngestionJob).order_index = IngestionJob.started_at.desc()
     return db.query(IngestionJob).order_by(IngestionJob.started_at.desc()).limit(limit).all()
 
 

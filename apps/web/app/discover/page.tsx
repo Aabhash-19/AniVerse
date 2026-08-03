@@ -42,17 +42,22 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Search/Mode states
+  // Search & Filter states
   const [search, setSearch] = useState("");
-  const [searchMode, setSearchMode] = useState<"keyword" | "semantic" | "nlp">("keyword");
   const [latency, setLatency] = useState<number | null>(null);
 
-  // Traditional filters state
+  // Filters state
   const [genre, setGenre] = useState("");
   const [season, setSeason] = useState("");
   const [format, setFormat] = useState("");
   const [sort, setSort] = useState("popularity");
   const [syncLoading, setSyncLoading] = useState(false);
+
+  // Pagination & Infinite Scroll states
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const observerTarget = React.useRef<HTMLDivElement>(null);
 
   // Recommendations state
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -94,89 +99,104 @@ export default function DiscoverPage() {
         body: JSON.stringify({ feedback_type: feedbackType }),
       });
       if (res.ok) {
-        // Remove item from recommendation list locally
         setRecommendations((prev) => prev.filter((r) => r.id !== animeId));
         alert(feedbackType === "INTERESTED" ? "Added to your profile preferences! 👍" : "Hiding this suggestion. 👎");
       }
     } catch (_) {}
   };
 
-  const fetchCatalog = async () => {
-    setLoading(true);
+  const fetchCatalog = async (pageNum = 1, append = false) => {
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setPage(1);
+      setHasMore(true);
+    }
     setError("");
     setLatency(null);
     try {
-      // 1. Traditional Keyword search with active filters
-      if (searchMode === "keyword") {
-        const params = new URLSearchParams();
-        if (search) params.append("q", search);
-        if (genre) params.append("genre", genre);
-        if (season) params.append("season", season);
-        if (format) params.append("format", format);
-        if (sort) params.append("sort", sort);
+      const params = new URLSearchParams();
+      if (search.trim()) params.append("search", search.trim());
+      if (genre) params.append("genre", genre);
+      if (season) params.append("season", season);
+      if (format) params.append("format", format);
+      if (sort) params.append("sort", sort);
+      params.append("page", pageNum.toString());
+      params.append("limit", "20");
 
-        const url = search 
-          ? getApiUrl(`/search?${params.toString()}`)
-          : getApiUrl(`/anime?${params.toString()}`);
-
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Failed to fetch catalog from backend");
-        const data = await response.json();
-        setAnimeList(search ? data.items : data);
-        if (search && data.latency_ms) setLatency(data.latency_ms);
-      }
-      
-      // 2. Semantic Search (AI vector proximity)
-      else if (searchMode === "semantic") {
-        if (!search.trim()) {
-          setAnimeList([]);
-          setLoading(false);
-          return;
+      const url = getApiUrl(`/anime?${params.toString()}`);
+      let response = await fetch(url);
+      if (!response.ok) {
+        if (response.status === 429) {
+          await new Promise((r) => setTimeout(r, 1200));
+          response = await fetch(url);
+        } else {
+          await new Promise((r) => setTimeout(r, 600));
+          response = await fetch(url);
         }
-        const response = await fetch(getApiUrl("/search/semantic?limit=25"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: search }),
-        });
-        if (!response.ok) throw new Error("Failed to process semantic search");
-        const data = await response.json();
-        setAnimeList(data.items);
-        if (data.latency_ms) setLatency(data.latency_ms);
+      }
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error("Rate limit reached — please wait a moment before searching again.");
+        }
+        throw new Error("Failed to fetch catalog from backend");
+      }
+      const data = await response.json();
+      const items = Array.isArray(data) ? data : (data.items || []);
+
+      if (append) {
+        setAnimeList((prev) => [...prev, ...items]);
+      } else {
+        setAnimeList(items);
       }
 
-      // 3. Intelligent NLP parsing
-      else if (searchMode === "nlp") {
-        if (!search.trim()) {
-          setAnimeList([]);
-          setLoading(false);
-          return;
-        }
-        const response = await fetch(getApiUrl("/search/natural-language"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: search }),
-        });
-        if (!response.ok) throw new Error("Failed to process NLP query");
-        const data = await response.json();
-        setAnimeList(data.items);
+      if (items.length < 20) {
+        setHasMore(false);
       }
+
+      if (data.latency_ms) setLatency(data.latency_ms);
     } catch (err: any) {
       setError(err.message || "An error occurred while loading catalogue.");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
+
+
 
   useEffect(() => {
     checkUserAndRecs();
   }, []);
 
   useEffect(() => {
-    // Only auto-trigger catalog fetch if no search input exists or on filter/sort change
     if (!search) {
-      fetchCatalog();
+      fetchCatalog(1, false);
     }
-  }, [genre, season, format, sort, searchMode]);
+  }, [genre, season, format, sort]);
+
+  // Infinite Scroll IntersectionObserver
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore && !search) {
+          const nextPage = page + 1;
+          setPage(nextPage);
+          fetchCatalog(nextPage, true);
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    const target = observerTarget.current;
+    if (target) observer.observe(target);
+
+    return () => {
+      if (target) observer.unobserve(target);
+    };
+  }, [page, hasMore, loading, loadingMore, search, genre, season, format, sort]);
+
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,20 +227,11 @@ export default function DiscoverPage() {
       <main id="main-content" role="main" className="max-w-7xl mx-auto px-6 py-10 relative z-10 space-y-10">
         
         {/* Title row */}
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-          <div>
-            <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
-              Discovery Engine
-            </h1>
-            <p className="text-zinc-400 mt-2">Filter and browse the official verified anime database.</p>
-          </div>
-          <button 
-            onClick={handleTriggerSync}
-            disabled={syncLoading}
-            className="text-xs px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-lg shadow-purple-900/20 disabled:opacity-50"
-          >
-            {syncLoading ? "Syncing..." : "Seed Catalogue"}
-          </button>
+        <div className="border-b border-zinc-900/50 pb-6">
+          <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
+            Discovery Engine
+          </h1>
+          <p className="text-zinc-400 mt-2">Filter and browse the official verified anime database.</p>
         </div>
 
         {/* Personalized Recommendations Section */}
@@ -280,82 +291,44 @@ export default function DiscoverPage() {
           </div>
         )}
 
-        {/* Unified Search Filters & Mode Toggles */}
+        {/* Unified Search Filters */}
         <div className="bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md rounded-2xl p-6 shadow-xl space-y-6">
-          
-          {/* Mode Tabs */}
-          <div className="flex border-b border-zinc-850 gap-6 text-sm">
-            {[
-              { id: "keyword", label: "Traditional" },
-              { id: "semantic", label: "AI Semantic Search" },
-              { id: "nlp", label: "Smart NLP Search" }
-            ].map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setSearchMode(m.id as any)}
-                className={`pb-3 font-bold transition-all border-b-2 ${
-                  searchMode === m.id
-                    ? "border-purple-500 text-purple-400"
-                    : "border-transparent text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-
           <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-            {/* Search input placeholder adapts to searchMode */}
             <div className="md:col-span-8 flex flex-col gap-2">
               <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                {searchMode === "keyword" ? "Keyword Search" : searchMode === "semantic" ? "Concept Search" : "Describe what you want to watch"}
+                Search Catalogue
               </label>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={
-                  searchMode === "keyword" 
-                    ? "e.g. Attack on Titan, AOT..." 
-                    : searchMode === "semantic"
-                    ? "e.g. Dark psychological anime with smart protagonist..."
-                    : "e.g. Short emotional movie under 2 hours complete..."
-                }
+                placeholder="e.g. Attack on Titan, Solo Leveling, Bleach..."
                 className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500 text-zinc-200 transition-all"
               />
             </div>
 
-            {searchMode === "keyword" ? (
-              <>
-                <div className="md:col-span-2 flex flex-col gap-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Genre</label>
-                  <select
-                    value={genre}
-                    onChange={(e) => setGenre(e.target.value)}
-                    className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500 text-zinc-300"
-                  >
-                    <option value="">All Genres</option>
-                    {genres.map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                </div>
-                <div className="md:col-span-2 flex flex-col gap-2">
-                  <button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl py-2.5 text-sm font-semibold transition-all shadow-lg">
-                    Search
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="md:col-span-4 flex flex-col gap-2">
-                <button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl py-2.5 text-sm font-semibold transition-all shadow-lg">
-                  AI Retrieve
-                </button>
-              </div>
-            )}
+            <div className="md:col-span-2 flex flex-col gap-2">
+              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Genre</label>
+              <select
+                value={genre}
+                onChange={(e) => setGenre(e.target.value)}
+                className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500 text-zinc-300"
+              >
+                <option value="">All Genres</option>
+                {genres.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+
+            <div className="md:col-span-2 flex flex-col gap-2">
+              <button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl py-2.5 text-sm font-semibold transition-all shadow-lg">
+                Search
+              </button>
+            </div>
           </form>
 
-          {/* Traditional filters toggle panel */}
-          {searchMode === "keyword" && (
-            <div className="pt-4 border-t border-zinc-850/50 flex flex-wrap gap-4 items-center justify-between">
+          {/* Catalogue Filters Row */}
+          <div className="pt-4 border-t border-zinc-850/50 flex flex-wrap gap-4 items-center justify-between">
+
               <div className="flex flex-wrap gap-4 items-center">
                 <select
                   value={season}
@@ -398,14 +371,9 @@ export default function DiscoverPage() {
                 <span className="text-xs font-mono text-zinc-500">Query processed in {latency.toFixed(1)}ms</span>
               )}
             </div>
-          )}
-
-          {searchMode !== "keyword" && latency != null && (
-            <div className="text-right">
-              <span className="text-xs font-mono text-zinc-500">AI similarity inference took {latency.toFixed(1)}ms</span>
-            </div>
-          )}
         </div>
+
+
 
         {/* Catalog Grid Results */}
         {loading ? (
@@ -440,7 +408,7 @@ export default function DiscoverPage() {
                 >
                   <div className="relative aspect-[3/4] bg-zinc-950 overflow-hidden">
                     {anime.cover_url ? (
-                      <img src={anime.cover_url} alt={displayTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                      <img src={anime.cover_url} alt={displayTitle} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs">No Cover</div>
                     )}
@@ -469,8 +437,9 @@ export default function DiscoverPage() {
                         {displayTitle}
                       </h3>
                       {anime.status && (
-                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mt-1">{anime.status}</p>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mt-1">{anime.status.replace(/_/g, " ")}</p>
                       )}
+
                     </div>
                     
                     {anime.genres && anime.genres.length > 0 && (
@@ -488,6 +457,21 @@ export default function DiscoverPage() {
             })}
           </div>
         )}
+
+        {/* Infinite Scroll Sentinel Target & Loader */}
+        <div ref={observerTarget} className="py-8 text-center flex flex-col items-center justify-center gap-2">
+          {loadingMore && (
+            <div className="flex items-center gap-3 text-purple-400 font-bold text-sm bg-zinc-900/60 px-5 py-2.5 rounded-full border border-purple-500/20 shadow-lg">
+              <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+              <span>Loading more anime from catalogue...</span>
+            </div>
+          )}
+          {!hasMore && animeList.length > 0 && (
+            <p className="text-xs text-zinc-600 font-semibold uppercase tracking-widest">
+              ✓ All items loaded from catalogue
+            </p>
+          )}
+        </div>
       </main>
     </div>
   );

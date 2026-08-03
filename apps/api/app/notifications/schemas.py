@@ -60,3 +60,5 @@ class AiringEpisodeEvent(BaseModel):
     countdown_seconds: int
     trailer_url: Optional[str] = None
     season: Optional[str] = None
+    format: Optional[str] = None
+    audio_type: Optional[str] = "SUB & DUB"

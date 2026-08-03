@@ -383,7 +383,7 @@ export default function AdminDashboardPage() {
                                 {report.target_type}
                               </span>
                               <span className="text-xs text-red-400 font-bold bg-red-500/10 border border-red-500/10 px-2 py-0.5 rounded-full">
-                                🚨 {report.reason}
+                                {report.reason}
                               </span>
                             </div>
                             <p className="text-xs text-zinc-500 font-medium">
@@ -409,7 +409,7 @@ export default function AdminDashboardPage() {
                             {report.target_type === "discussion" ? (
                               <Link
                                 href={`/discussions/${report.target_id}`}
-                                className="text-xs text-purple-400 hover:underline font-semibold"
+                                className="text-xs text-purple-400 hover:text-purple-300 font-semibold"
                               >
                                 View discussion thread details →
                               </Link>

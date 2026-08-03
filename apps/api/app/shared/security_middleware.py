@@ -35,9 +35,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
     def _is_rate_limited(self, ip: str) -> bool:
         """
-        Check rate limit: maximum 100 requests per minute per IP.
+        Check rate limit: maximum 500 requests per minute per IP.
+        Bypasses local loopback IPs in development.
         """
-        limit = 100
+        if ip in ("127.0.0.1", "::1", "localhost"):
+            return False
+
+        limit = 500
         window = 60
         now = time.time()
 
@@ -71,6 +75,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             
         self.memory_limit[ip] = (count + 1, start_time)
         return False
+
 
     async def dispatch(self, request: Request, call_next):
         request_id = str(uuid.uuid4())

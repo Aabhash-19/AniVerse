@@ -118,12 +118,12 @@ export default function NotificationsPage() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case "NEW_EPISODE": return "📺";
-      case "NEW_TRAILER": case "NEW_PV": return "🎬";
-      case "PREMIERE": return "🎉";
-      case "REPLY_COMMENT": case "REPLY_REVIEW": return "💬";
-      case "REVIEW_LIKE": return "❤️";
-      default: return "🔔";
+      case "NEW_EPISODE": return "EPISODE";
+      case "NEW_TRAILER": case "NEW_PV": return "TRAILER";
+      case "PREMIERE": return "PREMIERE";
+      case "REPLY_COMMENT": case "REPLY_REVIEW": return "REPLY";
+      case "REVIEW_LIKE": return "LIKE";
+      default: return "NOTIF";
     }
   };
 
@@ -198,7 +198,9 @@ export default function NotificationsPage() {
                   !n.is_read ? "border-l-4 border-l-purple-500" : ""
                 }`}
               >
-                <div className="text-2xl pt-0.5">{getTypeIcon(n.notification_type)}</div>
+                <span className="text-[10px] font-black uppercase px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-purple-400 mt-0.5">
+                  {getTypeIcon(n.notification_type)}
+                </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-sm font-bold text-zinc-200">{n.title}</h3>

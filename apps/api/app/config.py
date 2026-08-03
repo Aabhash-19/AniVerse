@@ -1,4 +1,9 @@
 from typing import List
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
 from pydantic import AnyHttpUrl, BeforeValidator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Annotated
@@ -32,7 +37,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
+    # Gemini AI Settings
+    GEMINI_API_KEY: str = ""
+    
     # CORS Origins
+
     BACKEND_CORS_ORIGINS: Annotated[
         List[str], 
         BeforeValidator(parse_cors)
