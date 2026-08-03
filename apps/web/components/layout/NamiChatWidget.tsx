@@ -26,8 +26,9 @@ export default function NamiChatWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Official high-res One Piece Nami avatar image
-  const NAMI_AVATAR = "https://s4.anilist.co/file/anilistcdn/character/large/b723-vp5hPptgnNEC.png";
+  // Cute post-timeskip Nami avatar image
+  const NAMI_AVATAR = "/nami-avatar.png";
+
 
   const [messages, setMessages] = useState<Message[]>([
     {
