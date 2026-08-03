@@ -77,6 +77,7 @@ def list_all_videos(
 ):
     """
     List all approved official videos in the media hub.
+    Auto-syncs from AniList trending trailers if the library is sparse (< 20 videos).
     """
     # Clean up any leftover mock IDs
     db.query(Video).filter(Video.provider_video_id.like("MOCK_%")).delete(synchronize_session=False)
@@ -89,15 +90,16 @@ def list_all_videos(
     offset = (page - 1) * limit
     videos = query.order_by(Video.id.desc()).offset(offset).limit(limit).all()
 
-    # If database has very few videos, auto-sync trending trailers from AniList
-    if not videos and page == 1:
+    # Auto-sync trending trailers from AniList if library is sparse (< 20 videos)
+    total_videos = db.query(Video).count()
+    if total_videos < 20 and page == 1:
         try:
             from app.ingestion.anilist import AniListClient
             from app.anime.models import Anime
             client = AniListClient()
             gql_query = """
             query {
-              Page(page: 1, perPage: 30) {
+              Page(page: 1, perPage: 50) {
                 media(type: ANIME, sort: [TRENDING_DESC, POPULARITY_DESC]) {
                   id
                   title { english romaji native }
@@ -110,11 +112,15 @@ def list_all_videos(
             media_list = res.get("data", {}).get("Page", {}).get("media", [])
             client.close()
 
+            imported = 0
             for m in media_list:
                 tr = m.get("trailer")
                 if not tr or tr.get("site") != "youtube" or not tr.get("id"):
                     continue
                 yt_id = tr["id"]
+                # Skip obviously bad/test IDs
+                if not yt_id or len(yt_id) < 5:
+                    continue
                 title_str = (m.get("title", {}).get("english") or m.get("title", {}).get("romaji") or "Anime") + " – Official Trailer"
                 local_anime = db.query(Anime).filter(Anime.anilist_id == m["id"]).first()
                 anime_id_to_use = local_anime.id if local_anime else 1
@@ -133,7 +139,11 @@ def list_all_videos(
                         verification_status=VerificationStatus.VERIFIED,
                         confidence_score=95.00
                     ))
-            db.commit()
+                    imported += 1
+            if imported > 0:
+                db.commit()
+                import logging
+                logging.getLogger(__name__).info(f"Auto-synced {imported} trailers from AniList trending.")
             videos = query.order_by(Video.id.desc()).offset(offset).limit(limit).all()
         except Exception as e:
             import logging
