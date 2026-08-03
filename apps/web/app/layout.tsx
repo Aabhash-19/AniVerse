@@ -40,6 +40,11 @@ export const metadata: Metadata = {
     description:
       "AI-powered anime discovery with official media, verified catalogues, progress tracking, and recommendations.",
   },
+  icons: {
+    icon: "/nami-wano-avatar.jpg",
+    shortcut: "/nami-wano-avatar.jpg",
+    apple: "/nami-wano-avatar.jpg",
+  },
   twitter: {
     card: "summary_large_image",
     title: "AniVerse — Anime Discovery Platform",
