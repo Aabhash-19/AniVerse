@@ -14,7 +14,7 @@ logger = logging.getLogger("admin_router")
 router = APIRouter(prefix="/admin", tags=["Administration"])
 
 
-def run_catalogue_sync(job_id: str, limit: int, db_session_factory):
+def run_catalogue_sync(job_id: str, limit: int, start_page: int, db_session_factory):
     """
     Background worker running the AniList import pipeline.
     """
@@ -34,7 +34,7 @@ def run_catalogue_sync(job_id: str, limit: int, db_session_factory):
     relations_map = {}
     
     try:
-        page = 1
+        page = start_page
         per_page = 20  # fetch in blocks of 20
         
         while processed < limit:
@@ -106,6 +106,7 @@ def run_catalogue_sync(job_id: str, limit: int, db_session_factory):
 def trigger_catalogue_sync(
     background_tasks: BackgroundTasks,
     limit: int = Query(default=1000, description="Max number of popular anime to import"),
+    start_page: int = Query(default=1, ge=1, description="Start page for AniList sync (each page handles per_page results)"),
     db: Session = Depends(get_db)
 ):
     """
@@ -126,7 +127,7 @@ def trigger_catalogue_sync(
     job = IngestionJob(
         job_type=JobType.CATALOGUE_SYNC,
         status=JobStatus.PENDING,
-        cursor={"limit": limit}
+        cursor={"limit": limit, "start_page": start_page}
     )
     db.add(job)
     db.commit()
@@ -137,6 +138,7 @@ def trigger_catalogue_sync(
         run_catalogue_sync,
         job_id=str(job.id),
         limit=limit,
+        start_page=start_page,
         db_session_factory=SessionLocal
     )
     
