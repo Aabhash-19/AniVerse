@@ -59,6 +59,9 @@ export default function Header() {
   const handleLogout = async () => {
     try {
       await fetchWithCredentials(getApiUrl("/auth/logout"), { method: "POST" });
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("namiverse_token");
+      }
       setUser(null);
       setUnreadCount(0);
       router.push("/discover");

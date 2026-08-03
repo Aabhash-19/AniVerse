@@ -143,26 +143,33 @@ def login(login_data: UserLoginSchema, response: Response, db: Session = Depends
     user.last_login_at = datetime.utcnow()
     db.commit()
 
+    # Determine cookie security based on CORS origins (SameSite=None & Secure=True for cross-origin HTTPS deployments)
+    is_prod_cors = any("vercel.app" in o or "onrender.com" in o for o in (settings.BACKEND_CORS_ORIGINS or []))
+    cookie_samesite = "none" if is_prod_cors else "lax"
+    cookie_secure = True if is_prod_cors else False
+
     # Set secure HttpOnly cookies
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         max_age=1800,  # 30 mins
-        samesite="lax",
-        secure=False   # Set True in production
+        samesite=cookie_samesite,
+        secure=cookie_secure
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
         max_age=604800, # 7 days
-        samesite="lax",
-        secure=False
+        samesite=cookie_samesite,
+        secure=cookie_secure
     )
 
     return {
         "message": "Login successful",
+        "access_token": access_token,
+        "token_type": "bearer",
         "username": user.username,
         "display_name": user.display_name,
         "role": user.role.value

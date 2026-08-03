@@ -23,9 +23,13 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || "Incorrect username or password.");
+        throw new Error(data.detail || "Incorrect username or password.");
+      }
+
+      if (data.access_token) {
+        localStorage.setItem("namiverse_token", data.access_token);
       }
 
       // Successful login
