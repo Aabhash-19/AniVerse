@@ -499,9 +499,9 @@ def get_anime_relations(anime_id: str, db: Session = Depends(get_db)):
     import logging
     log = logging.getLogger(__name__)
 
-    cache_key = f"anime:{anime_id}:relations:v3"
+    cache_key = f"anime:{anime_id}:relations:v4"
     cached_data = get_cached_json(cache_key)
-    if cached_data:
+    if cached_data and len(cached_data) > 2:
         return [RelationSchema(**r) for r in cached_data]
 
     # Resolve anime locally
@@ -667,13 +667,14 @@ def get_anime_reviews(anime_id: str, page: int = Query(1, ge=1), per_page: int =
 
     cache_key = f"anime:{anilist_id_to_use}:reviews:{page}:{per_page}"
     cached_data = get_cached_json(cache_key)
-    if cached_data is not None:
+    if cached_data and len(cached_data) > 0:
         return cached_data
 
     client = AniListClient()
     try:
         reviews = client.fetch_reviews_for_id(anilist_id_to_use, page=page, per_page=per_page)
-        set_cached_json(cache_key, reviews, expire_seconds=3600)
+        if reviews and len(reviews) > 0:
+            set_cached_json(cache_key, reviews, expire_seconds=3600)
         return reviews
     finally:
         client.close()
@@ -691,13 +692,14 @@ def get_anime_anilist_recommendations(anime_id: str, page: int = Query(1, ge=1),
 
     cache_key = f"anime:{anilist_id_to_use}:recommendations:{page}:{per_page}"
     cached_data = get_cached_json(cache_key)
-    if cached_data is not None:
+    if cached_data and len(cached_data) > 0:
         return cached_data
 
     client = AniListClient()
     try:
         recs = client.fetch_recommendations_for_id(anilist_id_to_use, page=page, per_page=per_page)
-        set_cached_json(cache_key, recs, expire_seconds=3600)
+        if recs and len(recs) > 0:
+            set_cached_json(cache_key, recs, expire_seconds=3600)
         return recs
     finally:
         client.close()
@@ -715,13 +717,14 @@ def get_anime_anilist_videos(anime_id: str, db: Session = Depends(get_db)):
 
     cache_key = f"anime:{anilist_id_to_use}:videos"
     cached_data = get_cached_json(cache_key)
-    if cached_data is not None:
+    if cached_data and (cached_data.get("trailer") or cached_data.get("streamingEpisodes")):
         return cached_data
 
     client = AniListClient()
     try:
         vids = client.fetch_videos_for_id(anilist_id_to_use)
-        set_cached_json(cache_key, vids, expire_seconds=3600)
+        if vids and (vids.get("trailer") or vids.get("streamingEpisodes")):
+            set_cached_json(cache_key, vids, expire_seconds=3600)
         return vids
     finally:
         client.close()
