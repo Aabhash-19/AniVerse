@@ -157,23 +157,8 @@ export default function VideosPage() {
           </div>
         </div>
 
-        {/* Nami's Media Lounge Banner */}
-        <div className="bg-gradient-to-r from-zinc-900 via-amber-950/20 to-zinc-900 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-4 shadow-lg">
-          <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-amber-500 shadow-md flex-shrink-0 bg-purple-950">
-            <img src="/nami-avatar.png" alt="Nami Navigator" className="w-full h-full object-cover" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
-              Nami's Media Lounge
-            </div>
-            <p className="text-xs text-zinc-300 font-medium mt-0.5 truncate">
-              "Verified official trailers, promotional clips, and live community discussions curated for your voyage!"
-            </p>
-          </div>
-        </div>
-
-
         {/* ── TAB 1: OFFICIAL VIDEOS ────────────────────────────────────────── */}
+
         {activeTab === "videos" && (
           <div>
             {loadingVideos ? (
