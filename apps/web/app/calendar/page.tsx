@@ -312,7 +312,7 @@ export default function CalendarPage() {
         {/* Nami's Airing Weather Report Banner */}
         <div className="bg-gradient-to-r from-zinc-900 via-amber-950/20 to-zinc-900 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-4 shadow-lg">
           <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-amber-500 shadow-md flex-shrink-0 bg-purple-950">
-            <img src="/nami-weather-avatar.png" alt="Nami Navigator" className="w-full h-full object-cover" />
+            <img src="/nami-wano-avatar.jpg" alt="Nami Navigator" className="w-full h-full object-cover scale-110" />
           </div>
 
           <div className="flex-1 min-w-0">

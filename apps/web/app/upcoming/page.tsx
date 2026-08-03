@@ -113,9 +113,9 @@ export default function UpcomingPage() {
         <div className="bg-gradient-to-r from-zinc-900 via-amber-950/20 to-zinc-900 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-4 shadow-lg">
           <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-amber-500 shadow-md flex-shrink-0 bg-purple-950">
             <img
-              src="/nami-horizon-avatar.jpg"
+              src="/nami-wano-avatar.jpg"
               alt="Nami Navigator"
-              className="w-full h-full object-cover scale-125 transition-transform duration-300"
+              className="w-full h-full object-cover scale-110 transition-transform duration-300"
             />
           </div>
 
