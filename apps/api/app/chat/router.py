@@ -135,55 +135,73 @@ def call_gemini_nami_ai(message: str, history: List[ChatMessage]) -> Optional[st
 def nami_chat(req: ChatRequest, db: Session = Depends(get_db)):
     """
     Nami AI Chatbot Endpoint — powered by Google Gemini API with fallbacks.
-    Returns in-character Nami responses along with database media cards.
+    Returns in-character Nami responses. Anime recommendation cards are only
+    returned when the user explicitly asks for recommendations.
     """
     user_msg = req.message.strip()
     if not user_msg:
         return ChatResponse(
-            reply="Hey, don't leave me hanging! Ask me for an anime recommendation, genre suggestions, or what's trending!",
+            reply="Hey, don't leave me hanging! Ask me anything, or say 'recommend me an anime' to get started!",
             anime_recommendations=[]
         )
 
     matched_anime: List[Anime] = []
     reply_text = ""
 
+    # ── Detect intent: does the user want anime recommendations? ─────────────
+    RECOMMENDATION_KEYWORDS = [
+        "recommend", "suggestion", "suggest", "what should i watch", "what to watch",
+        "what anime", "give me", "show me", "find me", "i want to watch",
+        "any good", "anything good", "best anime", "top anime", "anime for",
+        "similar to", "like this anime", "like", "new anime", "good anime",
+        "popular anime", "trending anime", "genre", "action anime", "romance anime",
+        "comedy anime", "isekai", "shonen", "seinen", "shoujo"
+    ]
+    lowered_msg = user_msg.lower()
+    is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS)
+
     # ── Attempt Real AI Generation via Gemini ────────────────────────────────
     ai_reply = call_gemini_nami_ai(user_msg, req.history or [])
     if ai_reply:
         reply_text = ai_reply
 
-        # Match anime cards based on AI reply and user message
-        lowered_comb = f"{user_msg.lower()} {ai_reply.lower()}"
-        
-        # Genre check
-        for g_name in ["Action", "Adventure", "Comedy", "Romance", "Fantasy", "Sci-Fi", "Drama", "Mystery", "Psychological", "Thriller"]:
-            if g_name.lower() in lowered_comb:
-                found_by_genre = db.query(Anime).join(Anime.genres).filter(
-                    Genre.name.ilike(f"%{g_name}%")
-                ).order_by(Anime.average_score.desc().nullslast()).limit(3).all()
-                matched_anime.extend(found_by_genre)
-                break
+        # Only match anime cards if the user explicitly asked for recommendations
+        if is_recommendation_request:
+            lowered_comb = f"{user_msg.lower()} {ai_reply.lower()}"
+            
+            # Genre check
+            for g_name in ["Action", "Adventure", "Comedy", "Romance", "Fantasy", "Sci-Fi", "Drama", "Mystery", "Psychological", "Thriller", "Isekai", "Shonen", "Seinen"]:
+                if g_name.lower() in lowered_comb:
+                    found_by_genre = db.query(Anime).join(Anime.genres).filter(
+                        Genre.name.ilike(f"%{g_name}%")
+                    ).order_by(Anime.average_score.desc().nullslast()).limit(4).all()
+                    matched_anime.extend(found_by_genre)
+                    break
 
-        # Check for top / popular if no genre matched
-        if not matched_anime:
-            matched_anime = db.query(Anime).order_by(Anime.average_score.desc().nullslast()).limit(3).all()
+            # Fall back to top rated if no genre matched
+            if not matched_anime:
+                matched_anime = db.query(Anime).order_by(Anime.average_score.desc().nullslast()).limit(4).all()
 
     # ── Fallback Rules if Gemini API key is missing or failed ─────────────────
     if not reply_text:
-        lowered_msg = user_msg.lower()
         if any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money"]):
             reply_text = random.choice(NAMI_BERRIES_REPLIES)
-            matched_anime = db.query(Anime).order_by(Anime.popularity.desc().nullslast()).limit(3).all()
+            if is_recommendation_request:
+                matched_anime = db.query(Anime).order_by(Anime.popularity.desc().nullslast()).limit(3).all()
 
         elif any(k in lowered_msg for k in ["one piece", "luffy", "zoro", "straw hat", "pirate"]):
             reply_text = random.choice(NAMI_ONE_PIECE_REPLIES)
-            matched_anime = db.query(Anime).filter(
-                Anime.genres.any(Genre.name.in_(["Action", "Adventure", "Fantasy"]))
-            ).order_by(Anime.popularity.desc().nullslast()).limit(4).all()
+            if is_recommendation_request:
+                matched_anime = db.query(Anime).filter(
+                    Anime.genres.any(Genre.name.in_(["Action", "Adventure", "Fantasy"]))
+                ).order_by(Anime.popularity.desc().nullslast()).limit(4).all()
+
+        elif is_recommendation_request:
+            reply_text = "Yosh! I've set our log pose to the top anime in our database for you!"
+            matched_anime = db.query(Anime).order_by(Anime.average_score.desc().nullslast()).limit(4).all()
 
         else:
-            reply_text = "Yosh! I've set our log pose to the top anime recommendations in our database for you:"
-            matched_anime = db.query(Anime).order_by(Anime.average_score.desc().nullslast()).limit(3).all()
+            reply_text = "Yosh! Set your course and ask me anything — anime news, character lore, or just chat!"
 
     # Deduplicate matched anime
     seen_ids = set()
