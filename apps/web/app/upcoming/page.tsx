@@ -109,6 +109,22 @@ export default function UpcomingPage() {
           <p className="text-zinc-400 mt-2">Explore unreleased anime titles, movies, and upcoming seasonal broadcasts.</p>
         </div>
 
+        {/* Nami's Horizon Radar Banner */}
+        <div className="bg-gradient-to-r from-zinc-900 via-amber-950/20 to-zinc-900 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-4 shadow-lg">
+          <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-amber-500 shadow-md flex-shrink-0 bg-purple-950">
+            <img src="/nami-avatar.png" alt="Nami Navigator" className="w-full h-full object-cover" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+              Nami's Horizon Radar
+            </div>
+            <p className="text-xs text-zinc-300 font-medium mt-0.5 truncate">
+              "Chart upcoming premieres and seasonal broadcasts heading into next season across the Grand Line!"
+            </p>
+          </div>
+        </div>
+
+
         {/* FEATURED UPCOMING SPOTLIGHT HERO BANNER WITH CAROUSEL CONTROLS */}
         {featured && !loading && (
           <div className="relative rounded-3xl overflow-hidden border border-purple-500/30 bg-gradient-to-r from-zinc-950 via-zinc-950/90 to-purple-950/40 p-6 md:p-8 backdrop-blur-md shadow-2xl shadow-purple-950/20 group transition-all duration-500">

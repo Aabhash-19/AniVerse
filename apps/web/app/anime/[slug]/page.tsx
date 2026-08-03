@@ -599,6 +599,24 @@ export default function AnimeDetailPage() {
               </div>
             )}
 
+            {/* Nami's Mascot Review Callout */}
+            <div className="mt-4 bg-gradient-to-r from-zinc-900 via-amber-950/20 to-zinc-900 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-4 shadow-lg max-w-4xl">
+              <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-amber-500 shadow-md flex-shrink-0 bg-purple-950">
+                <img src="/nami-avatar.png" alt="Nami Mascot" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+                  Nami's Navigator Log
+                </div>
+                <p className="text-xs text-zinc-300 font-medium mt-0.5">
+                  {anime.average_score && anime.average_score >= 80
+                    ? `Charted at a high rating of ${anime.average_score}%! This show is officially certified high value by your Straw Hat Navigator.`
+                    : `Log pose set for ${displayTitle}! Ask me in the chatbot for similar recommendations.`}
+                </p>
+              </div>
+            </div>
+
+
             {/* Studio & Additional Metadata Pills */}
             <div className="mt-4 flex flex-wrap gap-3 text-xs text-left">
               {anime.studios && anime.studios.length > 0 && (
