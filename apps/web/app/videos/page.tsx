@@ -91,31 +91,30 @@ const NAMI_NEWS = [
   },
 ];
 
-// Videos link to YouTube search so results are always accurate & current
 const NAMI_VIDEOS = [
   {
     id: "nami-1",
-    searchQuery: "Nami One Piece best moments compilation",
-    thumb: "https://i.ytimg.com/vi/V0s8tCTMV0I/hqdefault.jpg",
-    title: "Nami's Best Moments — Full Saga",
-    desc: "Top Nami scenes and power moments across the entire One Piece saga",
-    tag: "Fan Edit",
+    ytId: "1hPr6BYvWuI",
+    thumb: "https://i.ytimg.com/vi/1hPr6BYvWuI/hqdefault.jpg",
+    title: "One Piece — Video 1",
+    desc: "Selected by the AniVerse crew",
+    tag: "One Piece",
   },
   {
     id: "nami-2",
-    searchQuery: "One Piece official trailer Egghead arc Toei 2024",
-    thumb: "https://i.ytimg.com/vi/S8_YwFLCh4U/hqdefault.jpg",
-    title: "One Piece — Egghead Arc Official Trailer",
-    desc: "Official Toei Animation trailer for the Egghead Island arc",
-    tag: "Official Trailer",
+    ytId: "I4nvBF3yyeQ",
+    thumb: "https://i.ytimg.com/vi/I4nvBF3yyeQ/hqdefault.jpg",
+    title: "One Piece — Video 2",
+    desc: "Selected by the AniVerse crew",
+    tag: "One Piece",
   },
   {
     id: "nami-3",
-    searchQuery: "One Piece opening 1 We Are official creditless",
-    thumb: "https://i.ytimg.com/vi/lQ7tXMQoxTs/hqdefault.jpg",
-    title: "One Piece Opening 1 — 'We Are!'",
-    desc: "The legendary opening that started it all — Hiroshi Kitadani's classic",
-    tag: "Opening",
+    ytId: "xrjKnXLqWAU",
+    thumb: "https://i.ytimg.com/vi/xrjKnXLqWAU/hqdefault.jpg",
+    title: "One Piece — Video 3",
+    desc: "Selected by the AniVerse crew",
+    tag: "One Piece",
   },
 ];
 
@@ -624,12 +623,10 @@ export default function VideosPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 {NAMI_VIDEOS.map((vid) => (
-                  <a
+                  <div
                     key={vid.id}
-                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(vid.searchQuery)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex flex-col bg-zinc-900/30 border border-zinc-800 hover:border-amber-500/40 rounded-2xl overflow-hidden hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-300 no-underline"
+                    onClick={() => setActiveVideoId(vid.ytId)}
+                    className="cursor-pointer group flex flex-col bg-zinc-900/30 border border-zinc-800 hover:border-amber-500/40 rounded-2xl overflow-hidden hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-300"
                   >
                     <div className="aspect-video w-full bg-zinc-900 relative overflow-hidden">
                       <img
@@ -637,7 +634,7 @@ export default function VideosPage() {
                         alt={vid.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9' fill='%2318181b'%3E%3Crect width='16' height='9'/%3E%3C/svg%3E";
+                          (e.target as HTMLImageElement).src = `https://i.ytimg.com/vi/${vid.ytId}/mqdefault.jpg`;
                         }}
                       />
                       <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -645,10 +642,9 @@ export default function VideosPage() {
                           <svg className="w-6 h-6 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                         </div>
                       </div>
-                      <span className={`absolute bottom-2.5 right-2.5 text-[9px] px-2 py-0.5 rounded font-black tracking-wider uppercase ${videoTagColor[vid.tag] ?? "bg-zinc-800/80 text-zinc-300"}`}>
+                      <span className="absolute bottom-2.5 right-2.5 text-[9px] px-2 py-0.5 rounded font-black tracking-wider uppercase bg-amber-500/20 text-amber-300">
                         {vid.tag}
                       </span>
-                      {/* YouTube logo mark */}
                       <span className="absolute top-2.5 left-2.5 text-[9px] bg-red-600/90 text-white px-1.5 py-0.5 rounded font-black tracking-wider">
                         YT
                       </span>
@@ -657,7 +653,7 @@ export default function VideosPage() {
                       <span className="text-sm font-bold text-zinc-200 line-clamp-1 group-hover:text-amber-400 transition-colors">{vid.title}</span>
                       <span className="text-[10px] text-zinc-500">{vid.desc}</span>
                     </div>
-                  </a>
+                  </div>
                 ))}
               </div>
             </section>
