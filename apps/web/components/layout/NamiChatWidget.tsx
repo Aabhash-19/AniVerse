@@ -116,7 +116,7 @@ export default function NamiChatWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 font-sans">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 font-sans">
       {/* Proactive Speech Bubble Hint */}
       {!isOpen && showHint && (
         <div className="absolute -top-10 right-0 bg-gradient-to-r from-zinc-900 via-purple-950 to-zinc-900 border border-purple-500/40 text-purple-200 text-[11px] font-bold px-3 py-1.5 rounded-2xl shadow-xl whitespace-nowrap flex items-center gap-2 animate-bounce">
@@ -163,7 +163,7 @@ export default function NamiChatWidget() {
 
       {/* Floating Chat Modal anchored at Bottom-Right */}
       {isOpen && (
-        <div className="w-[360px] sm:w-[420px] h-[580px] bg-zinc-950/95 border border-purple-500/40 backdrop-blur-2xl rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="w-[calc(100vw-32px)] sm:w-[420px] max-w-[420px] h-[500px] sm:h-[580px] max-h-[85vh] bg-zinc-950/95 border border-purple-500/40 backdrop-blur-2xl rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
           
           {/* Header */}
           <div className="bg-gradient-to-r from-zinc-900 via-purple-950/50 to-zinc-900 p-4 border-b border-zinc-850 flex items-center justify-between">
