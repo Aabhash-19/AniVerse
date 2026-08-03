@@ -1,4 +1,4 @@
-# 🍊 🌌 NamiVerse — Next-Gen AI Anime Discovery, Official Media & Watchlist Platform
+# 🍊NamiVerse — Next-Gen AI Anime Discovery, Official Media & Watchlist Platform
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.2-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
