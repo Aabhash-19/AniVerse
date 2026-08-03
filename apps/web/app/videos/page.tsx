@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Header from "@/components/layout/Header";
-import { getApiUrl } from "@/lib/auth";
+import { getApiUrl, fetchWithCredentials } from "@/lib/auth";
 
 interface Video {
   id: number;
@@ -315,7 +315,7 @@ export default function VideosPage() {
     setLoadingVideos(true);
     setErrorVideos("");
     try {
-      const res = await fetch(getApiUrl("/videos"));
+      const res = await fetchWithCredentials(getApiUrl("/videos"));
       if (!res.ok) throw new Error("Failed to load official videos library.");
       const data = await res.json();
       setVideos(Array.isArray(data) ? data : []);
@@ -331,7 +331,7 @@ export default function VideosPage() {
     setLoadingPosts(true);
     setErrorPosts("");
     try {
-      const res = await fetch(getApiUrl("/media/social-feed?page_limit=25"));
+      const res = await fetchWithCredentials(getApiUrl("/media/social-feed?page_limit=25"));
       if (!res.ok) throw new Error("Failed to load social feed.");
       const data = await res.json();
       setPosts(Array.isArray(data) ? data : []);
