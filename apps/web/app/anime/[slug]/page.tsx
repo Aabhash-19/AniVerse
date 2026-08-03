@@ -679,7 +679,17 @@ export default function AnimeDetailPage() {
                       <div className="flex gap-3">
                         <div className="w-[60px] aspect-[3/4] rounded-lg overflow-hidden bg-zinc-950 flex-shrink-0">
                           {char.image_url ? (
-                            <img src={char.image_url} alt={char.first_name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                            <img
+                              src={char.image_url}
+                              alt={char.first_name}
+                              referrerPolicy="no-referrer"
+                              crossOrigin="anonymous"
+                              loading="lazy"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233f3f46'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+                              }}
+                            />
                           ) : (
                             <div className="w-full h-full bg-zinc-900" />
                           )}
@@ -702,7 +712,17 @@ export default function AnimeDetailPage() {
                           </div>
                           <div className="w-[60px] aspect-[3/4] rounded-lg overflow-hidden bg-zinc-950 flex-shrink-0">
                             {char.voice_actor_image ? (
-                              <img src={char.voice_actor_image} alt={char.voice_actor_name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                              <img
+                                src={char.voice_actor_image}
+                                alt={char.voice_actor_name}
+                                referrerPolicy="no-referrer"
+                                crossOrigin="anonymous"
+                                loading="lazy"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233f3f46'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+                                }}
+                              />
                             ) : (
                               <div className="w-full h-full bg-zinc-900" />
                             )}
