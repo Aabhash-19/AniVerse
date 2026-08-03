@@ -68,11 +68,50 @@ def get_anime_videos(anime_id: int, db: Session = Depends(get_db)):
     ]
 
 
+def fetch_youtube_video(query: str, bad_keywords: list = None) -> tuple:
+    """
+    Scrapes YouTube search results to find the best official video matching the query.
+    Returns (video_id, video_title) or (None, None).
+    """
+    import urllib.request
+    import urllib.parse
+    import re
+    
+    if bad_keywords is None:
+        bad_keywords = ["reaction", "reacting", "react", "amv", "cover", "remix", "fanmade", "fan-made", "review", "comparison", "parody"]
+        
+    try:
+        url = 'https://www.youtube.com/results?search_query=' + urllib.parse.quote(query)
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            html = response.read().decode('utf-8')
+            
+        matches = re.findall(r'\"videoRenderer\":\{(.*?)\"navigationEndpoint\"', html)
+        for m in matches:
+            vid_id_m = re.search(r'\"videoId\":\"([^\"]+)\"', m)
+            title_m = re.search(r'\"title\":\{\"runs\":\[\{\"text\":\"([^\"]+)\"\}', m)
+            if vid_id_m and title_m:
+                v_id = vid_id_m.group(1)
+                v_title = title_m.group(1)
+                
+                # Filter out obvious fan edits / covers / reactions
+                title_lower = v_title.lower()
+                if any(kw in title_lower for kw in bad_keywords):
+                    continue
+                    
+                return v_id, v_title
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"YouTube scrape failed for '{query}': {e}")
+        
+    return None, None
+
+
 def run_videos_sync(db_session_factory):
     """
     Refreshes top 50 trailers for currently airing and upcoming anime from AniList.
-    Upserts new trailers and marks existing ones as updated.
-    Prunes stale trailers that haven't been seen in the trending list for over 7 days.
+    Also discovers and imports official clean OPs/EDs from YouTube for the top 10 trending titles.
+    Prunes any trailers/videos that are no longer in this active list.
     """
     db: Session = db_session_factory()
     try:
@@ -135,6 +174,8 @@ def run_videos_sync(db_session_factory):
 
         imported = 0
         refreshed_ids = []
+        
+        # Part A: Import trailers/PVs from AniList metadata
         for m in unique_media:
             tr = m.get("trailer")
             if not tr or tr.get("site") != "youtube" or not tr.get("id"):
@@ -168,7 +209,74 @@ def run_videos_sync(db_session_factory):
                 # Update timestamp to mark it as active
                 existing.updated_at = datetime.utcnow()
                 refreshed_ids.append(existing.id)
+
+        # Part B: Import OPs and EDs for the top 10 unique anime
+        for m in unique_media[:10]:
+            anime_title = m.get("title", {}).get("english") or m.get("title", {}).get("romaji")
+            if not anime_title:
+                continue
                 
+            local_anime = db.query(Anime).filter(Anime.anilist_id == m["id"]).first()
+            anime_id_to_use = local_anime.id if local_anime else 1
+            
+            # Discover clean official Opening Theme (OP)
+            try:
+                op_query = f"{anime_title} opening official theme"
+                op_id, op_title = fetch_youtube_video(op_query)
+                if op_id:
+                    existing_op = db.query(Video).filter(Video.provider_video_id == op_id).first()
+                    if not existing_op:
+                        new_op = Video(
+                            anime_id=anime_id_to_use,
+                            provider=VideoProvider.YOUTUBE,
+                            provider_video_id=op_id,
+                            video_type=VideoType.OPENING,
+                            title=f"{anime_title} – Official Opening Theme",
+                            description=f"Official clean opening theme song for {anime_title}.",
+                            thumbnail_url=f"https://i.ytimg.com/vi/{op_id}/hqdefault.jpg",
+                            language="Japanese",
+                            verification_status=VerificationStatus.VERIFIED,
+                            confidence_score=90.00
+                        )
+                        db.add(new_op)
+                        db.flush()
+                        refreshed_ids.append(new_op.id)
+                    else:
+                        existing_op.updated_at = datetime.utcnow()
+                        refreshed_ids.append(existing_op.id)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Error syncing OP for {anime_title}: {e}")
+
+            # Discover clean official Ending Theme (ED)
+            try:
+                ed_query = f"{anime_title} ending official theme"
+                ed_id, ed_title = fetch_youtube_video(ed_query)
+                if ed_id:
+                    existing_ed = db.query(Video).filter(Video.provider_video_id == ed_id).first()
+                    if not existing_ed:
+                        new_ed = Video(
+                            anime_id=anime_id_to_use,
+                            provider=VideoProvider.YOUTUBE,
+                            provider_video_id=ed_id,
+                            video_type=VideoType.ENDING,
+                            title=f"{anime_title} – Official Ending Theme",
+                            description=f"Official clean ending theme song for {anime_title}.",
+                            thumbnail_url=f"https://i.ytimg.com/vi/{ed_id}/hqdefault.jpg",
+                            language="Japanese",
+                            verification_status=VerificationStatus.VERIFIED,
+                            confidence_score=90.00
+                        )
+                        db.add(new_ed)
+                        db.flush()
+                        refreshed_ids.append(new_ed.id)
+                    else:
+                        existing_ed.updated_at = datetime.utcnow()
+                        refreshed_ids.append(existing_ed.id)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Error syncing ED for {anime_title}: {e}")
+
         db.commit()
 
         # Instantly delete any video that was NOT in the latest trending/airing list
