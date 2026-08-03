@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     if (!res.ok) {
       return {
-        title: "Anime | AniVerse",
+        title: "Anime",
         description: "Discover anime on AniVerse — the AI-powered anime platform.",
       };
     }
@@ -32,12 +32,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const genres: string[] = anime.genres || [];
 
     return {
-      title: `${title} | AniVerse`,
+      title: title,
       description,
       keywords: [title, "anime", "AniVerse", ...genres],
       openGraph: {
         type: "article",
-        title: `${title} — AniVerse`,
+        title: `${title}`,
         description,
         url: `https://aniverse.app/anime/${slug}`,
         siteName: "AniVerse",
@@ -54,14 +54,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       },
       twitter: {
         card: "summary_large_image",
-        title: `${title} — AniVerse`,
+        title: `${title}`,
         description,
         ...(coverImage && { images: [coverImage] }),
       },
     };
   } catch {
     return {
-      title: "Anime | AniVerse",
+      title: "Anime",
       description: "Discover anime on AniVerse.",
     };
   }
