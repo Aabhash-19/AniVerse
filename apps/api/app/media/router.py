@@ -68,59 +68,54 @@ def get_anime_videos(anime_id: int, db: Session = Depends(get_db)):
     ]
 
 
-def fetch_youtube_video(query: str, bad_keywords: list = None) -> tuple:
+def fetch_animethemes_videos(anilist_id: int) -> list:
     """
-    Search YouTube videos via public Invidious instances (bypassing datacenter blocks).
-    Automatically tries up to 3 healthy Invidious instances dynamically.
+    Query animethemes.moe API for clean OPs and EDs.
+    Returns list of dicts: [{"type": "OPENING"|"ENDING", "url": str, "slug": str}]
     """
     import urllib.request
-    import urllib.parse
     import json
     
-    if bad_keywords is None:
-        bad_keywords = ["reaction", "reacting", "react", "amv", "cover", "remix", "fanmade", "fan-made", "review", "comparison", "parody"]
-        
-    # Get active/healthy public instances dynamically
-    instances = ["https://inv.zoomerville.com", "https://yewtu.be", "https://invidious.flokinet.to"]
+    results = []
     try:
-        req = urllib.request.Request("https://api.invidious.io/instances.json", headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=3) as resp:
+        url = f"https://api.animethemes.moe/anime?filter[has]=resources&filter[site]=AniList&filter[external_id]={anilist_id}&include=animethemes.animethemeentries.videos"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=4) as resp:
             data = json.loads(resp.read().decode('utf-8'))
-            healthy_uris = [inst[1]['uri'] for inst in data if inst[1].get('type') == 'https' and inst[1].get('api') == True and inst[1].get('monitor', {}).get('down') == False]
-            if healthy_uris:
-                instances = healthy_uris[:5]
-    except Exception:
-        # Fallback to static list if instances directory is down
-        pass
-        
-    for inst in instances:
-        try:
-            url = f"{inst}/api/v1/search?q={urllib.parse.quote(query)}&type=video"
-            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                results = json.loads(resp.read().decode('utf-8'))
-                
-            if not isinstance(results, list):
-                continue
-                
-            for res in results:
-                vid_id = res.get("videoId")
-                title = res.get("title")
-                if vid_id and title:
-                    title_lower = title.lower()
-                    if any(kw in title_lower for kw in bad_keywords):
-                        continue
-                    return vid_id, title
-        except Exception:
-            continue
             
-    return None, None
+        anime_list = data.get("anime", [])
+        if not anime_list:
+            anime_list = data.get("data", [])
+            
+        for a in anime_list:
+            themes = a.get("animethemes", [])
+            for t in themes:
+                t_type = t.get("type") # "OP" or "ED"
+                slug = t.get("slug")
+                entries = t.get("animethemeentries", [])
+                for entry in entries:
+                    videos = entry.get("videos", [])
+                    for v in videos:
+                        link = v.get("link")
+                        if link and link.startswith("http"):
+                            results.append({
+                                "type": "OPENING" if t_type == "OP" else "ENDING",
+                                "url": link,
+                                "slug": slug
+                            })
+                            # Keep only one video version per theme
+                            break
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Animethemes API failed for {anilist_id}: {e}")
+        
+    return results
 
 
 def run_videos_sync(db_session_factory):
     """
     Refreshes top 50 trailers for currently airing and upcoming anime from AniList.
-    Also discovers and imports official clean OPs/EDs from YouTube for the top 10 trending titles.
+    Also discovers and imports official clean OPs/EDs from Animethemes.moe for all trending titles.
     Prunes any trailers/videos that are no longer in this active list.
     """
     db: Session = db_session_factory()
@@ -220,8 +215,8 @@ def run_videos_sync(db_session_factory):
                 existing.updated_at = datetime.utcnow()
                 refreshed_ids.append(existing.id)
 
-        # Part B: Import OPs and EDs for the top 10 unique anime
-        for m in unique_media[:10]:
+        # Part B: Import OPs and EDs for the unique anime using Animethemes API
+        for m in unique_media:
             anime_title = m.get("title", {}).get("english") or m.get("title", {}).get("romaji")
             if not anime_title:
                 continue
@@ -229,63 +224,35 @@ def run_videos_sync(db_session_factory):
             local_anime = db.query(Anime).filter(Anime.anilist_id == m["id"]).first()
             anime_id_to_use = local_anime.id if local_anime else 1
             
-            # Discover clean official Opening Theme (OP)
-            try:
-                op_query = f"{anime_title} opening official theme"
-                op_id, op_title = fetch_youtube_video(op_query)
-                if op_id:
-                    existing_op = db.query(Video).filter(Video.provider_video_id == op_id).first()
-                    if not existing_op:
-                        new_op = Video(
-                            anime_id=anime_id_to_use,
-                            provider=VideoProvider.YOUTUBE,
-                            provider_video_id=op_id,
-                            video_type=VideoType.OPENING,
-                            title=f"{anime_title} – Official Opening Theme",
-                            description=f"Official clean opening theme song for {anime_title}.",
-                            thumbnail_url=f"https://i.ytimg.com/vi/{op_id}/hqdefault.jpg",
-                            language="Japanese",
-                            verification_status=VerificationStatus.VERIFIED,
-                            confidence_score=90.00
-                        )
-                        db.add(new_op)
-                        db.flush()
-                        refreshed_ids.append(new_op.id)
-                    else:
-                        existing_op.updated_at = datetime.utcnow()
-                        refreshed_ids.append(existing_op.id)
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(f"Error syncing OP for {anime_title}: {e}")
-
-            # Discover clean official Ending Theme (ED)
-            try:
-                ed_query = f"{anime_title} ending official theme"
-                ed_id, ed_title = fetch_youtube_video(ed_query)
-                if ed_id:
-                    existing_ed = db.query(Video).filter(Video.provider_video_id == ed_id).first()
-                    if not existing_ed:
-                        new_ed = Video(
-                            anime_id=anime_id_to_use,
-                            provider=VideoProvider.YOUTUBE,
-                            provider_video_id=ed_id,
-                            video_type=VideoType.ENDING,
-                            title=f"{anime_title} – Official Ending Theme",
-                            description=f"Official clean ending theme song for {anime_title}.",
-                            thumbnail_url=f"https://i.ytimg.com/vi/{ed_id}/hqdefault.jpg",
-                            language="Japanese",
-                            verification_status=VerificationStatus.VERIFIED,
-                            confidence_score=90.00
-                        )
-                        db.add(new_ed)
-                        db.flush()
-                        refreshed_ids.append(new_ed.id)
-                    else:
-                        existing_ed.updated_at = datetime.utcnow()
-                        refreshed_ids.append(existing_ed.id)
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(f"Error syncing ED for {anime_title}: {e}")
+            # Fetch from Animethemes
+            themes = fetch_animethemes_videos(m["id"])
+            for t in themes:
+                t_type = t["type"]
+                url_str = t["url"]
+                slug = t["slug"]
+                
+                # Check if it already exists
+                existing = db.query(Video).filter(Video.provider_video_id == url_str).first()
+                if not existing:
+                    new_video = Video(
+                        anime_id=anime_id_to_use,
+                        provider=VideoProvider.YOUTUBE,
+                        provider_video_id=url_str,
+                        video_type=VideoType.OPENING if t_type == "OPENING" else VideoType.ENDING,
+                        title=f"{anime_title} – Official {slug}",
+                        description=f"Official clean {slug} theme song for {anime_title}.",
+                        thumbnail_url=None,
+                        language="Japanese",
+                        verification_status=VerificationStatus.VERIFIED,
+                        confidence_score=95.00
+                    )
+                    db.add(new_video)
+                    db.flush()
+                    refreshed_ids.append(new_video.id)
+                    imported += 1
+                else:
+                    existing.updated_at = datetime.utcnow()
+                    refreshed_ids.append(existing.id)
 
         db.commit()
 
