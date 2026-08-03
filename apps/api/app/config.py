@@ -1,6 +1,7 @@
-from typing import List
+from typing import List, Union
 from dotenv import load_dotenv
 import os
+import json
 
 load_dotenv()
 
@@ -9,17 +10,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Annotated
 
 
-def parse_cors(v: str | List[str]) -> List[str]:
-    if isinstance(v, str) and not v.startswith("["):
-        return [i.strip() for i in v.split(",")]
+def parse_cors(v: Union[str, List[str]]) -> List[str]:
+    if isinstance(v, str):
+        if not v.startswith("["):
+            return [i.strip() for i in v.split(",") if i.strip()]
+        try:
+            return json.loads(v)
+        except Exception:
+            return []
     elif isinstance(v, list):
         return v
-    # If it is a string JSON list representation
-    import json
-    try:
-        return json.loads(v)
-    except Exception:
-        return []
+    return []
 
 
 class Settings(BaseSettings):
@@ -43,7 +44,7 @@ class Settings(BaseSettings):
     # CORS Origins
 
     BACKEND_CORS_ORIGINS: Annotated[
-        List[str], 
+        Union[str, List[str]], 
         BeforeValidator(parse_cors)
     ] = ["http://localhost:3000", "http://localhost:3001"]
     
