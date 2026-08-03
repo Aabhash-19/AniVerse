@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_, or_, desc, case
+from sqlalchemy import select, and_, or_, desc, case, func
 from app.database import get_db
 from app.anime.models import Anime, AnimeStatus, AnimeTitle, Genre, Tag, AnimeGenre, AnimeTag, AnimeCharacter, Character, VoiceActor, Staff, AnimeRelation
 from app.anime.schemas import AnimeSummarySchema, AnimeDetailSchema, CharacterSchema, RelationSchema
@@ -76,14 +76,20 @@ def list_anime(
 
     if sort == "score":
         result_query = result_query.order_by(
-            case({Anime.status == AnimeStatus.FINISHED: 0}, else_=1),
             desc(Anime.average_score).nulls_last(),
+            desc(Anime.popularity).nulls_last(),
             Anime.id
         )
     elif sort == "title":
-        result_query = result_query.order_by(Anime.title_english, Anime.title_romaji, Anime.id)
+        result_query = result_query.order_by(
+            func.coalesce(Anime.title_english, Anime.title_romaji, Anime.title_native),
+            Anime.id
+        )
     else:
-        result_query = result_query.order_by(desc(Anime.popularity).nulls_last(), Anime.id)
+        result_query = result_query.order_by(
+            desc(Anime.popularity).nulls_last(),
+            Anime.id
+        )
 
     offset = (page - 1) * limit
     results = result_query.offset(offset).limit(limit).all()
@@ -194,14 +200,20 @@ def list_anime(
             result_query = db.query(Anime).filter(Anime.id.in_(all_matching_ids))
             if sort == "score":
                 result_query = result_query.order_by(
-                    case({Anime.status == AnimeStatus.FINISHED: 0}, else_=1),
                     desc(Anime.average_score).nulls_last(),
+                    desc(Anime.popularity).nulls_last(),
                     Anime.id
                 )
             elif sort == "title":
-                result_query = result_query.order_by(Anime.title_english, Anime.title_romaji, Anime.id)
+                result_query = result_query.order_by(
+                    func.coalesce(Anime.title_english, Anime.title_romaji, Anime.title_native),
+                    Anime.id
+                )
             else:
-                result_query = result_query.order_by(desc(Anime.popularity).nulls_last(), Anime.id)
+                result_query = result_query.order_by(
+                    desc(Anime.popularity).nulls_last(),
+                    Anime.id
+                )
             results = result_query.offset(offset).limit(limit).all()
 
 
@@ -233,14 +245,20 @@ def list_anime(
                 result_query = db.query(Anime).filter(Anime.id.in_(matching_ids))
                 if sort == "score":
                     result_query = result_query.order_by(
-                        case({Anime.status == AnimeStatus.FINISHED: 0}, else_=1),
                         desc(Anime.average_score).nulls_last(),
+                        desc(Anime.popularity).nulls_last(),
                         Anime.id
                     )
                 elif sort == "title":
-                    result_query = result_query.order_by(Anime.title_english, Anime.title_romaji, Anime.id)
+                    result_query = result_query.order_by(
+                        func.coalesce(Anime.title_english, Anime.title_romaji, Anime.title_native),
+                        Anime.id
+                    )
                 else:
-                    result_query = result_query.order_by(desc(Anime.popularity).nulls_last(), Anime.id)
+                    result_query = result_query.order_by(
+                        desc(Anime.popularity).nulls_last(),
+                        Anime.id
+                    )
                 results = result_query.offset(offset).limit(limit).all()
         except Exception as fallback_err:
             logger.warning(f"On-demand fallback fetch notice: {fallback_err}")
