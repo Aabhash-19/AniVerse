@@ -105,7 +105,7 @@ def run_catalogue_sync(job_id: str, limit: int, db_session_factory):
 @router.post("/catalogue/sync")
 def trigger_catalogue_sync(
     background_tasks: BackgroundTasks,
-    limit: int = Query(default=50, description="Max number of popular anime to import"),
+    limit: int = Query(default=1000, description="Max number of popular anime to import"),
     db: Session = Depends(get_db)
 ):
     """

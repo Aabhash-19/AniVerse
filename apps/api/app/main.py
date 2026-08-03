@@ -74,35 +74,57 @@ app.include_router(chat_router, prefix=settings.API_V1_STR)
 @app.on_event("startup")
 def startup_autoseed():
     """
-    On backend startup, check if the database is sparse/empty (<10 anime).
-    If so, launch a background task to auto-seed top popular anime from AniList.
+    On backend startup, check if the database is sparse (< 1000 anime).
+    If so, launch a background task to bulk-seed up to 1200 popular anime
+    from AniList across multiple pages so the catalogue is richly populated.
     """
     import threading
+
     def _seed_task():
         try:
             from app.database import SessionLocal
             from app.anime.models import Anime
             from app.ingestion.anilist import AniListClient
             from app.ingestion.service import import_anime_payload
-            
+
             db = SessionLocal()
             try:
                 count = db.query(Anime).count()
-                if count < 10:
-                    print("Fresh database detected (<10 titles). Auto-seeding top popular anime from AniList...")
+                # Only seed when DB is meaningfully sparse (< 1000 titles)
+                if count < 1000:
+                    target = 1200  # aim for a rich local catalogue
+                    print(f"Sparse database detected ({count} titles < 1000). Auto-seeding up to {target} popular anime from AniList...")
                     client = AniListClient()
+                    imported = 0
                     try:
-                        res = client.fetch_anime_page(page=1, per_page=50)
-                        media_list = res.get("data", {}).get("Page", {}).get("media", [])
-                        for media in media_list:
+                        al_page = 1
+                        per_page = 50
+                        while imported < target:
+                            fetch_size = min(per_page, target - imported)
                             try:
-                                import_anime_payload(db, media)
-                                db.commit()
-                            except Exception:
-                                db.rollback()
-                        print(f"Auto-seeded {len(media_list)} popular anime into database.")
+                                res = client.fetch_anime_page(page=al_page, per_page=fetch_size)
+                            except Exception as fetch_err:
+                                print(f"Auto-seed fetch page {al_page} error: {fetch_err}")
+                                break
+                            media_list = res.get("data", {}).get("Page", {}).get("media", [])
+                            if not media_list:
+                                break
+                            for media in media_list:
+                                try:
+                                    import_anime_payload(db, media)
+                                    db.commit()
+                                    imported += 1
+                                except Exception:
+                                    db.rollback()
+                            has_next = res.get("data", {}).get("Page", {}).get("pageInfo", {}).get("hasNextPage")
+                            if not has_next:
+                                break
+                            al_page += 1
+                        print(f"Auto-seed complete: imported {imported} anime (DB total now ~{count + imported}).")
                     finally:
                         client.close()
+                else:
+                    print(f"Database is adequately populated ({count} anime). Skipping auto-seed.")
             finally:
                 db.close()
         except Exception as err:
