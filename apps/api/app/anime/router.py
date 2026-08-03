@@ -660,19 +660,22 @@ def get_anime_reviews(anime_id: str, page: int = Query(1, ge=1), per_page: int =
     """Fetch community reviews directly from AniList for a given anime."""
     from app.ingestion.anilist import AniListClient
 
+    page_num = int(page) if isinstance(page, (int, str)) and str(page).isdigit() else 1
+    per_num = int(per_page) if isinstance(per_page, (int, str)) and str(per_page).isdigit() else 20
+
     anime = resolve_anime_from_id(anime_id, db)
     anilist_id_to_use = anime.anilist_id if anime else None
     if not anilist_id_to_use:
         return []
 
-    cache_key = f"anime:{anilist_id_to_use}:reviews:{page}:{per_page}"
+    cache_key = f"anime:{anilist_id_to_use}:reviews:{page_num}:{per_num}"
     cached_data = get_cached_json(cache_key)
     if cached_data and len(cached_data) > 0:
         return cached_data
 
     client = AniListClient()
     try:
-        reviews = client.fetch_reviews_for_id(anilist_id_to_use, page=page, per_page=per_page)
+        reviews = client.fetch_reviews_for_id(anilist_id_to_use, page=page_num, per_page=per_num)
         if reviews and len(reviews) > 0:
             set_cached_json(cache_key, reviews, expire_seconds=3600)
         return reviews
@@ -685,19 +688,22 @@ def get_anime_anilist_recommendations(anime_id: str, page: int = Query(1, ge=1),
     """Fetch user-voted recommendations directly from AniList for a given anime."""
     from app.ingestion.anilist import AniListClient
 
+    page_num = int(page) if isinstance(page, (int, str)) and str(page).isdigit() else 1
+    per_num = int(per_page) if isinstance(per_page, (int, str)) and str(per_page).isdigit() else 25
+
     anime = resolve_anime_from_id(anime_id, db)
     anilist_id_to_use = anime.anilist_id if anime else None
     if not anilist_id_to_use:
         return []
 
-    cache_key = f"anime:{anilist_id_to_use}:recommendations:{page}:{per_page}"
+    cache_key = f"anime:{anilist_id_to_use}:recommendations:{page_num}:{per_num}"
     cached_data = get_cached_json(cache_key)
     if cached_data and len(cached_data) > 0:
         return cached_data
 
     client = AniListClient()
     try:
-        recs = client.fetch_recommendations_for_id(anilist_id_to_use, page=page, per_page=per_page)
+        recs = client.fetch_recommendations_for_id(anilist_id_to_use, page=page_num, per_page=per_num)
         if recs and len(recs) > 0:
             set_cached_json(cache_key, recs, expire_seconds=3600)
         return recs
