@@ -322,32 +322,39 @@ export default function AnimeDetailPage() {
 
         const realId = detData.id || animeId;
 
-        // Check user session
-        const authRes = await fetchWithCredentials(getApiUrl("/auth/me"));
+        // Fetch user status, characters, relations, and videos in parallel
+        const [authRes, charRes, relRes, vidRes] = await Promise.all([
+          fetchWithCredentials(getApiUrl("/auth/me")),
+          fetch(getApiUrl(`/anime/${realId}/characters`)),
+          fetch(getApiUrl(`/anime/${realId}/relations`)),
+          fetch(getApiUrl(`/anime/${realId}/videos`))
+        ]);
+
+        // Process user session if logged in
         if (authRes.ok) {
           const userData = await authRes.json();
           setUser(userData);
-          fetchWatchlistInfo(userData.id);
-          fetchFavouriteInfo();
-          fetchSubscriptionInfo();
+          // Fetch watchlist info, favourite info, and subscription in parallel
+          Promise.all([
+            fetchWatchlistInfo(userData.id),
+            fetchFavouriteInfo(),
+            fetchSubscriptionInfo()
+          ]).catch(err => console.error("Error loading user state:", err));
         }
 
-        // Fetch Characters
-        const charRes = await fetch(getApiUrl(`/anime/${realId}/characters`));
+        // Process characters
         if (charRes.ok) {
           const charData = await charRes.json();
           setCharacters(charData);
         }
 
-        // Fetch Relations
-        const relRes = await fetch(getApiUrl(`/anime/${realId}/relations`));
+        // Process relations
         if (relRes.ok) {
           const relData = await relRes.json();
           setRelations(relData);
         }
 
-        // Fetch Videos
-        const vidRes = await fetch(getApiUrl(`/anime/${realId}/videos`));
+        // Process videos
         if (vidRes.ok) {
           const vidData = await vidRes.json();
           setVideos(vidData);
