@@ -9,6 +9,7 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const checkUser = async () => {
     try {
@@ -24,14 +25,34 @@ export default function Header() {
     }
   };
 
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await fetchWithCredentials(getApiUrl("/notifications?unread_only=true"));
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadCount(data.length);
+      }
+    } catch (_) {}
+  };
+
   useEffect(() => {
     checkUser();
   }, [pathname]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUnreadCount();
+      // Listen to external alert triggers to dynamically adjust count
+      window.addEventListener("notifications_updated", fetchUnreadCount);
+      return () => window.removeEventListener("notifications_updated", fetchUnreadCount);
+    }
+  }, [user]);
 
   const handleLogout = async () => {
     try {
       await fetchWithCredentials(getApiUrl("/auth/logout"), { method: "POST" });
       setUser(null);
+      setUnreadCount(0);
       router.push("/discover");
       router.refresh();
     } catch (e) {
@@ -57,6 +78,18 @@ export default function Header() {
               Discover
             </Link>
             <Link 
+              href="/calendar" 
+              className={`font-semibold transition-all ${pathname === "/calendar" ? "text-purple-400" : "text-zinc-400 hover:text-zinc-200"}`}
+            >
+              Calendar
+            </Link>
+            <Link 
+              href="/upcoming" 
+              className={`font-semibold transition-all ${pathname === "/upcoming" ? "text-purple-400" : "text-zinc-400 hover:text-zinc-200"}`}
+            >
+              Upcoming
+            </Link>
+            <Link 
               href="/videos" 
               className={`font-semibold transition-all ${pathname === "/videos" ? "text-purple-400" : "text-zinc-400 hover:text-zinc-200"}`}
             >
@@ -76,6 +109,16 @@ export default function Header() {
         <div className="flex items-center gap-4">
           {user ? (
             <div className="flex items-center gap-4">
+              {/* Notification Bell */}
+              <Link href="/notifications" className="relative p-1 text-zinc-400 hover:text-zinc-200 transition-all">
+                <span className="text-xl">🔔</span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-black leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-purple-600 rounded-full">
+                    {unreadCount}
+                  </span>
+                )}
+              </Link>
+
               {user.role === "ADMIN" && (
                 <Link 
                   href="/admin" 
@@ -84,9 +127,11 @@ export default function Header() {
                   Curator Queue
                 </Link>
               )}
-              <span className="text-sm font-semibold text-zinc-300">
-                {user.display_name}
-              </span>
+              
+              <Link href={`/profile/${user.username}`} className="text-sm font-semibold text-zinc-300 hover:text-purple-400 transition-colors">
+                {user.display_name || user.username}
+              </Link>
+              
               <button 
                 onClick={handleLogout}
                 className="text-xs px-3.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold transition-all border border-zinc-850"

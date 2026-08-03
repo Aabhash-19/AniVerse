@@ -15,6 +15,7 @@ import app.lists.models
 import app.media.models
 import app.community.models
 import app.recommendations.models
+import app.notifications.models
 Base.metadata.create_all(bind=engine)
 
 from app.config import settings
@@ -25,6 +26,7 @@ from app.lists.router import router as lists_router
 from app.media.router import router as media_router
 from app.community.router import router as community_router
 from app.recommendations.router import router as recommendations_router
+from app.notifications.router import router as notifications_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -51,6 +53,7 @@ app.include_router(lists_router, prefix=settings.API_V1_STR)
 app.include_router(media_router, prefix=settings.API_V1_STR)
 app.include_router(community_router, prefix=settings.API_V1_STR)
 app.include_router(recommendations_router, prefix=settings.API_V1_STR)
+app.include_router(notifications_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")

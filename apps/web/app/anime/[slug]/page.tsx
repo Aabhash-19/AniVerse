@@ -87,6 +87,10 @@ export default function AnimeDetailPage() {
   const [similarRecs, setSimilarRecs] = useState<any[]>([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
 
+  // Subscription (Follow) states
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [togglingSub, setTogglingSub] = useState(false);
+
   // User auth & watchlist states
   const [user, setUser] = useState<any>(null);
   const [watchlistStatus, setWatchlistStatus] = useState<string>("");
@@ -106,6 +110,33 @@ export default function AnimeDetailPage() {
       if (res.ok) setSimilarRecs(await res.json());
     } finally {
       setLoadingSimilar(false);
+    }
+  };
+
+  const fetchSubscriptionInfo = async () => {
+    try {
+      const res = await fetchWithCredentials(getApiUrl(`/anime/${animeId}/subscription`));
+      if (res.ok) {
+        const data = await res.json();
+        setIsSubscribed(data !== null);
+      }
+    } catch (_) {}
+  };
+
+  const handleToggleSubscription = async () => {
+    if (!user) return;
+    setTogglingSub(true);
+    try {
+      const res = await fetchWithCredentials(getApiUrl(`/anime/${animeId}/subscribe`), {
+        method: "POST"
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const active = data.trailer_alerts || data.episode_alerts || data.news_alerts;
+        setIsSubscribed(active);
+      }
+    } finally {
+      setTogglingSub(false);
     }
   };
 
@@ -251,6 +282,7 @@ export default function AnimeDetailPage() {
           setUser(userData);
           fetchWatchlistInfo(userData.id);
           fetchFavouriteInfo();
+          fetchSubscriptionInfo();
         }
 
         // Fetch Characters
@@ -473,6 +505,20 @@ export default function AnimeDetailPage() {
                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                   </svg>
                   {isFavourite ? "Favourited" : "Favourite"}
+                </button>
+              )}
+
+              {user && (
+                <button
+                  onClick={handleToggleSubscription}
+                  disabled={togglingSub}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                    isSubscribed
+                      ? "bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
+                      : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  <span>{isSubscribed ? "✓ Following" : "🔔 Follow"}</span>
                 </button>
               )}
 
