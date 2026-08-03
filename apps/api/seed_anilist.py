@@ -22,10 +22,10 @@ def seed_catalogue(max_pages: int = 10, per_page: int = 50):
     total_imported = 0
     relations_map = {}
 
-    print(f"🚀 Starting AniList Catalogue Bulk Ingestion ({max_pages} pages, {per_page} items/page)...")
+    print(f" Starting AniList Catalogue Bulk Ingestion ({max_pages} pages, {per_page} items/page)...")
 
     for page in range(1, max_pages + 1):
-        print(f"📥 Fetching Page {page}/{max_pages} from AniList GraphQL...")
+        print(f" Fetching Page {page}/{max_pages} from AniList GraphQL...")
         try:
             res = client.fetch_anime_page(page=page, per_page=per_page)
             media_list = res.get("data", {}).get("Page", {}).get("media", [])
@@ -45,7 +45,7 @@ def seed_catalogue(max_pages: int = 10, per_page: int = 50):
                     logger.error(f"Failed to import anime {media.get('id')}: {e}")
                     db.rollback()
 
-            print(f"✅ Page {page} complete. Total imported so far: {total_imported}")
+            print(f" Page {page} complete. Total imported so far: {total_imported}")
             time.sleep(0.7)  # Respect AniList rate limit
 
         except Exception as e:
@@ -53,14 +53,14 @@ def seed_catalogue(max_pages: int = 10, per_page: int = 50):
             time.sleep(2)
 
     try:
-        print("🔗 Post-processing relationship graph...")
+        print(" Post-processing relationship graph...")
         process_relations(db, relations_map)
     except Exception as e:
         logger.error(f"Error building relations: {e}")
 
     db.close()
     client.close()
-    print(f"🎉 Bulk ingestion finished! Total anime imported: {total_imported}")
+    print(f" Bulk ingestion finished! Total anime imported: {total_imported}")
 
 if __name__ == "__main__":
     max_p = int(sys.argv[1]) if len(sys.argv) > 1 else 10

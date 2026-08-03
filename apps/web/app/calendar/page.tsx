@@ -316,7 +316,7 @@ export default function CalendarPage() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
-              Nami's Airing Weather Report 🍊
+              Nami's Airing Weather Report 
             </div>
             <p className="text-xs text-zinc-300 font-medium mt-0.5 truncate">
               {events.length > 0
@@ -535,7 +535,7 @@ export default function CalendarPage() {
                   {viewMode === "personal" && (
                     <div className="space-y-4">
                       <h3 className="text-sm font-extrabold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
-                        <span>📜</span>
+                        <span></span>
                         <span>My Activity & History on This Day ({selectedDayActivities.length})</span>
                       </h3>
 
@@ -584,7 +584,7 @@ export default function CalendarPage() {
                   {/* 2. SEASONAL EPISODE AIRINGS FOR THIS DAY */}
                   <div className="space-y-4">
                     <h3 className="text-sm font-extrabold text-purple-400 uppercase tracking-wider flex items-center gap-2">
-                      <span>⚡</span>
+                      <span></span>
                       <span>
                         {viewMode === "personal"
                           ? `Watched Anime Episodes Airing on This Day (${selectedDayEvents.length})`
@@ -641,7 +641,7 @@ export default function CalendarPage() {
                                     </span>
                                   )}
                                   <span className="text-[10px] text-zinc-400 font-medium">
-                                    🕒 {formatTime(ev.airing_at)}
+                                     {formatTime(ev.airing_at)}
                                   </span>
                                 </div>
                               </div>
@@ -656,7 +656,7 @@ export default function CalendarPage() {
                                     onClick={() => setActiveTrailerId(ev.trailer_url || null)}
                                     className="text-[9px] font-bold text-zinc-400 hover:text-zinc-200 transition-all flex items-center gap-1"
                                   >
-                                    🎬 Watch Trailer
+                                     Watch Trailer
                                   </button>
                                 )}
                               </div>
@@ -727,7 +727,7 @@ export default function CalendarPage() {
                             </span>
                           )}
                           <span className="text-[10px] text-zinc-400 font-medium">
-                            🕒 {formatTime(ev.airing_at)}
+                             {formatTime(ev.airing_at)}
                           </span>
                         </div>
                       </div>
@@ -742,7 +742,7 @@ export default function CalendarPage() {
                             onClick={() => setActiveTrailerId(ev.trailer_url || null)}
                             className="text-[9px] font-bold text-zinc-400 hover:text-zinc-200 transition-all flex items-center gap-1"
                           >
-                            🎬 Watch Trailer
+                             Watch Trailer
                           </button>
                         )}
                       </div>

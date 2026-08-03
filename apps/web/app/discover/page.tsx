@@ -100,7 +100,7 @@ export default function DiscoverPage() {
       });
       if (res.ok) {
         setRecommendations((prev) => prev.filter((r) => r.id !== animeId));
-        alert(feedbackType === "INTERESTED" ? "Added to your profile preferences! 👍" : "Hiding this suggestion. 👎");
+        alert(feedbackType === "INTERESTED" ? "Added to your profile preferences! " : "Hiding this suggestion. ");
       }
     } catch (_) {}
   };
@@ -266,7 +266,7 @@ export default function DiscoverPage() {
                     
                     {/* Reason block */}
                     {rec.reasons.length > 0 && (
-                      <p className="text-[10px] text-zinc-500 italic leading-tight">✓ {rec.reasons[0]}</p>
+                      <p className="text-[10px] text-zinc-500 italic leading-tight"> {rec.reasons[0]}</p>
                     )}
 
                     {/* Feedback Buttons */}
@@ -275,13 +275,13 @@ export default function DiscoverPage() {
                         onClick={() => handleRecommendationFeedback(rec.id, "INTERESTED")}
                         className="text-[10px] font-bold text-zinc-400 hover:text-green-400 bg-zinc-900 hover:bg-green-500/10 border border-zinc-800 px-2 py-1 rounded flex-1 text-center transition-all"
                       >
-                        👍 Yes
+                         Yes
                       </button>
                       <button 
                         onClick={() => handleRecommendationFeedback(rec.id, "NOT_INTERESTED")}
                         className="text-[10px] font-bold text-zinc-400 hover:text-red-400 bg-zinc-900 hover:bg-red-500/10 border border-zinc-800 px-2 py-1 rounded flex-1 text-center transition-all"
                       >
-                        👎 No
+                         No
                       </button>
                     </div>
                   </div>
@@ -416,7 +416,7 @@ export default function DiscoverPage() {
                     {/* Nami's Log Pose Choice badge for top rated shows */}
                     {anime.average_score && anime.average_score >= 84 && (
                       <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-md text-[9px] font-extrabold text-zinc-950 shadow-md flex items-center gap-1">
-                        Nami's Pick 🍊
+                        Nami's Pick 
                       </div>
                     )}
 
@@ -476,7 +476,7 @@ export default function DiscoverPage() {
           )}
           {!hasMore && animeList.length > 0 && (
             <p className="text-xs text-zinc-600 font-semibold uppercase tracking-widest">
-              ✓ All items loaded from catalogue
+               All items loaded from catalogue
             </p>
           )}
         </div>

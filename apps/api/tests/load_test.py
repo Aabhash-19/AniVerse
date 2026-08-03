@@ -14,7 +14,7 @@ def fetch_search():
     return time.time() - start, status
 
 def run_load_test():
-    print("🚀 Initiating concurrent load stress test simulation...")
+    print(" Initiating concurrent load stress test simulation...")
     concurrency = 15
     total_runs = 60
 
@@ -39,7 +39,7 @@ def run_load_test():
         print(f"Max latency: {max(successful):.2f} ms")
         print(f"Min latency: {min(successful):.2f} ms")
     else:
-        print("❌ All concurrent requests failed or returned non-200 status codes. Ensure API server is active.")
+        print(" All concurrent requests failed or returned non-200 status codes. Ensure API server is active.")
 
 if __name__ == "__main__":
     run_load_test()

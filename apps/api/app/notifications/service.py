@@ -58,9 +58,9 @@ def create_notification(
 
     # Stub integrations for Email & Web Push delivery
     if pref.emails_enabled:
-        logger.info(f"📧 [SMTP STUB] Dispatching email alert to user {user_id}. Subject: '{title}' - Body: '{message}'")
+        logger.info(f" [SMTP STUB] Dispatching email alert to user {user_id}. Subject: '{title}' - Body: '{message}'")
     if pref.push_enabled:
-        logger.info(f"📱 [WEB PUSH STUB] Dispatched VAPID browser push notification to user {user_id}. Title: '{title}'")
+        logger.info(f" [WEB PUSH STUB] Dispatched VAPID browser push notification to user {user_id}. Title: '{title}'")
 
     return notification
 

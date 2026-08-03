@@ -498,7 +498,7 @@ export default function MyListPage() {
                     onClick={() => setImportProgress((prev) => ({ ...prev, showModal: false }))}
                     className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-sm font-bold"
                   >
-                    ✕
+                    
                   </button>
                 ) : (
                   <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
@@ -577,7 +577,7 @@ export default function MyListPage() {
                         className="flex items-center justify-between bg-zinc-900/40 border border-zinc-900 rounded-xl px-3 py-2 text-zinc-300"
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <span className="text-emerald-400">✓</span>
+                          <span className="text-emerald-400"></span>
                           <span className="truncate font-semibold text-zinc-200">{item.title}</span>
                         </div>
                         <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-850 border border-zinc-800 text-purple-300 font-bold flex-shrink-0">
@@ -591,7 +591,7 @@ export default function MyListPage() {
                   {importProgress.isComplete && (
                     <div className="bg-emerald-950/20 border border-emerald-800/40 rounded-2xl p-4 text-center space-y-3">
                       <p className="text-emerald-300 font-bold text-sm">
-                        ✓ Successfully imported {importProgress.importedCount} entries from AniList!
+                         Successfully imported {importProgress.importedCount} entries from AniList!
                       </p>
                       <button
                         onClick={() => setImportProgress((prev) => ({ ...prev, showModal: false }))}

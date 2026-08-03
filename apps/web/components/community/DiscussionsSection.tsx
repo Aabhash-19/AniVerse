@@ -37,7 +37,7 @@ function SpoilerPreview({ title, body, hasSpoiler }: { title: string; body: stri
   }
   return (
     <div className="flex items-center gap-2 mt-1">
-      <span className="text-[9px] px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-black">⚠️ Spoiler</span>
+      <span className="text-[9px] px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-black">️ Spoiler</span>
       <button onClick={() => setRevealed(true)} className="text-[10px] text-zinc-500 hover:text-zinc-300 underline">Reveal preview</button>
     </div>
   );

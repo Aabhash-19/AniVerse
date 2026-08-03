@@ -148,7 +148,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-100 font-sans p-6">
         <div className="text-center space-y-4">
-          <p className="text-5xl">👤</p>
+          <p className="text-5xl"></p>
           <h1 className="text-2xl font-extrabold text-zinc-200">User Not Found</h1>
           <p className="text-zinc-500 text-sm">{error || "This profile doesn't exist."}</p>
           <Link href="/discover" className="inline-block px-5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-bold transition-all">
@@ -216,7 +216,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
                       : "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white"
                   }`}
                 >
-                  {togglingBlock ? "..." : isBlocked ? "🚫 Unblock User" : "Block User"}
+                  {togglingBlock ? "..." : isBlocked ? " Unblock User" : "Block User"}
                 </button>
               ) : null}
             </div>

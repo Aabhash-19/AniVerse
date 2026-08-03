@@ -41,26 +41,26 @@ def build_anime_text(anime: Anime) -> str:
     return text_doc
 
 def sync_embeddings():
-    print("🚀 Initializing Vector Database Extension...")
+    print(" Initializing Vector Database Extension...")
     with engine.connect() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
         conn.commit()
-    print("✅ pgvector extension active.")
+    print(" pgvector extension active.")
 
     db = SessionLocal()
     try:
         anime_list = db.query(Anime).all()
         if not anime_list:
-            print("⚠️ No anime records found in the database. Please import AniList or seed first.")
+            print("️ No anime records found in the database. Please import AniList or seed first.")
             return
 
-        print(f"🔍 Found {len(anime_list)} anime records to index.")
+        print(f" Found {len(anime_list)} anime records to index.")
         
         # Load embedding model
-        print("📥 Loading sentence-transformers model (all-MiniLM-L6-v2)...")
+        print(" Loading sentence-transformers model (all-MiniLM-L6-v2)...")
         from sentence_transformers import SentenceTransformer
         model = SentenceTransformer(MODEL_NAME)
-        print("✅ Model loaded successfully.")
+        print(" Model loaded successfully.")
 
         count = 0
         for anime in anime_list:
@@ -91,13 +91,13 @@ def sync_embeddings():
             count += 1
             if count % 10 == 0:
                 db.commit()
-                print(f"💾 Indexed {count} anime vector records...")
+                print(f" Indexed {count} anime vector records...")
 
         db.commit()
-        print(f"🎉 Success! Synced {count} new/updated anime vector embeddings.")
+        print(f" Success! Synced {count} new/updated anime vector embeddings.")
 
     except Exception as e:
-        print(f"❌ Synchronization failed: {e}")
+        print(f" Synchronization failed: {e}")
         db.rollback()
     finally:
         db.close()

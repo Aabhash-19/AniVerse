@@ -127,7 +127,7 @@ export default function NamiChatWidget() {
             }}
             className="text-zinc-400 hover:text-white text-xs font-bold"
           >
-            ✕
+            
           </button>
         </div>
       )}
@@ -196,7 +196,7 @@ export default function NamiChatWidget() {
                 onClick={() => setIsOpen(false)}
                 className="w-8 h-8 rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center font-bold text-xs transition-all border border-zinc-800"
               >
-                ✕
+                
               </button>
             </div>
           </div>

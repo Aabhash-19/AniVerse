@@ -329,11 +329,11 @@ export default function VideosPage() {
                   {/* Interaction Footer */}
                   <div className="flex items-center gap-6 pt-3 border-t border-zinc-900/60 text-xs font-semibold text-zinc-500">
                     <div className="flex items-center gap-1.5 hover:text-zinc-300 transition-colors">
-                      <span>💬</span>
+                      <span></span>
                       <span>{post.comments_count} Comments</span>
                     </div>
                     <div className="flex items-center gap-1.5 hover:text-purple-400 transition-colors">
-                      <span>❤️</span>
+                      <span>️</span>
                       <span>{post.likes_count} Likes</span>
                     </div>
                   </div>

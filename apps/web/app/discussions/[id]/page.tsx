@@ -155,7 +155,7 @@ function CommentItem({
           <p className="text-xs italic text-zinc-600">[Content hidden by moderator]</p>
         ) : isSpoiler ? (
           <div className="bg-zinc-950/40 rounded-xl p-3 border border-zinc-900/80 flex items-center justify-between gap-4">
-            <span className="text-xs text-zinc-500 font-medium">⚠️ This comment contains spoilers</span>
+            <span className="text-xs text-zinc-500 font-medium">️ This comment contains spoilers</span>
             <button
               onClick={() => setSpoilerRevealed(true)}
               className="text-xs text-yellow-500 hover:text-yellow-400 font-bold underline"
@@ -175,13 +175,13 @@ function CommentItem({
               disabled={!currentUser}
               className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 font-medium"
             >
-              ❤️ <span className="font-bold">{comment.like_count}</span>
+              ️ <span className="font-bold">{comment.like_count}</span>
             </button>
             <button
               onClick={() => handleToggleReplies()}
               className="text-zinc-500 hover:text-zinc-300 font-medium"
             >
-              💬 {comment.reply_count || replies.length} {comment.reply_count === 1 ? "Reply" : "Replies"}
+               {comment.reply_count || replies.length} {comment.reply_count === 1 ? "Reply" : "Replies"}
             </button>
             {currentUser && !isAuthor && (
               <button
@@ -506,7 +506,7 @@ export default function DiscussionDetailPage({ params }: { params: Promise<{ id:
           <div className="flex items-center gap-2 flex-wrap">
             {discussion.is_pinned && (
               <span className="text-[9px] px-2 py-0.5 rounded bg-purple-500/20 border border-purple-500/30 text-purple-400 font-black">
-                📌 PINNED
+                 PINNED
               </span>
             )}
             {discussion.episode && (
@@ -516,7 +516,7 @@ export default function DiscussionDetailPage({ params }: { params: Promise<{ id:
             )}
             {discussion.has_spoiler && (
               <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-black">
-                ⚠️ SPOILERS
+                ️ SPOILERS
               </span>
             )}
           </div>
@@ -530,7 +530,7 @@ export default function DiscussionDetailPage({ params }: { params: Promise<{ id:
               by @{discussion.user.username}
             </span>
             <span>•</span>
-            <span>👁️ {discussion.view_count} views</span>
+            <span>️ {discussion.view_count} views</span>
             <span>•</span>
             <span>{new Date(discussion.created_at).toLocaleDateString()}</span>
           </div>
@@ -541,7 +541,7 @@ export default function DiscussionDetailPage({ params }: { params: Promise<{ id:
               <p className="text-sm italic text-zinc-600">[Discussion content hidden by moderator]</p>
             ) : isSpoilerBody ? (
               <div className="bg-zinc-950/60 rounded-xl p-5 border border-zinc-900/80 flex flex-col items-center justify-center gap-3">
-                <span className="text-sm text-zinc-400 font-medium">⚠️ This thread description contains spoilers</span>
+                <span className="text-sm text-zinc-400 font-medium">️ This thread description contains spoilers</span>
                 <button
                   onClick={() => setBodySpoilerRevealed(true)}
                   className="text-xs px-4 py-1.5 rounded-lg bg-yellow-600/10 border border-yellow-500/20 text-yellow-400 font-bold hover:bg-yellow-600 hover:text-white transition-all"
@@ -558,7 +558,7 @@ export default function DiscussionDetailPage({ params }: { params: Promise<{ id:
           <div className="flex items-center justify-between pt-4 border-t border-zinc-850/40 text-xs">
             <div className="flex items-center gap-3">
               <span className="text-zinc-500 font-bold uppercase tracking-wider">
-                💬 {discussion.comment_count} Comments
+                 {discussion.comment_count} Comments
               </span>
             </div>
             <div className="flex items-center gap-3">

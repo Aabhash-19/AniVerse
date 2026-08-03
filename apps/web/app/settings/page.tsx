@@ -57,7 +57,7 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAccount = async () => {
-    const check1 = confirm("⚠️ WARNING: Are you absolutely sure you want to delete your account? This action is permanent and cannot be undone.");
+    const check1 = confirm("️ WARNING: Are you absolutely sure you want to delete your account? This action is permanent and cannot be undone.");
     if (!check1) return;
     const check2 = confirm("Confirming again: All watchlists, ratings, comments, and profile preferences will be permanently wiped from the database.");
     if (!check2) return;

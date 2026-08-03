@@ -156,7 +156,7 @@ export default function AnimeDetailPage() {
         body: JSON.stringify({ feedback_type: feedbackType }),
       });
       if (res.ok) {
-        alert(feedbackType === "INTERESTED" ? "Added to your profile preferences! 👍" : "Hiding this suggestion. 👎");
+        alert(feedbackType === "INTERESTED" ? "Added to your profile preferences! " : "Hiding this suggestion. ");
         fetchSimilar();
       }
     } catch (_) {}
@@ -570,7 +570,7 @@ export default function AnimeDetailPage() {
                       : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
-                  <span>{isSubscribed ? "✓ Following" : "Follow"}</span>
+                  <span>{isSubscribed ? " Following" : "Follow"}</span>
                 </button>
               )}
 
