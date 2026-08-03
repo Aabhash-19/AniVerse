@@ -71,7 +71,7 @@ graph TD
 
 ### 🎬 4. Nami's Lounge & Media Vault
 - **HD Official Clips & Trailers**: Stream verified YouTube trailers and official opening sequences.
-- **Navigator's Knowledge Test**: A 5-question trivia quiz covering One Piece & Nami lore with instant score calculation and feedback.
+- **Navigator's Knowledge Test**: A 6-question trivia quiz covering One Piece & Nami lore with instant score calculation and feedback.
 
 ### 💬 5. Grand Line Community & Spoiler Shield
 - **Threaded Forums**: Create discussion threads, reply to comments, and upvote community posts.
