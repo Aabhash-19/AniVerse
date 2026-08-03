@@ -392,6 +392,14 @@ export default function AnimeDetailPage() {
     );
   }
 
+  const getProxiedImageUrl = (url?: string) => {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return getApiUrl(`/image-proxy?url=${encodeURIComponent(url)}`);
+    }
+    return url;
+  };
+
   const displayTitle = anime ? (anime.title.english || anime.title.romaji || anime.title.native) : "";
   const secondaryTitle = anime ? (anime.title.romaji !== displayTitle ? anime.title.romaji : anime.title.native) : "";
   const cleanSynopsisText = anime ? (anime.description || "").replace(/<[^>]*>?/gm, "").trim() : "";
@@ -404,7 +412,7 @@ export default function AnimeDetailPage() {
         <div className="relative h-[250px] md:h-[400px] w-full overflow-hidden bg-zinc-950">
         {anime.banner_url ? (
           <img
-            src={anime.banner_url}
+            src={getProxiedImageUrl(anime.banner_url)}
             alt={displayTitle}
             referrerPolicy="no-referrer"
             className="w-full h-full object-cover opacity-60"
@@ -423,7 +431,7 @@ export default function AnimeDetailPage() {
             <div className="w-full aspect-[3/4] bg-zinc-950 rounded-2xl overflow-hidden shadow-2xl">
               {anime.cover_large_url ? (
                 <img
-                  src={anime.cover_large_url}
+                  src={getProxiedImageUrl(anime.cover_large_url)}
                   alt={displayTitle}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"
@@ -687,7 +695,7 @@ export default function AnimeDetailPage() {
                         <div className="w-[60px] aspect-[3/4] rounded-lg overflow-hidden bg-zinc-950 flex-shrink-0">
                           {char.image_url ? (
                             <img
-                              src={char.image_url}
+                              src={getProxiedImageUrl(char.image_url)}
                               alt={char.first_name}
                               referrerPolicy="no-referrer"
                               loading="lazy"
@@ -719,7 +727,7 @@ export default function AnimeDetailPage() {
                           <div className="w-[60px] aspect-[3/4] rounded-lg overflow-hidden bg-zinc-950 flex-shrink-0">
                             {char.voice_actor_image ? (
                               <img
-                                src={char.voice_actor_image}
+                                src={getProxiedImageUrl(char.voice_actor_image)}
                                 alt={char.voice_actor_name}
                                 referrerPolicy="no-referrer"
                                 loading="lazy"

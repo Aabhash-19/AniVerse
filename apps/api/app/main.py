@@ -1,5 +1,6 @@
 import time
-from fastapi import FastAPI, Depends
+import httpx
+from fastapi import FastAPI, Depends, Response, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -106,3 +107,35 @@ def health_check(db: Session = Depends(get_db)):
         health_status["services"]["redis"] = f"error: {str(e)}"
         
     return health_status
+
+
+@app.get(f"{settings.API_V1_STR}/image-proxy")
+async def image_proxy(url: str = Query(..., description="The external image URL to proxy")):
+    """
+    Proxy image URLs from trusted external sites like AniList to bypass browser
+    blocking, CORS, and network routing delays.
+    """
+    if not (url.startswith("https://s4.anilist.co/") or url.startswith("https://media.kitsu.io/")):
+        raise HTTPException(status_code=400, detail="Invalid image source URL")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            }
+            resp = await client.get(url, headers=headers, timeout=10.0)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=resp.status_code, detail="Failed to fetch image from source")
+
+            content_type = resp.headers.get("content-type", "image/jpeg")
+            return Response(
+                content=resp.content,
+                media_type=content_type,
+                headers={
+                    "Cache-Control": "public, max-age=31536000, immutable",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Proxy error: {str(e)}")
+
