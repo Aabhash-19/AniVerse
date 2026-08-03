@@ -148,7 +148,7 @@ def run_videos_sync(db_session_factory):
 
             existing = db.query(Video).filter(Video.provider_video_id == yt_id).first()
             if not existing:
-                db.add(Video(
+                new_video = Video(
                     anime_id=anime_id_to_use,
                     provider=VideoProvider.YOUTUBE,
                     provider_video_id=yt_id,
@@ -159,7 +159,10 @@ def run_videos_sync(db_session_factory):
                     language="Japanese",
                     verification_status=VerificationStatus.VERIFIED,
                     confidence_score=95.00
-                ))
+                )
+                db.add(new_video)
+                db.flush() # Populate the ID
+                refreshed_ids.append(new_video.id)
                 imported += 1
             else:
                 # Update timestamp to mark it as active
@@ -168,10 +171,10 @@ def run_videos_sync(db_session_factory):
                 
         db.commit()
 
-        # Prune older videos that are no longer trending (haven't been seen/refreshed in 7 days)
-        seven_days_ago = datetime.utcnow() - timedelta(days=7)
-        db.query(Video).filter(Video.updated_at < seven_days_ago).delete(synchronize_session=False)
-        db.commit()
+        # Instantly delete any video that was NOT in the latest trending/airing list
+        if refreshed_ids:
+            db.query(Video).filter(Video.id.notin_(refreshed_ids)).delete(synchronize_session=False)
+            db.commit()
         
     except Exception as e:
         import logging
