@@ -215,8 +215,8 @@ def run_videos_sync(db_session_factory):
                 existing.updated_at = datetime.utcnow()
                 refreshed_ids.append(existing.id)
 
-        # Part B: Import OPs and EDs for the unique anime using Animethemes API
-        for m in unique_media:
+        # Part B: Import OPs and EDs for the top 10 unique anime using Animethemes API
+        for m in unique_media[:10]:
             anime_title = m.get("title", {}).get("english") or m.get("title", {}).get("romaji")
             if not anime_title:
                 continue
