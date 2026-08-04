@@ -8,6 +8,16 @@ export default function Home() {
       <div className="absolute bottom-[20%] right-[20%] w-[60%] h-[60%] bg-indigo-900/10 rounded-full blur-[140px] pointer-events-none" />
 
       <main className="max-w-xl text-center px-6 relative z-10 flex flex-col items-center gap-8">
+        {/* Mascot Avatar */}
+        <div className="relative group">
+          <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-amber-500 to-indigo-600 rounded-full blur-md opacity-75 group-hover:opacity-100 transition duration-500 animate-pulse" />
+          <img
+            src="/nami-wano-avatar.jpg"
+            alt="Nami — NamiVerse Mascot"
+            className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-2 border-purple-400/80 shadow-2xl shadow-purple-900/50"
+          />
+        </div>
+
         {/* Animated Brand Logo */}
         <div className="flex flex-col gap-2">
           <span className="text-5xl md:text-7xl font-black bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-500 bg-clip-text text-transparent tracking-widest animate-pulse">
