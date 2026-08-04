@@ -52,35 +52,35 @@
 
 In **NamiVerse**, Nami changes her outfit to match your current vibe and page section! Here is her iconic wardrobe featured across the platform:
 
-<table align="center" width="100%">
-  <tr align="center">
-    <td width="14%">
-      <img src="./apps/web/public/nami-outfits/east-blue-new.png" alt="East Blue Nami" width="100%" style="max-width: 100px; height: auto; border-radius: 10px;" /><br />
+<table align="center" width="100%" style="table-layout: fixed; width: 100%;">
+  <tr align="center" valign="top">
+    <td width="16.66%" style="padding: 4px;">
+      <img src="./apps/web/public/nami-outfits/east-blue-card.png" alt="East Blue Nami" width="100%" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; display: block;" /><br />
       <b>East Blue</b><br />
       <sub>Classic Navigator</sub>
     </td>
-    <td width="14%">
-      <img src="./apps/web/public/nami-outfits/alabasta.png" alt="Alabasta Nami" width="100%" style="max-width: 100px; height: auto; border-radius: 10px;" /><br />
+    <td width="16.66%" style="padding: 4px;">
+      <img src="./apps/web/public/nami-outfits/alabasta-card.png" alt="Alabasta Nami" width="100%" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; display: block;" /><br />
       <b>Alabasta</b><br />
       <sub>Desert Explorer</sub>
     </td>
-    <td width="14%">
-      <img src="./apps/web/public/nami-outfits/skypiea.png" alt="Skypiea Nami" width="100%" style="max-width: 100px; height: auto; border-radius: 10px;" /><br />
+    <td width="16.66%" style="padding: 4px;">
+      <img src="./apps/web/public/nami-outfits/skypiea-card.png" alt="Skypiea Nami" width="100%" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; display: block;" /><br />
       <b>Skypiea</b><br />
       <sub>Sky Island Radar</sub>
     </td>
-    <td width="14%">
-      <img src="./apps/web/public/nami-outfits/whole-cake.png" alt="Whole Cake Nami" width="100%" style="max-width: 100px; height: auto; border-radius: 10px;" /><br />
+    <td width="16.66%" style="padding: 4px;">
+      <img src="./apps/web/public/nami-outfits/whole-cake-card.png" alt="Whole Cake Nami" width="100%" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; display: block;" /><br />
       <b>Whole Cake</b><br />
       <sub>Tactical Chiffon</sub>
     </td>
-    <td width="14%">
-      <img src="./apps/web/public/nami-outfits/wano.png" alt="Wano Nami" width="100%" style="max-width: 100px; height: auto; border-radius: 10px;" /><br />
+    <td width="16.66%" style="padding: 4px;">
+      <img src="./apps/web/public/nami-outfits/wano-card.png" alt="Wano Nami" width="100%" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; display: block;" /><br />
       <b>Wano Kuni</b><br />
       <sub>Kunoichi Nami</sub>
     </td>
-    <td width="14%">
-      <img src="./apps/web/public/nami-outfits/egghead.png" alt="Egghead Nami" width="100%" style="max-width: 100px; height: auto; border-radius: 10px;" /><br />
+    <td width="16.66%" style="padding: 4px;">
+      <img src="./apps/web/public/nami-outfits/egghead-card.png" alt="Egghead Nami" width="100%" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; display: block;" /><br />
       <b>Egghead</b><br />
       <sub>Futuristic Sci-Fi</sub>
     </td>
