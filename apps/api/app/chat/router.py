@@ -258,15 +258,60 @@ def nami_chat(
     catalog_context = "\n".join(catalog_snippets)
 
     PLOT_KEYWORDS = ["plot", "synopsis", "about", "story", "summary", "tell me about", "what is", "who is", "explain"]
+    WATCHLIST_KEYWORDS = [
+        "my list", "my watchlist", "what am i watching", "what did i watch",
+        "my completed", "my plan to watch", "on my list", "my profile", "my logbook",
+        "tracked anime", "what is on my list", "show my list", "show my watchlist"
+    ]
+    
     is_plot_request = any(kw in lowered_msg for kw in PLOT_KEYWORDS)
+    is_watchlist_request = any(kw in lowered_msg for kw in WATCHLIST_KEYWORDS)
 
-    # ── 4. Call Gemini AI ───────────────────────────────────────────────────
-    reply_text = call_gemini_nami_ai(
-        message=user_msg,
-        history=req.history or [],
-        catalog_context=catalog_context,
-        watchlist_context=watchlist_context
-    )
+    # ── 4. Intent Handlers & Gemini AI Call ───────────────────────────────
+    reply_text = None
+
+    if is_watchlist_request:
+        if current_user and (completed_titles or watching_titles or planning_titles):
+            parts = [f"Yosh @{current_user.username}! Here is your current NamiVerse logbook:\n"]
+            if watching_titles:
+                parts.append("📺 **Currently Watching:**\n" + "\n".join([f"• **{t}**" for t in watching_titles]))
+            if completed_titles:
+                parts.append("🏆 **Completed & Scored:**\n" + "\n".join([f"• **{t}**" for t in completed_titles[:8]]))
+            if planning_titles:
+                parts.append("📝 **Plan to Watch:**\n" + "\n".join([f"• **{t}**" for t in planning_titles[:5]]))
+            reply_text = "\n\n".join(parts) + "\n\nKeep up the awesome watching journey! 🍊"
+        elif current_user:
+            reply_text = f"Yosh @{current_user.username}! Your watchlist logbook is currently empty. Start adding anime to your list so I can track your journey! 🍊"
+        else:
+            reply_text = "Yosh! Please sign in to your NamiVerse account so I can view and manage your personal watchlist logbook! 🍊"
+
+    elif is_airing_request:
+        airing_shows = db.query(Anime).filter(
+            or_(
+                Anime.status == "RELEASING",
+                Anime.status == AnimeStatus.RELEASING,
+                Anime.status.ilike("%releasing%"),
+                Anime.status.ilike("%airing%")
+            )
+        ).order_by(Anime.popularity.desc().nullslast(), Anime.average_score.desc().nullslast()).limit(6).all()
+
+        if airing_shows:
+            show_snippets = []
+            for a in airing_shows:
+                t_str = a.title_english or a.title_romaji
+                g_str = ", ".join([g.name for g in a.genres[:2]])
+                s_str = f"{a.average_score:.1f}/100" if a.average_score else "N/A"
+                show_snippets.append(f"• **{t_str}** (⭐ {s_str} | {g_str})")
+            
+            reply_text = "Yosh! Here are top-rated anime currently airing right now on NamiVerse:\n\n" + "\n".join(show_snippets) + "\n\nWhich of these would you like to add to your watchlist? ⛵"
+
+    if not reply_text:
+        reply_text = call_gemini_nami_ai(
+            message=user_msg,
+            history=req.history or [],
+            catalog_context=catalog_context,
+            watchlist_context=watchlist_context
+        )
 
     # Database-Powered Accurate Fallback if Gemini API rate limits or blips occur
     if not reply_text:
@@ -280,9 +325,7 @@ def nami_chat(
 
         elif is_recommendation_request:
             titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:3]])
-            if is_airing_request:
-                reply_text = f"Yosh! Here are top-rated anime currently airing right now on NamiVerse: {titles_str}! ⛵"
-            elif matched_genres:
+            if matched_genres:
                 reply_text = f"Yosh! For {matched_genres[0]} lovers, I recommend checking out {titles_str}! 🍊"
             else:
                 reply_text = f"Yosh! Here are some top-tier recommendations from our logbook: {titles_str}! 🧭"
