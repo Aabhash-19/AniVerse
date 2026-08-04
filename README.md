@@ -65,7 +65,7 @@ In **NamiVerse**, Nami changes her outfit to match your current vibe and page se
     <td width="16.66%" style="padding: 4px;">
       <img src="./apps/web/public/nami-outfits/whole-cake-card.png" alt="Whole Cake Nami" width="100%" style="width: 100%; height: auto; border-radius: 10px;" /><br />
       <b>Whole Cake</b><br />
-      <sub>Tactical Chiffon</sub>
+      <sub>Zeus Hijacker</sub>
     </td>
     <td width="16.66%" style="padding: 4px;">
       <img src="./apps/web/public/nami-outfits/wano-card.png" alt="Wano Nami" width="100%" style="width: 100%; height: auto; border-radius: 10px;" /><br />
@@ -75,7 +75,7 @@ In **NamiVerse**, Nami changes her outfit to match your current vibe and page se
     <td width="16.66%" style="padding: 4px;">
       <img src="./apps/web/public/nami-outfits/egghead-card.png" alt="Egghead Nami" width="100%" style="width: 100%; height: auto; border-radius: 10px;" /><br />
       <b>Egghead</b><br />
-      <sub>Futuristic Sci-Fi</sub>
+      <sub>Cyberpunk Nami</sub>
     </td>
   </tr>
 </table>
