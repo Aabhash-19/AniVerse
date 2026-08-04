@@ -9,6 +9,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -20,7 +21,7 @@ export default function LoginPage() {
     try {
       const res = await fetchWithCredentials(getApiUrl("/auth/login"), {
         method: "POST",
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, remember_me: rememberMe }),
       });
 
       const data = await res.json();
@@ -30,6 +31,7 @@ export default function LoginPage() {
 
       if (data.access_token) {
         localStorage.setItem("namiverse_token", data.access_token);
+        localStorage.setItem("namiverse_remember_me", rememberMe ? "true" : "false");
       }
 
       // Successful login
@@ -86,6 +88,21 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="bg-zinc-950/80 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500 text-zinc-200 transition-all"
             />
+          </div>
+
+          {/* Remember Me Checkbox */}
+          <div className="flex items-center justify-between pt-1">
+            <label className="flex items-center gap-2.5 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-purple-600 focus:ring-purple-500 focus:ring-offset-zinc-900 cursor-pointer accent-purple-600 transition-all"
+              />
+              <span className="text-xs font-medium text-zinc-400 group-hover:text-zinc-200 transition-colors">
+                Remember me on this device
+              </span>
+            </label>
           </div>
 
           <button

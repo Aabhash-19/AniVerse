@@ -38,7 +38,27 @@ export async function fetchWithCredentials(url: string, options: RequestInit = {
   options.headers = headers;
 
   try {
-    const response = await fetch(url, options);
+    let response = await fetch(url, options);
+
+    // If 401 Unauthorized and not calling /auth/login or /auth/refresh, attempt silent token refresh once
+    if (response.status === 401 && !url.includes("/auth/login") && !url.includes("/auth/refresh")) {
+      try {
+        const refreshRes = await fetch(getApiUrl("/auth/refresh"), {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" }
+        });
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          if (refreshData.access_token && typeof window !== "undefined") {
+            localStorage.setItem("namiverse_token", refreshData.access_token);
+            (options.headers as Record<string, string>)["Authorization"] = `Bearer ${refreshData.access_token}`;
+            response = await fetch(url, options);
+          }
+        }
+      } catch (_) {}
+    }
+
     return response;
   } catch (err: any) {
     // Catch browser network errors (CORS, offline, blips) cleanly without throwing TypeError: Load failed

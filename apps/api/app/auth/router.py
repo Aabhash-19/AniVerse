@@ -26,6 +26,7 @@ class UserRegisterSchema(BaseModel):
 class UserLoginSchema(BaseModel):
     username: str
     password: str
+    remember_me: Optional[bool] = False
 
 
 class UserPreferencesResponseSchema(BaseModel):
@@ -124,13 +125,21 @@ def login(login_data: UserLoginSchema, response: Response, db: Session = Depends
     if user.status == UserStatus.SUSPENDED:
         raise HTTPException(status_code=403, detail="Your account has been suspended by a moderator.")
 
+    # Determine token & cookie lifetime based on remember_me preference (30 days vs 7 days)
+    if login_data.remember_me:
+        token_delta = timedelta(days=30)
+        cookie_max_age = 2592000  # 30 days
+    else:
+        token_delta = timedelta(days=7)
+        cookie_max_age = 604800  # 7 days
+
     # Create Access & Refresh Tokens
-    access_token = create_access_token(user.id)
-    refresh_token = create_refresh_token(user.id)
+    access_token = create_access_token(user.id, expires_delta=token_delta)
+    refresh_token = create_refresh_token(user.id, expires_delta=token_delta)
     
     # Store refresh token hash in DB
     rt_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
-    expires_at = datetime.utcnow() + timedelta(days=7)
+    expires_at = datetime.utcnow() + token_delta
     
     session = UserSession(
         user_id=user.id,
@@ -153,7 +162,7 @@ def login(login_data: UserLoginSchema, response: Response, db: Session = Depends
         key="access_token",
         value=access_token,
         httponly=True,
-        max_age=1800,  # 30 mins
+        max_age=cookie_max_age,
         samesite=cookie_samesite,
         secure=cookie_secure
     )
@@ -161,7 +170,7 @@ def login(login_data: UserLoginSchema, response: Response, db: Session = Depends
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        max_age=604800, # 7 days
+        max_age=cookie_max_age,
         samesite=cookie_samesite,
         secure=cookie_secure
     )
