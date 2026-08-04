@@ -282,31 +282,34 @@ def nami_chat(
         planning_titles = []
 
         if current_user:
-            entries = db.query(AnimeListEntry).filter(AnimeListEntry.user_id == current_user.id).all()
-            if entries:
-                for e in entries:
-                    t_str = e.anime.title_english or e.anime.title_romaji if e.anime else ""
-                    if not t_str:
-                        continue
-                    if e.status in [ListStatus.COMPLETED, ListStatus.REWATCHING]:
-                        user_completed_ids.add(e.anime_id)
-                        formatted_score = f"{e.score/10:.1f}/10" if (e.score and e.score > 10) else (f"{e.score:.1f}/10" if e.score else "")
-                        score_info = f" (Scored {formatted_score})" if formatted_score else ""
-                        completed_titles.append(f"{t_str}{score_info}")
-                    elif e.status == ListStatus.WATCHING:
-                        watching_titles.append(t_str)
-                    elif e.status == ListStatus.PLANNING:
-                        planning_titles.append(t_str)
+            try:
+                entries = db.query(AnimeListEntry).filter(AnimeListEntry.user_id == current_user.id).all()
+                if entries:
+                    for e in entries:
+                        t_str = e.anime.title_english or e.anime.title_romaji if e.anime else ""
+                        if not t_str:
+                            continue
+                        if e.status in [ListStatus.COMPLETED, ListStatus.REWATCHING]:
+                            user_completed_ids.add(e.anime_id)
+                            formatted_score = f"{e.score/10:.1f}/10" if (e.score and e.score > 10) else (f"{e.score:.1f}/10" if e.score else "")
+                            score_info = f" (Scored {formatted_score})" if formatted_score else ""
+                            completed_titles.append(f"{t_str}{score_info}")
+                        elif e.status == ListStatus.WATCHING:
+                            watching_titles.append(t_str)
+                        elif e.status == ListStatus.PLANNING:
+                            planning_titles.append(t_str)
 
-                summary_parts = [f"Logged in user: @{current_user.username} ({current_user.display_name or ''})"]
-                if completed_titles:
-                    summary_parts.append("Watched/Completed: " + ", ".join(completed_titles[:15]))
-                if watching_titles:
-                    summary_parts.append("Currently Watching: " + ", ".join(watching_titles[:10]))
-                if planning_titles:
-                    summary_parts.append("Plan to Watch: " + ", ".join(planning_titles[:10]))
-                    
-                watchlist_context = "\n".join(summary_parts)
+                    summary_parts = [f"Logged in user: @{current_user.username} ({current_user.display_name or ''})"]
+                    if completed_titles:
+                        summary_parts.append("Watched/Completed: " + ", ".join(completed_titles[:15]))
+                    if watching_titles:
+                        summary_parts.append("Currently Watching: " + ", ".join(watching_titles[:10]))
+                    if planning_titles:
+                        summary_parts.append("Plan to Watch: " + ", ".join(planning_titles[:10]))
+                        
+                    watchlist_context = "\n".join(summary_parts)
+            except Exception as db_wl_err:
+                log.warning(f"Watchlist DB query warning: {db_wl_err}")
 
         # ── 2. Query & Intent Parsing ─────────────────────────────────────────
         lowered_msg = user_msg.lower()
@@ -414,30 +417,37 @@ def nami_chat(
             search_term = " ".join(clean_words).strip()
 
             if search_term and len(search_term) >= 3:
-                target_anime = db.query(Anime).filter(
-                    or_(
-                        Anime.title_english.ilike(f"%{search_term}%"),
-                        Anime.title_romaji.ilike(f"%{search_term}%"),
-                        Anime.title_native.ilike(f"%{search_term}%")
-                    )
-                ).first()
+                try:
+                    target_anime = db.query(Anime).filter(
+                        or_(
+                            Anime.title_english.ilike(f"%{search_term}%"),
+                            Anime.title_romaji.ilike(f"%{search_term}%"),
+                            Anime.title_native.ilike(f"%{search_term}%")
+                        )
+                    ).first()
+                except Exception:
+                    target_anime = None
 
-        # Build DB candidates list based on genre or target or general score
-        query = db.query(Anime)
+        # Build DB candidates list safely with fallback to AniList GraphQL
+        db_candidates = []
+        try:
+            query = db.query(Anime)
 
-        if is_upcoming_request:
-            query = query.filter(or_(Anime.status == "NOT_YET_RELEASED", Anime.status == AnimeStatus.NOT_YET_RELEASED))
+            if is_upcoming_request:
+                query = query.filter(or_(Anime.status == "NOT_YET_RELEASED", Anime.status == AnimeStatus.NOT_YET_RELEASED))
 
-        if matched_genres:
-            query = query.join(Anime.genres).filter(
-                or_(*[Genre.name.ilike(f"%{g}%") for g in matched_genres])
-            )
-        elif target_anime:
-            query = query.filter(Anime.id == target_anime.id)
+            if matched_genres:
+                query = query.join(Anime.genres).filter(
+                    or_(*[Genre.name.ilike(f"%{g}%") for g in matched_genres])
+                )
+            elif target_anime:
+                query = query.filter(Anime.id == target_anime.id)
 
-        db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(40).all()
-        if not db_candidates:
-            db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(40).all()
+            db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(40).all()
+            if not db_candidates:
+                db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(40).all()
+        except Exception as db_err:
+            log.warning(f"DB candidates query warning: {db_err}")
 
         catalog_snippets = []
         for a in db_candidates[:10]:
@@ -474,15 +484,12 @@ def nami_chat(
                 score_str = f"{target_anime.average_score:.1f}/100" if target_anime.average_score else "N/A"
                 reply_text = f"Yosh! Here is the lowdown on **{t_name}**:\n\n{desc_clean}\n\n⭐ **Score:** {score_str} | **Genres:** {g_str} 🍊"
             elif "10/10" in lowered_msg or "masterpiece" in lowered_msg:
-                titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:4]])
-                reply_text = f"Yosh! Here are certified 10/10 masterpiece anime from our logbook: {titles_str}! 🏆"
+                reply_text = "Yosh! Here are certified 10/10 masterpiece anime from our logbook! 🏆"
             elif matched_genres:
                 genre_name = matched_genres[0]
-                titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:4]])
-                reply_text = f"Yosh! For **{genre_name}** lovers, I've mapped out top-tier recommendations from our logbook: {titles_str}! Which one looks best for your next watch? 🍊"
+                reply_text = f"Yosh! For **{genre_name}** lovers, I've mapped out top-tier recommendations from our logbook! Which one looks best for your next watch? 🍊"
             elif is_recommendation_request:
-                titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:4]])
-                reply_text = f"Yosh! Here are some top-tier recommendations from our logbook: {titles_str}! 🧭"
+                reply_text = "Yosh! Here are some top-tier recommendations from our logbook! 🧭"
             else:
                 if any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money"]):
                     reply_text = random.choice(NAMI_BERRIES_REPLIES)
@@ -494,18 +501,10 @@ def nami_chat(
         # ── 8. Select Best Recommended Anime Cards & Build All Recommendations Pool ──
         recs_formatted = []
         all_recs_pool = []
-        
-        # Build candidate pool for recommendations, presets, genres, airing, or specific titles
-        matched_anime: List[Anime] = []
-        if target_anime:
-            matched_anime = [target_anime]
-        else:
-            fresh_candidates = [a for a in db_candidates if a.id not in user_completed_ids]
-            matched_anime = fresh_candidates if fresh_candidates else db_candidates
-
         seen_ids = set()
-        for a in matched_anime:
-            if a.id not in seen_ids:
+
+        for a in db_candidates:
+            if a.id not in user_completed_ids and a.id not in seen_ids:
                 seen_ids.add(a.id)
                 t_str = a.title_english or a.title_romaji or a.title_native
                 card_obj = RecommendedAnimeCard(
@@ -518,18 +517,19 @@ def nami_chat(
                 )
                 all_recs_pool.append(card_obj)
 
-        # If pool has fewer than 16 items, fetch extra top-rated genre anime from AniList GraphQL
-        if (is_recommendation_request or matched_genres or "10/10" in lowered_msg or "masterpiece" in lowered_msg) and len(all_recs_pool) < 16:
+        # If pool has fewer than 20 items, fetch extra top-rated anime from AniList GraphQL over HTTPS
+        if (is_recommendation_request or matched_genres or "10/10" in lowered_msg or "masterpiece" in lowered_msg) and len(all_recs_pool) < 20:
             target_g = matched_genres[0] if matched_genres else None
             extra_media = fetch_anilist_genre_anime(target_g)
             for m in extra_media:
-                if m["id"] not in seen_ids:
-                    seen_ids.add(m["id"])
+                m_id = m["id"]
+                if m_id not in seen_ids:
+                    seen_ids.add(m_id)
                     t_str = m["title"]["english"] or m["title"]["romaji"]
                     s_val = float(m["meanScore"]) if m.get("meanScore") else None
                     slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
                     all_recs_pool.append(RecommendedAnimeCard(
-                        id=m["id"],
+                        id=m_id,
                         slug=slug_clean,
                         title=t_str,
                         cover_url=m.get("coverImage", {}).get("extraLarge"),
@@ -548,8 +548,24 @@ def nami_chat(
 
     except Exception as err:
         log.error(f"Nami chat handler unexpected error: {err}", exc_info=True)
+        # Always fallback to live AniList GraphQL anime so cards ALWAYS generate!
+        extra_media = fetch_anilist_genre_anime()
+        fallback_pool = []
+        for m in extra_media:
+            t_str = m["title"]["english"] or m["title"]["romaji"]
+            s_val = float(m["meanScore"]) if m.get("meanScore") else None
+            slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
+            fallback_pool.append(RecommendedAnimeCard(
+                id=m["id"],
+                slug=slug_clean,
+                title=t_str,
+                cover_url=m.get("coverImage", {}).get("extraLarge"),
+                score=s_val,
+                genres=m.get("genres", [])[:3]
+            ))
+
         return ChatResponse(
-            reply="Yosh! I'm on deck and ready to navigate! Ask me for anime recommendations, genres like Romance or Action, or what's on your watchlist! 🍊⛵",
-            anime_recommendations=[],
-            all_recommendations=[]
+            reply="Yosh! Here are some top-rated recommendations from our logbook! 🧭",
+            anime_recommendations=fallback_pool[:4],
+            all_recommendations=fallback_pool
         )
