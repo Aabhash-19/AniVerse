@@ -12,7 +12,7 @@ jobs:
     
     services:
       postgres:
-        image: postgres:15
+        image: pgvector/pgvector:pg15
         env:
           POSTGRES_USER: aniverse_user
           POSTGRES_PASSWORD: aniverse_password
@@ -51,6 +51,11 @@ jobs:
         run: |
           cd apps/api
           PYTHONPATH=. pytest
+        env:
+          DATABASE_URL: postgresql://aniverse_user:aniverse_password@localhost:5432/aniverse_db
+          REDIS_URL: redis://localhost:6379
+          SECRET_KEY: test_secret_key_for_ci_pipeline_32_bytes_min
+          ENVIRONMENT: testing
 
       # --- Frontend Validation ---
       - name: Setup Node.js runtime
