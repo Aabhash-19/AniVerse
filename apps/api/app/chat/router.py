@@ -59,6 +59,10 @@ NAMI_ONE_PIECE_REPLIES = [
     "Sailing the Grand Line taught me that every great journey needs a great map! Here are some top-tier adventure and shonen anime to add to your list! ⛵"
 ]
 
+NAMI_DREAM_REPLY = "My dream is to draw a map of the entire world! 🗺️ As the navigator of the Straw Hat Pirates, I'm charting every ocean and island—and here on NamiVerse, I'm charting every anime for you! 🍊"
+NAMI_LUFFY_REPLY = "Luffy is our captain! He's reckless, eats all our meat, and gets us into crazy fights—but he's going to be King of the Pirates! 🍖👑"
+NAMI_ZORO_REPLY = "Zoro? He's probably lost again on some random island! Don't ask him for directions unless you want to end up in the middle of the sea! ⚔️🧭"
+
 
 def clean_gemini_reply(text: str) -> str:
     """Strip any system prompt leakage or internal rule echoing from Gemini reply."""
@@ -130,7 +134,8 @@ def call_gemini_nami_ai(
 
     system_prompt = (
         "You are Nami, the Straw Hat Pirates Navigator from One Piece! "
-        "You are navigating NamiVerse, an anime platform. Answer warmly, enthusiastically, and in-character as Nami.\n\n"
+        "You are navigating NamiVerse, an anime platform. Answer warmly, enthusiastically, and in-character as Nami. "
+        "If the user asks personal or character questions about Nami, One Piece, your dream, or your crewmates (Luffy, Zoro, Sanji), answer in authentic Nami character voice.\n\n"
         f"VERIFIED DATABASE ANIME ENTRIES:\n{catalog_context or 'Top rated anime available.'}\n\n"
         f"USER PROFILE & WATCHLIST:\n{watchlist_context or 'Anonymous guest.'}\n\n"
         "GUIDELINES:\n"
@@ -210,7 +215,6 @@ def nami_chat(
     """
     try:
         user_msg = req.message.strip()
-        # Clean quotes or excess whitespace
         user_msg = user_msg.strip('"\'')
         if not user_msg:
             return ChatResponse(
@@ -282,6 +286,14 @@ def nami_chat(
         elif "dark fantasy" in lowered_msg:
             matched_genres = list(set(matched_genres + ["Fantasy", "Horror", "Psychological"]))
 
+        RECOMMENDATION_KEYWORDS = [
+            "recommend", "suggestion", "suggest", "what should i watch", "what to watch",
+            "what anime", "give me", "show me", "find me", "i want to watch", "looking for",
+            "any good", "anything good", "best anime", "top anime", "anime for",
+            "similar to", "like this anime", "genre", "isekai", "shonen", "seinen", "shoujo"
+        ]
+        is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS) or bool(matched_genres) or is_upcoming_request
+
         # ── 3. Handle Watchlist Queries ───────────────────────────────────────
         if is_watchlist_request:
             if current_user and (completed_titles or watching_titles or planning_titles):
@@ -338,10 +350,10 @@ def nami_chat(
         # ── 5. Specific Anime Title Search vs Genre Query ───────────────────────
         target_anime = None
 
-        if not matched_genres and not is_airing_request and not is_upcoming_request:
+        if not matched_genres and not is_airing_request and not is_upcoming_request and not is_recommendation_request:
             clean_words = [w for w in user_msg.split() if w.lower() not in [
                 "can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of", "anime", "show",
-                "recommend", "suggest", "good", "best", "top", "give", "find", "looking", "for"
+                "recommend", "suggest", "good", "best", "top", "give", "find", "looking", "for", "your", "dream"
             ]]
             search_term = " ".join(clean_words).strip()
 
@@ -382,15 +394,6 @@ def nami_chat(
         
         catalog_context = "\n".join(catalog_snippets)
 
-        RECOMMENDATION_KEYWORDS = [
-            "recommend", "suggestion", "suggest", "what should i watch", "what to watch",
-            "what anime", "give me", "show me", "find me", "i want to watch", "looking for",
-            "any good", "anything good", "best anime", "top anime", "anime for",
-            "similar to", "like this anime", "like", "new anime", "good anime",
-            "popular anime", "trending anime", "genre", "isekai", "shonen", "seinen", "shoujo"
-        ]
-        is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS) or bool(matched_genres) or is_upcoming_request
-
         # ── 6. Call Gemini AI ───────────────────────────────────────────────────
         reply_text = call_gemini_nami_ai(
             message=user_msg,
@@ -401,52 +404,59 @@ def nami_chat(
 
         # ── 7. Guaranteed Accurate Fallback Engine ─────────────────────────────
         if not reply_text:
-            if target_anime:
+            if any(k in lowered_msg for k in ["dream", "goal", "map"]):
+                reply_text = NAMI_DREAM_REPLY
+            elif any(k in lowered_msg for k in ["luffy", "captain"]):
+                reply_text = NAMI_LUFFY_REPLY
+            elif any(k in lowered_msg for k in ["zoro", "swordsman"]):
+                reply_text = NAMI_ZORO_REPLY
+            elif target_anime:
                 t_name = target_anime.title_english or target_anime.title_romaji or target_anime.title_native
                 g_str = ", ".join([genre.name for genre in target_anime.genres[:3]])
                 raw_desc = getattr(target_anime, "description", None) or "A fantastic masterpiece entry in our NamiVerse catalog!"
                 desc_clean = re.sub(r'<[^>]+>', '', raw_desc).strip()
                 score_str = f"{target_anime.average_score:.1f}/100" if target_anime.average_score else "N/A"
                 reply_text = f"Yosh! Here is the lowdown on **{t_name}**:\n\n{desc_clean}\n\n⭐ **Score:** {score_str} | **Genres:** {g_str} 🍊"
-
             elif matched_genres:
                 genre_name = matched_genres[0]
                 titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:3]])
                 reply_text = f"Yosh! For **{genre_name}** lovers, I've mapped out top-tier recommendations from our logbook: {titles_str}! Which one looks best for your next watch? 🍊"
-
+            elif is_recommendation_request:
+                titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:3]])
+                reply_text = f"Yosh! Here are some top-tier recommendations from our logbook: {titles_str}! 🧭"
             else:
                 if any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money"]):
                     reply_text = random.choice(NAMI_BERRIES_REPLIES)
-                elif any(k in lowered_msg for k in ["one piece", "luffy", "zoro", "straw hat", "pirate"]):
+                elif any(k in lowered_msg for k in ["one piece", "pirate", "straw hat"]):
                     reply_text = random.choice(NAMI_ONE_PIECE_REPLIES)
                 else:
-                    titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:3]])
-                    reply_text = f"Yosh! Here are some top-tier recommendations from our logbook: {titles_str}! 🧭"
+                    reply_text = random.choice(NAMI_GREETINGS)
 
-        # ── 8. Select Best Recommended Anime Cards ─────────────────────────────
-        matched_anime: List[Anime] = []
-        if target_anime:
-            matched_anime = [target_anime]
-        else:
-            fresh_candidates = [a for a in db_candidates if a.id not in user_completed_ids]
-            matched_anime = fresh_candidates if fresh_candidates else db_candidates
-
+        # ── 8. Select Best Recommended Anime Cards (ONLY if recommendations requested or target anime found) ──
         recs_formatted = []
-        seen_ids = set()
-        for a in matched_anime:
-            if a.id not in seen_ids:
-                seen_ids.add(a.id)
-                t_str = a.title_english or a.title_romaji or a.title_native
-                recs_formatted.append(RecommendedAnimeCard(
-                    id=a.id,
-                    slug=a.slug,
-                    title=t_str,
-                    cover_url=a.cover_large_url,
-                    score=float(a.average_score) if a.average_score else None,
-                    genres=[g.name for g in a.genres[:3]]
-                ))
-                if len(recs_formatted) >= 4:
-                    break
+        if is_recommendation_request or target_anime:
+            matched_anime: List[Anime] = []
+            if target_anime:
+                matched_anime = [target_anime]
+            else:
+                fresh_candidates = [a for a in db_candidates if a.id not in user_completed_ids]
+                matched_anime = fresh_candidates if fresh_candidates else db_candidates
+
+            seen_ids = set()
+            for a in matched_anime:
+                if a.id not in seen_ids:
+                    seen_ids.add(a.id)
+                    t_str = a.title_english or a.title_romaji or a.title_native
+                    recs_formatted.append(RecommendedAnimeCard(
+                        id=a.id,
+                        slug=a.slug,
+                        title=t_str,
+                        cover_url=a.cover_large_url,
+                        score=float(a.average_score) if a.average_score else None,
+                        genres=[g.name for g in a.genres[:3]]
+                    ))
+                    if len(recs_formatted) >= 4:
+                        break
 
         return ChatResponse(
             reply=reply_text,
@@ -455,8 +465,7 @@ def nami_chat(
 
     except Exception as err:
         log.error(f"Nami chat handler unexpected error: {err}", exc_info=True)
-        # Always return clean, articulate response instead of 500 error
         return ChatResponse(
-            reply="Yosh! I'm back on line and ready to navigate! Ask me for anime recommendations, genres like Romance or Action, or what's on your watchlist! 🍊⛵",
+            reply="Yosh! I'm on deck and ready to navigate! Ask me for anime recommendations, genres like Romance or Action, or what's on your watchlist! 🍊⛵",
             anime_recommendations=[]
         )
