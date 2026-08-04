@@ -257,15 +257,8 @@ def nami_chat(
     
     catalog_context = "\n".join(catalog_snippets)
 
-    # ── 3. Detect intent ───────────────────────────────────────────────────
-    RECOMMENDATION_KEYWORDS = [
-        "recommend", "suggestion", "suggest", "what should i watch", "what to watch",
-        "what anime", "give me", "show me", "find me", "i want to watch", "looking for",
-        "any good", "anything good", "best anime", "top anime", "anime for",
-        "similar to", "like this anime", "like", "new anime", "good anime",
-        "popular anime", "trending anime", "genre", "isekai", "shonen", "seinen", "shoujo"
-    ]
-    is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS) or bool(matched_genres) or is_airing_request or is_upcoming_request
+    PLOT_KEYWORDS = ["plot", "synopsis", "about", "story", "summary", "tell me about", "what is", "who is", "explain"]
+    is_plot_request = any(kw in lowered_msg for kw in PLOT_KEYWORDS)
 
     # ── 4. Call Gemini AI ───────────────────────────────────────────────────
     reply_text = call_gemini_nami_ai(
@@ -275,15 +268,32 @@ def nami_chat(
         watchlist_context=watchlist_context
     )
 
-    # Reliable Instant Fallback if Gemini API key or network blip occurs
+    # Database-Powered Accurate Fallback if Gemini API rate limits or blips occur
     if not reply_text:
-        titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:3]])
-        if is_airing_request:
-            reply_text = f"Yosh! Here are top-rated anime currently airing right now on NamiVerse: {titles_str}! ⛵"
-        elif matched_genres:
-            reply_text = f"Yosh! For {matched_genres[0]} lovers, I recommend checking out {titles_str}! 🍊"
+        if is_plot_request and db_candidates:
+            target = db_candidates[0]
+            t_name = target.title_english or target.title_romaji or target.title_native
+            g_str = ", ".join([genre.name for genre in target.genres[:3]])
+            synopsis_clean = target.synopsis.strip() if target.synopsis else "A fantastic anime entry in our NamiVerse catalog!"
+            score_str = f"{target.average_score:.1f}/100" if target.average_score else "N/A"
+            reply_text = f"Yosh! Here is the lowdown on **{t_name}**:\n\n{synopsis_clean}\n\n⭐ **Score:** {score_str} | **Genres:** {g_str} 🍊"
+
+        elif is_recommendation_request:
+            titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:3]])
+            if is_airing_request:
+                reply_text = f"Yosh! Here are top-rated anime currently airing right now on NamiVerse: {titles_str}! ⛵"
+            elif matched_genres:
+                reply_text = f"Yosh! For {matched_genres[0]} lovers, I recommend checking out {titles_str}! 🍊"
+            else:
+                reply_text = f"Yosh! Here are some top-tier recommendations from our logbook: {titles_str}! 🧭"
+
         else:
-            reply_text = f"Yosh! Here are some top-tier recommendations from our logbook: {titles_str}! 🧭"
+            if any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money"]):
+                reply_text = random.choice(NAMI_BERRIES_REPLIES)
+            elif any(k in lowered_msg for k in ["one piece", "luffy", "zoro", "straw hat", "pirate"]):
+                reply_text = random.choice(NAMI_ONE_PIECE_REPLIES)
+            else:
+                reply_text = random.choice(NAMI_GREETINGS)
 
     # ── 5. Select Best Recommended Anime Cards ─────────────────────────────
     matched_anime: List[Anime] = []

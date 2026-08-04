@@ -246,7 +246,15 @@ export default function NamiChatWidget() {
                         : "bg-zinc-900/90 border border-zinc-800 text-zinc-200 rounded-bl-none"
                     }`}
                   >
-                    {msg.text}
+                    {msg.text.split(/(\*\*.*?\*\*|\*.*?\*)/g).map((part, i) => {
+                      if (part.startsWith("**") && part.endsWith("**")) {
+                        return <strong key={i} className="font-bold text-white">{part.slice(2, -2)}</strong>;
+                      }
+                      if (part.startsWith("*") && part.endsWith("*")) {
+                        return <em key={i} className="italic text-amber-300">{part.slice(1, -1)}</em>;
+                      }
+                      return part;
+                    })}
                   </div>
 
                   {/* Anime Recommendation Cards */}
