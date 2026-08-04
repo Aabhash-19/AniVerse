@@ -59,51 +59,9 @@ export default function DiscoverPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const observerTarget = React.useRef<HTMLDivElement>(null);
 
-  // Recommendations state
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
-  const [loadingRecs, setLoadingRecs] = useState(false);
-
   const genres = ["Action", "Adventure", "Comedy", "Drama", "Fantasy", "Mystery", "Psychological", "Sci-Fi", "Thriller", "Romance"];
   const seasons = ["WINTER", "SPRING", "SUMMER", "FALL"];
   const formats = ["TV", "MOVIE", "OVA", "ONA", "SPECIAL"];
-
-  // Authenticate user & load recommendations
-  const checkUserAndRecs = async () => {
-    try {
-      const res = await fetchWithCredentials(getApiUrl("/auth/me"));
-      if (res.ok) {
-        const user = await res.json();
-        setCurrentUser(user);
-        fetchRecommendations();
-      }
-    } catch (_) {}
-  };
-
-  const fetchRecommendations = async () => {
-    setLoadingRecs(true);
-    try {
-      const res = await fetchWithCredentials(getApiUrl("/recommendations/home?limit=5"));
-      if (res.ok) {
-        setRecommendations(await res.json());
-      }
-    } finally {
-      setLoadingRecs(false);
-    }
-  };
-
-  const handleRecommendationFeedback = async (animeId: number, feedbackType: "INTERESTED" | "NOT_INTERESTED") => {
-    try {
-      const res = await fetchWithCredentials(getApiUrl(`/recommendations/${animeId}/feedback`), {
-        method: "POST",
-        body: JSON.stringify({ feedback_type: feedbackType }),
-      });
-      if (res.ok) {
-        setRecommendations((prev) => prev.filter((r) => r.id !== animeId));
-        alert(feedbackType === "INTERESTED" ? "Added to your profile preferences! " : "Hiding this suggestion. ");
-      }
-    } catch (_) {}
-  };
 
   const fetchCatalog = async (pageNum = 1, append = false) => {
     if (append) {
@@ -166,9 +124,7 @@ export default function DiscoverPage() {
 
 
 
-  useEffect(() => {
-    checkUserAndRecs();
-  }, []);
+
 
   useEffect(() => {
     if (!search) {
@@ -233,63 +189,6 @@ export default function DiscoverPage() {
           </h1>
           <p className="text-zinc-400 mt-2">Filter and browse the official verified anime database.</p>
         </div>
-
-        {/* Personalized Recommendations Section */}
-        {currentUser && recommendations.length > 0 && (
-          <div className="bg-zinc-900/20 border border-zinc-900 rounded-2xl p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-zinc-200">Recommended for You</h2>
-                <p className="text-xs text-zinc-500 mt-1">Based on watchlist ratings, genre preferences, and engagement.</p>
-              </div>
-              <button onClick={fetchRecommendations} className="text-xs text-purple-400 hover:text-purple-300 font-bold transition-all">Refresh ↺</button>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-              {recommendations.map((rec) => {
-                const recTitle = rec.title.english || rec.title.romaji || rec.title.native;
-                return (
-                  <div key={rec.id} className="bg-zinc-950/40 border border-zinc-900 rounded-xl p-3 flex flex-col justify-between space-y-3 group hover:border-zinc-800 transition-all">
-                    <Link href={`/anime/${rec.slug}-${rec.id}`} className="space-y-2">
-                      <div className="aspect-[3/4] rounded-lg overflow-hidden bg-zinc-900 relative">
-                        {rec.cover_url ? (
-                          <img src={rec.cover_url} alt={recTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs">No Cover</div>
-                        )}
-                        <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-purple-600 text-[10px] font-black text-white">
-                          {(rec.score * 100).toFixed(0)}% Match
-                        </span>
-                      </div>
-                      <p className="text-xs font-bold text-zinc-200 line-clamp-1 group-hover:text-purple-400 transition-colors">{recTitle}</p>
-                    </Link>
-                    
-                    {/* Reason block */}
-                    {rec.reasons.length > 0 && (
-                      <p className="text-[10px] text-zinc-500 italic leading-tight"> {rec.reasons[0]}</p>
-                    )}
-
-                    {/* Feedback Buttons */}
-                    <div className="flex gap-2 pt-1 border-t border-zinc-900/60">
-                      <button 
-                        onClick={() => handleRecommendationFeedback(rec.id, "INTERESTED")}
-                        className="text-[10px] font-bold text-zinc-400 hover:text-green-400 bg-zinc-900 hover:bg-green-500/10 border border-zinc-800 px-2 py-1 rounded flex-1 text-center transition-all"
-                      >
-                         Yes
-                      </button>
-                      <button 
-                        onClick={() => handleRecommendationFeedback(rec.id, "NOT_INTERESTED")}
-                        className="text-[10px] font-bold text-zinc-400 hover:text-red-400 bg-zinc-900 hover:bg-red-500/10 border border-zinc-800 px-2 py-1 rounded flex-1 text-center transition-all"
-                      >
-                         No
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Unified Search Filters */}
         <div className="bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md rounded-2xl p-6 shadow-xl space-y-6">
