@@ -24,7 +24,7 @@
 <table align="center">
   <tr>
     <td width="35%" align="center">
-      <img src="./apps/web/public/nami-outfits/wano.png" alt="Nami Wano Outfit" height="230" />
+      <img src="./apps/web/public/nami-outfits/nami-readme.png" alt="Nami Navigator" height="230" />
     </td>
     <td width="65%">
       <h3><i>"Yosh! Welcome aboard NamiVerse!"</i> ⛵</h3>
