@@ -19,6 +19,7 @@ interface Message {
   text: string;
   anime_recommendations?: RecommendedAnime[];
   all_recommendations?: RecommendedAnime[];
+  cardOffset?: number;
   timestamp: string;
 }
 
@@ -35,47 +36,28 @@ export default function NamiChatWidget() {
     setMessages((prev) =>
       prev.map((msg) => {
         if (msg.id !== msgId) return msg;
-        const pool = (msg.all_recommendations && msg.all_recommendations.length > 4)
+        const pool = (msg.all_recommendations && msg.all_recommendations.length > 0)
           ? msg.all_recommendations
-          : msg.anime_recommendations;
+          : (msg.anime_recommendations || []);
 
-        if (!pool || pool.length <= 1) return msg;
-
-        // Currently displayed 4 anime IDs
-        const currentIds = new Set((msg.anime_recommendations || []).map((a) => a.id));
-
-        // Anime candidates excluding the 4 currently displayed
-        const unshownCandidates = pool.filter((a) => !currentIds.has(a.id));
-
-        if (unshownCandidates.length >= 4) {
-          // Take 4 completely new anime!
-          const nextFour = unshownCandidates.slice(0, 4);
-          const remainingUnshown = unshownCandidates.slice(4);
-          const currentShown = pool.filter((a) => currentIds.has(a.id));
-          const newAllPool = [...remainingUnshown, ...currentShown, ...nextFour];
-
-          return {
-            ...msg,
-            anime_recommendations: nextFour,
-            all_recommendations: newAllPool
-          };
-        } else if (unshownCandidates.length > 0) {
-          const fillCount = 4 - unshownCandidates.length;
-          const shownPool = pool.filter((a) => currentIds.has(a.id));
-          const fillers = [...shownPool].sort(() => 0.5 - Math.random()).slice(0, fillCount);
-          const nextFour = [...unshownCandidates, ...fillers];
-
-          return {
-            ...msg,
-            anime_recommendations: nextFour
-          };
-        } else {
+        if (pool.length <= 4) {
           const shuffled = [...pool].sort(() => 0.5 - Math.random());
-          return {
-            ...msg,
-            anime_recommendations: shuffled.slice(0, 4)
-          };
+          return { ...msg, anime_recommendations: shuffled };
         }
+
+        const currentOffset = msg.cardOffset ?? 0;
+        let nextOffset = currentOffset + 4;
+        if (nextOffset >= pool.length) {
+          nextOffset = 0;
+        }
+
+        const nextFour = pool.slice(nextOffset, nextOffset + 4);
+
+        return {
+          ...msg,
+          cardOffset: nextOffset,
+          anime_recommendations: nextFour
+        };
       })
     );
   };

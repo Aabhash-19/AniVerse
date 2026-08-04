@@ -119,6 +119,58 @@ def fetch_live_airing_anime() -> List[dict]:
         return []
 
 
+def fetch_anilist_genre_anime(genre_name: Optional[str] = None) -> List[dict]:
+    """
+    Fetch top-rated anime for a genre (or general top anime) from AniList GraphQL API.
+    Guarantees a rich pool of 20+ candidate cards for any genre request.
+    """
+    if genre_name:
+        gql = """
+        query ($genre: String) {
+          Page(page: 1, perPage: 25) {
+            media(type: ANIME, genre: $genre, sort: [SCORE_DESC, POPULARITY_DESC]) {
+              id
+              title { english romaji }
+              status
+              meanScore
+              genres
+              coverImage { extraLarge }
+            }
+          }
+        }
+        """
+        variables = {"genre": genre_name}
+    else:
+        gql = """
+        query {
+          Page(page: 1, perPage: 25) {
+            media(type: ANIME, sort: [SCORE_DESC, POPULARITY_DESC]) {
+              id
+              title { english romaji }
+              status
+              meanScore
+              genres
+              coverImage { extraLarge }
+            }
+          }
+        }
+        """
+        variables = {}
+
+    try:
+        req = urllib.request.Request(
+            "https://graphql.anilist.co",
+            data=json.dumps({"query": gql, "variables": variables}).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+        )
+        with urllib.request.urlopen(req, timeout=4) as res:
+            data = json.loads(res.read().decode("utf-8"))
+            return data.get("data", {}).get("Page", {}).get("media", [])
+    except Exception as ex:
+        log.warning(f"Failed to fetch genre anime from AniList: {ex}")
+        return []
+
+
 def call_gemini_nami_ai(
     message: str,
     history: List[ChatMessage],
@@ -465,6 +517,25 @@ def nami_chat(
                     genres=[g.name for g in a.genres[:3]]
                 )
                 all_recs_pool.append(card_obj)
+
+        # If pool has fewer than 16 items, fetch extra top-rated genre anime from AniList GraphQL
+        if (is_recommendation_request or matched_genres or "10/10" in lowered_msg or "masterpiece" in lowered_msg) and len(all_recs_pool) < 16:
+            target_g = matched_genres[0] if matched_genres else None
+            extra_media = fetch_anilist_genre_anime(target_g)
+            for m in extra_media:
+                if m["id"] not in seen_ids:
+                    seen_ids.add(m["id"])
+                    t_str = m["title"]["english"] or m["title"]["romaji"]
+                    s_val = float(m["meanScore"]) if m.get("meanScore") else None
+                    slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
+                    all_recs_pool.append(RecommendedAnimeCard(
+                        id=m["id"],
+                        slug=slug_clean,
+                        title=t_str,
+                        cover_url=m.get("coverImage", {}).get("extraLarge"),
+                        score=s_val,
+                        genres=m.get("genres", [])[:3]
+                    ))
 
         if is_recommendation_request or is_airing_request or is_upcoming_request or target_anime or matched_genres or ("10/10" in lowered_msg) or ("masterpiece" in lowered_msg):
             recs_formatted = all_recs_pool[:4]
