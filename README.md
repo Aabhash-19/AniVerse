@@ -23,10 +23,10 @@
 
 <table align="center">
   <tr>
-    <td width="35%" align="center">
-      <img src="./apps/web/public/nami-outfits/nami-readme.png" alt="Nami Navigator" height="230" />
+    <td width="22%" align="center" valign="middle">
+      <img src="./apps/web/public/nami-outfits/nami-readme.png" alt="Nami Navigator" height="210" style="display: block; margin: 0 auto;" />
     </td>
-    <td width="65%">
+    <td width="78%" valign="middle">
       <h3><i>"Yosh! Welcome aboard NamiVerse!"</i> ⛵</h3>
       <p>
         I'm <b>Nami</b>, your official Straw Hat Navigator! Whether you're searching for a 10/10 masterpiece, checking the upcoming airing weather, or looking for official media clips, I've mapped out the entire Grand Line of anime just for you!
