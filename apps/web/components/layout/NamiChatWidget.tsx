@@ -18,6 +18,7 @@ interface Message {
   sender: "user" | "nami";
   text: string;
   anime_recommendations?: RecommendedAnime[];
+  all_recommendations?: RecommendedAnime[];
   timestamp: string;
 }
 
@@ -29,6 +30,19 @@ export default function NamiChatWidget() {
 
   // Cute post-timeskip Wano Nami avatar image provided by user
   const NAMI_AVATAR = "/nami-wano-avatar.jpg";
+
+  const handleShuffleCards = (msgId: string) => {
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id !== msgId || !msg.all_recommendations || msg.all_recommendations.length <= 1) return msg;
+        const shuffled = [...msg.all_recommendations].sort(() => 0.5 - Math.random());
+        return {
+          ...msg,
+          anime_recommendations: shuffled.slice(0, 4)
+        };
+      })
+    );
+  };
 
 
 
@@ -186,43 +200,34 @@ export default function NamiChatWidget() {
                 <p className="text-[10px] text-zinc-400 font-medium">Straw Hat Pirate & Anime Specialist</p>
               </div>
             </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleClearChat}
-                title="Clear Chat"
-                className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 text-[11px] font-bold transition-all border border-zinc-800 flex items-center gap-1"
-              >
-                Clear Chat
-              </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="w-8 h-8 rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center font-bold text-xs transition-all border border-zinc-800"
-              >
-                
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-850 rounded-xl transition-colors"
+            >
+              ✕
+            </button>
           </div>
 
-          {/* Quick Suggestion Chips */}
-          <div className="px-4 py-2.5 bg-zinc-900/40 border-b border-zinc-900 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-none text-[11px]">
+          {/* Quick Prompt Badges */}
+          <div className="px-3 py-2 bg-zinc-900/60 border-b border-zinc-850/60 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             {[
-              "Top Adventure Anime",
-              "10/10 Masterpieces",
-              "Dark Fantasy Shows",
-              "Airing Season Hits"
-            ].map((chip, idx) => (
+              { label: "Top Adventure", text: "Top Adventure Anime", icon: "⚔️" },
+              { label: "10/10 Masterpieces", text: "10/10 Masterpieces", icon: "⭐" },
+              { label: "Dark Fantasy", text: "Dark Fantasy Shows", icon: "🌑" },
+              { label: "Airing Season", text: "Airing Season Hits", icon: "📺" }
+            ].map((prompt) => (
               <button
-                key={idx}
-                onClick={() => handleSendMessage(chip)}
-                disabled={loading}
-                className="bg-zinc-900 hover:bg-purple-950/50 border border-zinc-800 hover:border-purple-500/40 text-zinc-300 hover:text-purple-300 px-3 py-1 rounded-full font-semibold transition-all flex-shrink-0"
+                key={prompt.label}
+                type="button"
+                onClick={() => handleSendMessage(prompt.text)}
+                className="text-[10px] font-semibold bg-purple-950/60 hover:bg-purple-900/80 text-purple-200 border border-purple-500/30 px-2.5 py-1 rounded-lg flex-shrink-0 transition-all active:scale-95 flex items-center gap-1"
               >
-                {chip}
+                <span>{prompt.icon}</span>
+                <span>{prompt.label}</span>
               </button>
             ))}
           </div>
-
 
           {/* Messages Feed */}
           <div className="flex-1 p-4 overflow-y-auto space-y-4 text-xs">
@@ -239,7 +244,6 @@ export default function NamiChatWidget() {
                     className="w-7 h-7 rounded-full object-cover border border-amber-500/80 flex-shrink-0 mt-1 bg-purple-950"
                   />
                 )}
-
 
                 <div className={`max-w-[82%] space-y-2 ${msg.sender === "user" ? "items-end" : "items-start"}`}>
                   <div
@@ -262,32 +266,51 @@ export default function NamiChatWidget() {
 
                   {/* Anime Recommendation Cards */}
                   {msg.anime_recommendations && msg.anime_recommendations.length > 0 && (
-                    <div className="grid grid-cols-1 gap-2 pt-1">
-                      {msg.anime_recommendations.map((anime) => (
-                        <Link
-                          key={anime.id}
-                          href={`/anime/${anime.slug}-${anime.id}`}
-                          onClick={() => setIsOpen(false)}
-                          className="flex items-center gap-3 bg-zinc-950 border border-zinc-850 hover:border-purple-500/60 p-2 rounded-xl group transition-all"
-                        >
-                          {anime.cover_url ? (
-                            <img src={anime.cover_url} alt={anime.title} className="w-10 h-14 object-cover rounded-lg flex-shrink-0 group-hover:scale-105 transition-transform" />
-                          ) : (
-                            <div className="w-10 h-14 bg-zinc-900 rounded-lg flex items-center justify-center text-[10px] text-zinc-600">No Cover</div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-bold text-zinc-200 group-hover:text-purple-400 truncate">{anime.title}</div>
-                            <div className="flex items-center gap-2 mt-1">
-                              {anime.score && (
-                                <span className="text-[10px] font-extrabold text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20">
-                                  ⭐ {anime.score}%
-                                </span>
-                              )}
-                              <span className="text-[10px] text-zinc-500 truncate">{anime.genres.join(", ")}</span>
+                    <div className="space-y-1.5 pt-1">
+                      {msg.all_recommendations && msg.all_recommendations.length > 1 && (
+                        <div className="flex items-center justify-between px-1">
+                          <span className="text-[10px] font-semibold text-zinc-400">Recommendations:</span>
+                          <button
+                            type="button"
+                            onClick={() => handleShuffleCards(msg.id)}
+                            className="flex items-center gap-1.5 text-[10px] font-bold text-amber-400 hover:text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-lg hover:bg-amber-500/20 transition-all active:scale-95 shadow-sm"
+                          >
+                            <svg className="w-3 h-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Shuffle Cards 🔀
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 gap-2">
+                        {msg.anime_recommendations.map((anime) => (
+                          <a
+                            key={anime.id}
+                            href={`/anime/${anime.slug}-${anime.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 bg-zinc-950 border border-zinc-850 hover:border-purple-500/60 p-2 rounded-xl group transition-all"
+                          >
+                            {anime.cover_url ? (
+                              <img src={anime.cover_url} alt={anime.title} className="w-10 h-14 object-cover rounded-lg flex-shrink-0 group-hover:scale-105 transition-transform" />
+                            ) : (
+                              <div className="w-10 h-14 bg-zinc-900 rounded-lg flex items-center justify-center text-[10px] text-zinc-600">No Cover</div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-bold text-zinc-200 group-hover:text-purple-400 truncate">{anime.title}</div>
+                              <div className="flex items-center gap-2 mt-1">
+                                {anime.score && (
+                                  <span className="text-[10px] font-extrabold text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20">
+                                    ⭐ {anime.score}%
+                                  </span>
+                                )}
+                                <span className="text-[10px] text-zinc-500 truncate">{anime.genres.join(", ")}</span>
+                              </div>
                             </div>
-                          </div>
-                        </Link>
-                      ))}
+                          </a>
+                        ))}
+                      </div>
                     </div>
                   )}
 
