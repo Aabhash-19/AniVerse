@@ -11,7 +11,7 @@ import json
 import logging
 
 from app.database import get_db
-from app.anime.models import Anime, Genre, AnimeTitle
+from app.anime.models import Anime, Genre, AnimeTitle, AnimeStatus
 from app.auth.dependencies import get_optional_user
 from app.auth.models import User
 from app.lists.models import AnimeListEntry, ListStatus
@@ -68,7 +68,7 @@ def call_gemini_nami_ai(
 ) -> Optional[str]:
     """
     Call Google Gemini API with Nami's character system prompt, catalog ground truth, and user watchlist context.
-    Returns AI generated response text in Nami's voice without truncating.
+    Returns AI generated response text in Nami's voice without truncating or metadata leaks.
     """
     api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -79,15 +79,16 @@ def call_gemini_nami_ai(
         "You are the official Straw Hat Navigator on NamiVerse (an AI-powered anime discovery platform). "
         "You are an expert on all anime, manga, and pop culture. You love navigation, weather, maps, Berries/gold, and your crewmates (Luffy, Zoro, Sanji, Usopp). "
         "Answer the user's questions in Nami's authentic personality—spirited, clever, knowledgeable, and helpful.\n\n"
-        "DATABASE CATALOG GROUND TRUTH (Use these real anime entries from our database for recommendations):\n"
+        "DATABASE CATALOG GROUND TRUTH (Use ONLY these verified anime entries from our database for recommendations):\n"
         f"{catalog_context or 'No specific catalog filter active. Use top-rated anime.'}\n\n"
         "USER WATCHLIST & PROFILE CONTEXT:\n"
         f"{watchlist_context or 'User is browsing anonymously.'}\n\n"
-        "GUIDELINES:\n"
-        "1. When recommending anime, ALWAYS refer to real anime titles matching the user's requested genre/vibe.\n"
-        "2. If user watchlist context is present, take into account what they have already watched and scored. Avoid recommending anime they have already completed unless explicitly asked.\n"
-        "3. Provide full, articulate, and complete responses. Do NOT stop mid-sentence or give partial replies.\n"
-        "4. Keep Nami's tone spirited, witty, and engaging!"
+        "STRICT RESPONSE CONSTRAINTS:\n"
+        "1. FILTER COMPLIANCE: If the user asks for 'currently airing', 'ongoing', or 'this season' anime, ONLY recommend titles from the catalog marked as (Status: Currently Airing / Releasing)!\n"
+        "2. NO METADATA LEAKS: NEVER output catalog tags, database IDs, or internal status labels (do NOT write 'Catalog ID: ...' or 'Status: ...'). Just mention the anime naturally in conversation.\n"
+        "3. WATCHLIST COMPLIANCE: Do NOT recommend anime the user has already completed unless they specifically ask about them.\n"
+        "4. BOLD TITLES: Always format anime titles in bold markdown (e.g., **Solo Leveling**).\n"
+        "5. COMPLETE RESPONSES: Always finish your thought completely. Never stop mid-sentence."
     )
 
     contents = []
@@ -178,7 +179,8 @@ def nami_chat(
                     continue
                 if e.status in [ListStatus.COMPLETED, ListStatus.REWATCHING]:
                     user_completed_ids.add(e.anime_id)
-                    score_info = f" (Scored {e.score}/10)" if e.score else ""
+                    formatted_score = f"{e.score/10:.1f}/10" if (e.score and e.score > 10) else (f"{e.score:.1f}/10" if e.score else "")
+                    score_info = f" (Scored {formatted_score})" if formatted_score else ""
                     completed_titles.append(f"{t_str}{score_info}")
                 elif e.status == ListStatus.WATCHING:
                     watching_titles.append(t_str)
@@ -197,20 +199,33 @@ def nami_chat(
 
     # ── 2. Query Catalog Ground Truth based on User Query ───────────────────
     lowered_msg = user_msg.lower()
+    
+    AIRING_KEYWORDS = ["currently airing", "airing", "ongoing", "this season", "releasing", "currently running", "new episodes", "weekly"]
+    UPCOMING_KEYWORDS = ["upcoming", "not yet released", "next season", "future anime", "soon"]
+
+    is_airing_request = any(kw in lowered_msg for kw in AIRING_KEYWORDS)
+    is_upcoming_request = any(kw in lowered_msg for kw in UPCOMING_KEYWORDS)
+
     ALL_GENRES = [
         "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Isekai", "Mecha", 
         "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Seinen", "Shonen", 
         "Shoujo", "Slice of Life", "Sports", "Supernatural", "Thriller"
     ]
-    
     matched_genres = [g for g in ALL_GENRES if g.lower() in lowered_msg]
 
     query = db.query(Anime)
+
+    # Filter by Airing/Upcoming status if requested
+    if is_airing_request:
+        query = query.filter(or_(Anime.status == "RELEASING", Anime.status == AnimeStatus.RELEASING))
+    elif is_upcoming_request:
+        query = query.filter(or_(Anime.status == "NOT_YET_RELEASED", Anime.status == AnimeStatus.NOT_YET_RELEASED))
+
     if matched_genres:
         query = query.join(Anime.genres).filter(
             or_(*[Genre.name.ilike(f"%{g}%") for g in matched_genres])
         )
-    elif len(user_msg.split()) <= 4:
+    elif not is_airing_request and not is_upcoming_request and len(user_msg.split()) <= 4:
         query = query.filter(
             or_(
                 Anime.title_english.ilike(f"%{user_msg}%"),
@@ -220,15 +235,23 @@ def nami_chat(
         )
 
     db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(15).all()
+    
+    # Fallback if no matching status/genre candidates returned
     if not db_candidates:
-        db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(15).all()
+        if is_airing_request:
+            db_candidates = db.query(Anime).filter(or_(Anime.status == "RELEASING", Anime.status == "NOT_YET_RELEASED")).order_by(Anime.popularity.desc().nullslast()).limit(15).all()
+        else:
+            db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(15).all()
 
     catalog_snippets = []
     for a in db_candidates:
         t = a.title_english or a.title_romaji or a.title_native
         g = ", ".join([genre.name for genre in a.genres[:4]])
-        score = f"{a.average_score:.1f}/10" if a.average_score else "N/A"
-        catalog_snippets.append(f"• ID:{a.id} | Title: '{t}' | Score: {score} | Genres: {g}")
+        score = f"{a.average_score:.1f}/100" if a.average_score else "N/A"
+        status_str = str(a.status).upper()
+        status_label = "Currently Airing / Releasing" if "RELEASING" in status_str else ("Upcoming" if "NOT_YET" in status_str else "Finished Airing")
+        ep_info = f"{a.episodes} episodes" if a.episodes else "Ongoing episodes"
+        catalog_snippets.append(f"• Title: \"{t}\" (Status: {status_label}, Score: {score}, Format: {a.format or 'TV'}, Episodes: {ep_info}, Genres: {g})")
     
     catalog_context = "\n".join(catalog_snippets)
 
@@ -240,7 +263,7 @@ def nami_chat(
         "similar to", "like this anime", "like", "new anime", "good anime",
         "popular anime", "trending anime", "genre", "isekai", "shonen", "seinen", "shoujo"
     ]
-    is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS) or bool(matched_genres)
+    is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS) or bool(matched_genres) or is_airing_request or is_upcoming_request
 
     # ── 4. Call Gemini AI ───────────────────────────────────────────────────
     reply_text = call_gemini_nami_ai(
