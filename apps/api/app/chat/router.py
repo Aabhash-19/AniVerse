@@ -17,6 +17,11 @@ from app.auth.models import User
 from app.lists.models import AnimeListEntry, ListStatus
 from app.config import settings
 
+try:
+    from app.recommendations.service import run_semantic_search
+except Exception as ex:
+    run_semantic_search = None
+
 log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["Nami AI Navigator"])
@@ -67,7 +72,7 @@ def call_gemini_nami_ai(
     watchlist_context: str = ""
 ) -> Optional[str]:
     """
-    Call Google Gemini API with Nami's character system prompt, catalog ground truth, and user watchlist context.
+    Call Google Gemini API with Nami's character system prompt, vector RAG catalog ground truth, and user watchlist context.
     Returns AI generated response text in Nami's voice without truncating or metadata leaks.
     """
     api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
@@ -153,7 +158,7 @@ def nami_chat(
     current_user: Optional[User] = Depends(get_optional_user)
 ):
     """
-    Nami AI Chatbot Endpoint — powered by Google Gemini API with database catalog ground truth and user watchlist context.
+    Nami AI Chatbot Endpoint — powered by Google Gemini API with pgvector RAG search, watchlist context, and intent routing.
     """
     user_msg = req.message.strip()
     if not user_msg:
@@ -197,7 +202,7 @@ def nami_chat(
                 
             watchlist_context = "\n".join(summary_parts)
 
-    # ── 2. Query Catalog Ground Truth based on User Query ───────────────────
+    # ── 2. Intent Routing & RAG Candidate Retrieval ────────────────────────
     lowered_msg = user_msg.lower()
     
     AIRING_KEYWORDS = ["currently airing", "airing", "ongoing", "this season", "releasing", "currently running", "new episodes", "weekly"]
@@ -213,36 +218,48 @@ def nami_chat(
     ]
     matched_genres = [g for g in ALL_GENRES if g.lower() in lowered_msg]
 
-    query = db.query(Anime)
+    db_candidates: List[Anime] = []
 
-    # Filter by Airing/Upcoming status if requested
-    if is_airing_request:
-        query = query.filter(or_(Anime.status == "RELEASING", Anime.status == AnimeStatus.RELEASING))
-    elif is_upcoming_request:
-        query = query.filter(or_(Anime.status == "NOT_YET_RELEASED", Anime.status == AnimeStatus.NOT_YET_RELEASED))
+    # Attempt Semantic Vector RAG Search if available and query is expressive
+    if run_semantic_search and len(user_msg.split()) >= 3 and not is_airing_request and not is_upcoming_request:
+        try:
+            vector_results = run_semantic_search(db, user_msg, limit=15)
+            db_candidates = [r["anime"] for r in vector_results if r.get("anime")]
+        except Exception as ex:
+            log.warning(f"Semantic vector search fallback: {ex}")
 
-    if matched_genres:
-        query = query.join(Anime.genres).filter(
-            or_(*[Genre.name.ilike(f"%{g}%") for g in matched_genres])
-        )
-    elif not is_airing_request and not is_upcoming_request and len(user_msg.split()) <= 4:
-        query = query.filter(
-            or_(
-                Anime.title_english.ilike(f"%{user_msg}%"),
-                Anime.title_romaji.ilike(f"%{user_msg}%"),
-                Anime.description.ilike(f"%{user_msg}%")
+    # SQL Fallback / Filtered Query
+    if not db_candidates:
+        query = db.query(Anime)
+
+        if is_airing_request:
+            query = query.filter(or_(Anime.status == "RELEASING", Anime.status == AnimeStatus.RELEASING))
+        elif is_upcoming_request:
+            query = query.filter(or_(Anime.status == "NOT_YET_RELEASED", Anime.status == AnimeStatus.NOT_YET_RELEASED))
+
+        if matched_genres:
+            query = query.join(Anime.genres).filter(
+                or_(*[Genre.name.ilike(f"%{g}%") for g in matched_genres])
             )
-        )
+        elif not is_airing_request and not is_upcoming_request and len(user_msg.split()) <= 4:
+            query = query.filter(
+                or_(
+                    Anime.title_english.ilike(f"%{user_msg}%"),
+                    Anime.title_romaji.ilike(f"%{user_msg}%"),
+                    Anime.description.ilike(f"%{user_msg}%")
+                )
+            )
 
-    db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(15).all()
-    
-    # Fallback if no matching status/genre candidates returned
+        db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(15).all()
+
+    # Final Fallback if empty
     if not db_candidates:
         if is_airing_request:
             db_candidates = db.query(Anime).filter(or_(Anime.status == "RELEASING", Anime.status == "NOT_YET_RELEASED")).order_by(Anime.popularity.desc().nullslast()).limit(15).all()
         else:
             db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(15).all()
 
+    # Build Ground Truth Catalog Snippets
     catalog_snippets = []
     for a in db_candidates:
         t = a.title_english or a.title_romaji or a.title_native
