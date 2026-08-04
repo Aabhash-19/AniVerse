@@ -259,7 +259,7 @@ def nami_chat(
         # ── 2. Query & Intent Parsing ─────────────────────────────────────────
         lowered_msg = user_msg.lower()
         
-        AIRING_KEYWORDS = ["currently airing", "airing", "ongoing", "this season", "releasing", "currently running", "new episodes", "weekly", "airing anime", "airing season"]
+        AIRING_KEYWORDS = ["currently airing", "airing", "ongoing", "this season", "releasing", "currently running", "new episodes", "weekly", "airing anime", "airing season", "airing hits"]
         UPCOMING_KEYWORDS = ["upcoming", "not yet released", "next season", "future anime", "soon"]
         PLOT_KEYWORDS = ["plot", "synopsis", "about", "story", "summary", "tell me about", "what is", "who is", "explain"]
         WATCHLIST_KEYWORDS = [
@@ -285,6 +285,8 @@ def nami_chat(
             matched_genres = list(set(matched_genres + ["Romance", "Comedy"]))
         elif "dark fantasy" in lowered_msg:
             matched_genres = list(set(matched_genres + ["Fantasy", "Horror", "Psychological"]))
+        elif "top adventure" in lowered_msg:
+            matched_genres = list(set(matched_genres + ["Adventure"]))
 
         RECOMMENDATION_KEYWORDS = [
             "recommend", "suggestion", "suggest", "what should i watch", "what to watch",
@@ -293,7 +295,7 @@ def nami_chat(
             "similar to", "like this anime", "genre", "isekai", "shonen", "seinen", "shoujo",
             "10/10", "masterpiece", "masterpieces", "top adventure", "dark fantasy", "airing season", "hits"
         ]
-        is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS) or bool(matched_genres) or is_upcoming_request
+        is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS) or bool(matched_genres) or is_upcoming_request or ("10/10" in lowered_msg) or ("masterpiece" in lowered_msg)
 
         # ── 3. Handle Watchlist Queries ───────────────────────────────────────
         if is_watchlist_request:
@@ -419,6 +421,9 @@ def nami_chat(
                 desc_clean = re.sub(r'<[^>]+>', '', raw_desc).strip()
                 score_str = f"{target_anime.average_score:.1f}/100" if target_anime.average_score else "N/A"
                 reply_text = f"Yosh! Here is the lowdown on **{t_name}**:\n\n{desc_clean}\n\n⭐ **Score:** {score_str} | **Genres:** {g_str} 🍊"
+            elif "10/10" in lowered_msg or "masterpiece" in lowered_msg:
+                titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:4]])
+                reply_text = f"Yosh! Here are certified 10/10 masterpiece anime from our logbook: {titles_str}! 🏆"
             elif matched_genres:
                 genre_name = matched_genres[0]
                 titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:4]])
@@ -437,29 +442,31 @@ def nami_chat(
         # ── 8. Select Best Recommended Anime Cards & Build All Recommendations Pool ──
         recs_formatted = []
         all_recs_pool = []
-        if is_recommendation_request or target_anime:
-            matched_anime: List[Anime] = []
-            if target_anime:
-                matched_anime = [target_anime]
-            else:
-                fresh_candidates = [a for a in db_candidates if a.id not in user_completed_ids]
-                matched_anime = fresh_candidates if fresh_candidates else db_candidates
+        
+        # Build candidate pool for recommendations, presets, genres, airing, or specific titles
+        matched_anime: List[Anime] = []
+        if target_anime:
+            matched_anime = [target_anime]
+        else:
+            fresh_candidates = [a for a in db_candidates if a.id not in user_completed_ids]
+            matched_anime = fresh_candidates if fresh_candidates else db_candidates
 
-            seen_ids = set()
-            for a in matched_anime:
-                if a.id not in seen_ids:
-                    seen_ids.add(a.id)
-                    t_str = a.title_english or a.title_romaji or a.title_native
-                    card_obj = RecommendedAnimeCard(
-                        id=a.id,
-                        slug=a.slug,
-                        title=t_str,
-                        cover_url=a.cover_large_url,
-                        score=float(a.average_score) if a.average_score else None,
-                        genres=[g.name for g in a.genres[:3]]
-                    )
-                    all_recs_pool.append(card_obj)
+        seen_ids = set()
+        for a in matched_anime:
+            if a.id not in seen_ids:
+                seen_ids.add(a.id)
+                t_str = a.title_english or a.title_romaji or a.title_native
+                card_obj = RecommendedAnimeCard(
+                    id=a.id,
+                    slug=a.slug,
+                    title=t_str,
+                    cover_url=a.cover_large_url,
+                    score=float(a.average_score) if a.average_score else None,
+                    genres=[g.name for g in a.genres[:3]]
+                )
+                all_recs_pool.append(card_obj)
 
+        if is_recommendation_request or is_airing_request or is_upcoming_request or target_anime or matched_genres or ("10/10" in lowered_msg) or ("masterpiece" in lowered_msg):
             recs_formatted = all_recs_pool[:4]
 
         return ChatResponse(
