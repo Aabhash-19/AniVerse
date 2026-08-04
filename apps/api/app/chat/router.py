@@ -91,7 +91,7 @@ def fetch_live_airing_anime() -> List[dict]:
     """
     gql = """
     query {
-      Page(page: 1, perPage: 15) {
+      Page(page: 1, perPage: 25) {
         media(type: ANIME, status: RELEASING, sort: [TRENDING_DESC, POPULARITY_DESC]) {
           id
           title { english romaji }
@@ -383,9 +383,9 @@ def nami_chat(
         elif target_anime:
             query = query.filter(Anime.id == target_anime.id)
 
-        db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(25).all()
+        db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(40).all()
         if not db_candidates:
-            db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(25).all()
+            db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(40).all()
 
         catalog_snippets = []
         for a in db_candidates[:10]:
