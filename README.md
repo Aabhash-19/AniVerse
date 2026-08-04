@@ -21,28 +21,24 @@
 
 ## 🍊 Meet Your Navigator: Nami
 
-<table align="center" width="100%" cellspacing="0" cellpadding="0">
+<table align="center">
   <tr>
-    <td width="30%" align="center" valign="bottom" style="overflow: hidden;">
-      <img src="./apps/web/public/nami-outfits/nami-readme2.png" alt="Nami Navigator" width="100%" style="display: block; margin: 0 auto; vertical-align: bottom; transform: scale(1.18); transform-origin: bottom center;" />
+    <td width="26%" align="center" valign="middle">
+      <img src="./apps/web/public/nami-outfits/nami-readme.png" alt="Nami Navigator" width="100%" style="border-radius: 12px; display: block;" />
     </td>
-    <td width="70%" valign="middle" style="padding: 10px;">
+    <td width="74%" valign="middle">
       <h3><i>"Yosh! Welcome aboard NamiVerse!"</i> ⛵</h3>
       <p>
         I'm <b>Nami</b>, your official Straw Hat Navigator! Whether you're searching for a 10/10 masterpiece, checking the upcoming airing weather, or looking for official media clips, I've mapped out the entire Grand Line of anime just for you!
       </p>
       <ul>
-        <li>🤖 <b>Log Pose AI Chatbot</b>: Interactive Gemini AI navigator giving personalized recommendations with embedded media cards.</li>
-        <li>⚡ <b>Clima-Tact Weather Intelligence</b>: Live airing countdowns, weekly release radars, and local timezone conversions.</li>
-        <li>🧠 <b>Tactical Vector Search</b>: High-speed semantic similarity matching using PostgreSQL <code>pgvector</code> & 384d dense embeddings.</li>
-        <li>💰 <b>Bounty & Watchlist Logbook</b>: Track episode progress, log personal 1–10 scores, and organize custom anime categories.</li>
-        <li>🎬 <b>Lounge & Media Vault</b>: Watch HD official trailers, PV clips, opening themes, and test your lore in trivia quizzes!</li>
+        <li>⚡ <b>Clima-Tact Weather Intelligence</b>: Airing countdowns & weekly release radars.</li>
+        <li>💰 <b>Bounty & Score Tracking</b>: Log your watchlist progress and personal scores.</li>
+        <li>🤖 <b>Log Pose AI Chatbot</b>: Ask me for personalized recommendations anytime!</li>
       </ul>
     </td>
   </tr>
 </table>
-
----
 
 ---
 
