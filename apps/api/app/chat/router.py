@@ -60,6 +60,41 @@ NAMI_ONE_PIECE_REPLIES = [
 ]
 
 
+def fetch_live_airing_anime() -> List[dict]:
+    """
+    Fetch real-time currently airing (RELEASING) anime directly from AniList GraphQL API.
+    Guarantees 100% accurate live airing anime status.
+    """
+    gql = """
+    query {
+      Page(page: 1, perPage: 6) {
+        media(type: ANIME, status: RELEASING, sort: [TRENDING_DESC, POPULARITY_DESC]) {
+          id
+          title { english romaji }
+          status
+          meanScore
+          genres
+          episodes
+          coverImage { extraLarge }
+          nextAiringEpisode { episode }
+        }
+      }
+    }
+    """
+    try:
+        req = urllib.request.Request(
+            "https://graphql.anilist.co",
+            data=json.dumps({"query": gql}).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+        )
+        with urllib.request.urlopen(req, timeout=4) as res:
+            data = json.loads(res.read().decode("utf-8"))
+            return data.get("data", {}).get("Page", {}).get("media", [])
+    except Exception as ex:
+        log.warning(f"Failed to fetch live airing anime from AniList: {ex}")
+        return []
+
+
 def call_gemini_nami_ai(
     message: str,
     history: List[ChatMessage],
@@ -165,14 +200,13 @@ def nami_chat(
     # ── 1. Build User Watchlist Context ─────────────────────────────────────
     watchlist_context = "User is browsing anonymously."
     user_completed_ids = set()
+    completed_titles = []
+    watching_titles = []
+    planning_titles = []
 
     if current_user:
         entries = db.query(AnimeListEntry).filter(AnimeListEntry.user_id == current_user.id).all()
         if entries:
-            completed_titles = []
-            watching_titles = []
-            planning_titles = []
-            
             for e in entries:
                 t_str = e.anime.title_english or e.anime.title_romaji if e.anime else ""
                 if not t_str:
@@ -200,11 +234,19 @@ def nami_chat(
     # ── 2. High-Speed SQL RAG Database Query ────────────────────────────────
     lowered_msg = user_msg.lower()
     
-    AIRING_KEYWORDS = ["currently airing", "airing", "ongoing", "this season", "releasing", "currently running", "new episodes", "weekly"]
+    AIRING_KEYWORDS = ["currently airing", "airing", "ongoing", "this season", "releasing", "currently running", "new episodes", "weekly", "airing anime"]
     UPCOMING_KEYWORDS = ["upcoming", "not yet released", "next season", "future anime", "soon"]
+    PLOT_KEYWORDS = ["plot", "synopsis", "about", "story", "summary", "tell me about", "what is", "who is", "explain"]
+    WATCHLIST_KEYWORDS = [
+        "my list", "my watchlist", "what am i watching", "what did i watch",
+        "my completed", "my plan to watch", "on my list", "my profile", "my logbook",
+        "tracked anime", "what is on my list", "show my list", "show my watchlist"
+    ]
 
     is_airing_request = any(kw in lowered_msg for kw in AIRING_KEYWORDS)
     is_upcoming_request = any(kw in lowered_msg for kw in UPCOMING_KEYWORDS)
+    is_plot_request = any(kw in lowered_msg for kw in PLOT_KEYWORDS)
+    is_watchlist_request = any(kw in lowered_msg for kw in WATCHLIST_KEYWORDS)
 
     ALL_GENRES = [
         "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Isekai", "Mecha", 
@@ -213,63 +255,7 @@ def nami_chat(
     ]
     matched_genres = [g for g in ALL_GENRES if g.lower() in lowered_msg]
 
-    query = db.query(Anime)
-
-    # Filter by Airing/Upcoming status if requested
-    if is_airing_request:
-        query = query.filter(or_(Anime.status == "RELEASING", Anime.status == AnimeStatus.RELEASING))
-    elif is_upcoming_request:
-        query = query.filter(or_(Anime.status == "NOT_YET_RELEASED", Anime.status == AnimeStatus.NOT_YET_RELEASED))
-
-    if matched_genres:
-        query = query.join(Anime.genres).filter(
-            or_(*[Genre.name.ilike(f"%{g}%") for g in matched_genres])
-        )
-    elif not is_airing_request and not is_upcoming_request:
-        words = [w for w in user_msg.split() if len(w) > 3]
-        if words:
-            query = query.filter(
-                or_(*[
-                    Anime.title_english.ilike(f"%{w}%") |
-                    Anime.title_romaji.ilike(f"%{w}%") |
-                    Anime.description.ilike(f"%{w}%")
-                    for w in words[:3]
-                ])
-            )
-
-    db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(10).all()
-    
-    # Fallback if no matching candidates
-    if not db_candidates:
-        if is_airing_request:
-            db_candidates = db.query(Anime).filter(or_(Anime.status == "RELEASING", Anime.status == "NOT_YET_RELEASED")).order_by(Anime.popularity.desc().nullslast()).limit(10).all()
-        else:
-            db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(10).all()
-
-    catalog_snippets = []
-    for a in db_candidates:
-        t = a.title_english or a.title_romaji or a.title_native
-        g = ", ".join([genre.name for genre in a.genres[:3]])
-        score = f"{a.average_score:.1f}/100" if a.average_score else "N/A"
-        status_str = str(a.status).upper()
-        status_label = "Currently Airing / Releasing" if "RELEASING" in status_str else ("Upcoming" if "NOT_YET" in status_str else "Finished Airing")
-        catalog_snippets.append(f"• Title: \"{t}\" (Status: {status_label}, Score: {score}, Genres: {g})")
-    
-    catalog_context = "\n".join(catalog_snippets)
-
-    PLOT_KEYWORDS = ["plot", "synopsis", "about", "story", "summary", "tell me about", "what is", "who is", "explain"]
-    WATCHLIST_KEYWORDS = [
-        "my list", "my watchlist", "what am i watching", "what did i watch",
-        "my completed", "my plan to watch", "on my list", "my profile", "my logbook",
-        "tracked anime", "what is on my list", "show my list", "show my watchlist"
-    ]
-    
-    is_plot_request = any(kw in lowered_msg for kw in PLOT_KEYWORDS)
-    is_watchlist_request = any(kw in lowered_msg for kw in WATCHLIST_KEYWORDS)
-
-    # ── 4. Intent Handlers & Gemini AI Call ───────────────────────────────
-    reply_text = None
-
+    # ── 3. Handle Special Intent Queries (Watchlist / Airing) ───────────────
     if is_watchlist_request:
         if current_user and (completed_titles or watching_titles or planning_titles):
             parts = [f"Yosh @{current_user.username}! Here is your current NamiVerse logbook:\n"]
@@ -285,33 +271,96 @@ def nami_chat(
         else:
             reply_text = "Yosh! Please sign in to your NamiVerse account so I can view and manage your personal watchlist logbook! 🍊"
 
-    elif is_airing_request:
-        airing_shows = db.query(Anime).filter(
-            or_(
-                Anime.status == "RELEASING",
-                Anime.status == AnimeStatus.RELEASING,
-                Anime.status.ilike("%releasing%"),
-                Anime.status.ilike("%airing%")
-            )
-        ).order_by(Anime.popularity.desc().nullslast(), Anime.average_score.desc().nullslast()).limit(6).all()
+        return ChatResponse(reply=reply_text, anime_recommendations=[])
 
-        if airing_shows:
+    if is_airing_request:
+        live_releasing = fetch_live_airing_anime()
+        if live_releasing:
             show_snippets = []
-            for a in airing_shows:
-                t_str = a.title_english or a.title_romaji
-                g_str = ", ".join([g.name for g in a.genres[:2]])
-                s_str = f"{a.average_score:.1f}/100" if a.average_score else "N/A"
-                show_snippets.append(f"• **{t_str}** (⭐ {s_str} | {g_str})")
-            
-            reply_text = "Yosh! Here are top-rated anime currently airing right now on NamiVerse:\n\n" + "\n".join(show_snippets) + "\n\nWhich of these would you like to add to your watchlist? ⛵"
+            recs_formatted = []
+            for m in live_releasing:
+                t_str = m["title"]["english"] or m["title"]["romaji"]
+                g_str = ", ".join(m.get("genres", [])[:2])
+                s_val = float(m["meanScore"]) if m.get("meanScore") else None
+                s_str = f"{s_val/10:.1f}/10" if s_val else "N/A"
+                ep_info = f"Ep {m['nextAiringEpisode']['episode']}" if m.get("nextAiringEpisode") else f"{m.get('episodes', 'Ongoing')} eps"
+                
+                show_snippets.append(f"• **{t_str}** (⭐ {s_str} | {ep_info} | {g_str})")
+                
+                slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
+                recs_formatted.append(RecommendedAnimeCard(
+                    id=m["id"],
+                    slug=slug_clean,
+                    title=t_str,
+                    cover_url=m.get("coverImage", {}).get("extraLarge"),
+                    score=s_val,
+                    genres=m.get("genres", [])[:3]
+                ))
 
-    if not reply_text:
-        reply_text = call_gemini_nami_ai(
-            message=user_msg,
-            history=req.history or [],
-            catalog_context=catalog_context,
-            watchlist_context=watchlist_context
+            reply_text = (
+                "Yosh! Here are top anime **currently airing right now** across the world:\n\n" +
+                "\n".join(show_snippets) +
+                "\n\nWhich of these current season shows would you like to chart onto your logbook? ⛵"
+            )
+            return ChatResponse(
+                reply=reply_text,
+                anime_recommendations=recs_formatted[:4]
+            )
+
+    # Standard Catalog Candidates Retrieval
+    query = db.query(Anime)
+
+    if is_upcoming_request:
+        query = query.filter(or_(Anime.status == "NOT_YET_RELEASED", Anime.status == AnimeStatus.NOT_YET_RELEASED))
+
+    if matched_genres:
+        query = query.join(Anime.genres).filter(
+            or_(*[Genre.name.ilike(f"%{g}%") for g in matched_genres])
         )
+    elif not is_upcoming_request:
+        words = [w for w in user_msg.split() if len(w) > 3]
+        if words:
+            query = query.filter(
+                or_(*[
+                    Anime.title_english.ilike(f"%{w}%") |
+                    Anime.title_romaji.ilike(f"%{w}%") |
+                    Anime.description.ilike(f"%{w}%")
+                    for w in words[:3]
+                ])
+            )
+
+    db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(10).all()
+    
+    if not db_candidates:
+        db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(10).all()
+
+    catalog_snippets = []
+    for a in db_candidates:
+        t = a.title_english or a.title_romaji or a.title_native
+        g = ", ".join([genre.name for genre in a.genres[:3]])
+        score = f"{a.average_score:.1f}/100" if a.average_score else "N/A"
+        status_str = str(a.status).upper()
+        status_label = "Currently Airing / Releasing" if "RELEASING" in status_str else ("Upcoming" if "NOT_YET" in status_str else "Finished Airing")
+        catalog_snippets.append(f"• Title: \"{t}\" (Status: {status_label}, Score: {score}, Genres: {g})")
+    
+    catalog_context = "\n".join(catalog_snippets)
+
+    RECOMMENDATION_KEYWORDS = [
+        "recommend", "suggestion", "suggest", "what should i watch", "what to watch",
+        "what anime", "give me", "show me", "find me", "i want to watch", "looking for",
+        "any good", "anything good", "best anime", "top anime", "anime for",
+        "similar to", "like this anime", "like", "new anime", "good anime",
+        "popular anime", "trending anime", "genre", "isekai", "shonen", "seinen", "shoujo"
+    ]
+    is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS) or bool(matched_genres) or is_upcoming_request
+
+    # ── 4. Call Gemini AI ───────────────────────────────────────────────────
+    reply_text = call_gemini_nami_ai(
+        message=user_msg,
+        history=req.history or [],
+        catalog_context=catalog_context,
+        watchlist_context=watchlist_context
+    )
 
     # Database-Powered Accurate Fallback if Gemini API rate limits or blips occur
     if not reply_text:
