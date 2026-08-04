@@ -26,7 +26,7 @@
 <table align="center" width="100%">
   <tr>
     <td width="30%" align="center" valign="middle" style="padding: 8px;">
-      <img src="./apps/web/public/nami-outfits/nami-transparent-welcome.png" alt="Nami Navigator" width="100%" style="max-width: 100%; height: auto; display: block;" />
+      <img src="./apps/web/public/nami-outfits/nami-fullbody-welcome.png" alt="Nami Navigator" width="100%" style="max-width: 100%; height: auto; display: block;" />
     </td>
     <td width="70%" valign="top" style="padding: 12px 16px;">
       <h3><i>"Yosh, Mina-san! Welcome to NamiVerse!"</i> 💰🍊</h3>
