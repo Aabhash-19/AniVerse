@@ -259,7 +259,7 @@ def nami_chat(
         # ── 2. Query & Intent Parsing ─────────────────────────────────────────
         lowered_msg = user_msg.lower()
         
-        AIRING_KEYWORDS = ["currently airing", "airing", "ongoing", "this season", "releasing", "currently running", "new episodes", "weekly", "airing anime"]
+        AIRING_KEYWORDS = ["currently airing", "airing", "ongoing", "this season", "releasing", "currently running", "new episodes", "weekly", "airing anime", "airing season"]
         UPCOMING_KEYWORDS = ["upcoming", "not yet released", "next season", "future anime", "soon"]
         PLOT_KEYWORDS = ["plot", "synopsis", "about", "story", "summary", "tell me about", "what is", "who is", "explain"]
         WATCHLIST_KEYWORDS = [
@@ -290,7 +290,8 @@ def nami_chat(
             "recommend", "suggestion", "suggest", "what should i watch", "what to watch",
             "what anime", "give me", "show me", "find me", "i want to watch", "looking for",
             "any good", "anything good", "best anime", "top anime", "anime for",
-            "similar to", "like this anime", "genre", "isekai", "shonen", "seinen", "shoujo"
+            "similar to", "like this anime", "genre", "isekai", "shonen", "seinen", "shoujo",
+            "10/10", "masterpiece", "masterpieces", "top adventure", "dark fantasy", "airing season", "hits"
         ]
         is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS) or bool(matched_genres) or is_upcoming_request
 
@@ -380,9 +381,9 @@ def nami_chat(
         elif target_anime:
             query = query.filter(Anime.id == target_anime.id)
 
-        db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(20).all()
+        db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(25).all()
         if not db_candidates:
-            db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(20).all()
+            db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(25).all()
 
         catalog_snippets = []
         for a in db_candidates[:10]:

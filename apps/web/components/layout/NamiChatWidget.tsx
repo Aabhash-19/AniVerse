@@ -34,8 +34,13 @@ export default function NamiChatWidget() {
   const handleShuffleCards = (msgId: string) => {
     setMessages((prev) =>
       prev.map((msg) => {
-        if (msg.id !== msgId || !msg.all_recommendations || msg.all_recommendations.length <= 1) return msg;
-        const shuffled = [...msg.all_recommendations].sort(() => 0.5 - Math.random());
+        if (msg.id !== msgId) return msg;
+        const pool = (msg.all_recommendations && msg.all_recommendations.length > 1)
+          ? msg.all_recommendations
+          : msg.anime_recommendations;
+
+        if (!pool || pool.length <= 1) return msg;
+        const shuffled = [...pool].sort(() => 0.5 - Math.random());
         return {
           ...msg,
           anime_recommendations: shuffled.slice(0, 4)
@@ -267,7 +272,7 @@ export default function NamiChatWidget() {
                   {/* Anime Recommendation Cards */}
                   {msg.anime_recommendations && msg.anime_recommendations.length > 0 && (
                     <div className="space-y-1.5 pt-1">
-                      {msg.all_recommendations && msg.all_recommendations.length > 1 && (
+                      {((msg.all_recommendations && msg.all_recommendations.length > 1) || (msg.anime_recommendations && msg.anime_recommendations.length >= 2)) && (
                         <div className="flex items-center justify-between px-1">
                           <span className="text-[10px] font-semibold text-zinc-400">Recommendations:</span>
                           <button
