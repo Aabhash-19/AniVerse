@@ -21,12 +21,12 @@
 
 ## 🍊 Meet Your Navigator: Nami
 
-<table align="center">
+<table align="center" style="border-collapse: collapse;">
   <tr>
-    <td width="26%" align="center" valign="middle">
-      <img src="./apps/web/public/nami-outfits/nami-readme.png" alt="Nami Navigator" width="100%" style="border-radius: 12px; display: block;" />
+    <td width="30%" align="center" valign="middle" style="padding: 0; margin: 0; line-height: 0;">
+      <img src="./apps/web/public/nami-outfits/nami-readme.png" alt="Nami Navigator" width="100%" style="display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 6px; margin: 0; padding: 0;" />
     </td>
-    <td width="74%" valign="middle">
+    <td width="70%" valign="middle" style="padding-left: 15px;">
       <h3><i>"Yosh! Welcome aboard NamiVerse!"</i> ⛵</h3>
       <p>
         I'm <b>Nami</b>, your official Straw Hat Navigator! Whether you're searching for a 10/10 masterpiece, checking the upcoming airing weather, or looking for official media clips, I've mapped out the entire Grand Line of anime just for you!
