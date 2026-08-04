@@ -23,12 +23,12 @@
 
 ## 🍊 Welcome Aboard! A Message From Navigator Nami ⛵
 
-<table align="center" width="100%" style="table-layout: fixed; width: 100%;">
-  <tr valign="top">
-    <td width="32%" style="padding: 0px;">
-      <img src="./apps/web/public/nami-outfits/nami-welcome.png" alt="Nami Navigator" width="100%" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: block;" />
+<table align="center" width="100%">
+  <tr>
+    <td width="30%" align="center" valign="middle" style="padding: 6px;">
+      <img src="./apps/web/public/nami-outfits/nami-welcome.png" alt="Nami Navigator" width="100%" style="width: 100%; height: auto; border-radius: 14px; display: block; box-shadow: 0 8px 24px rgba(0,0,0,0.3);" />
     </td>
-    <td width="68%" valign="top" style="padding: 16px;">
+    <td width="70%" valign="top" style="padding: 12px 16px;">
       <h3><i>"Yosh, Mina-san! Welcome to NamiVerse!"</i> 💰🍊</h3>
       <p>
         I'm <b>Nami</b>, official Navigator of the Straw Hat Pirates! When I'm not steering the Thousand Sunny through treacherous Grand Line storms or counting my precious Berries (💰 100,000,000 and counting!), I chart the vast ocean of anime so you never have to waste your time on filler again!
@@ -55,32 +55,32 @@ In **NamiVerse**, Nami changes her outfit to match your current vibe and page se
 <table align="center" width="100%" style="table-layout: fixed; width: 100%;">
   <tr align="center" valign="top">
     <td width="16.66%" style="padding: 4px;">
-      <img src="./apps/web/public/nami-outfits/east-blue-card.png" alt="East Blue Nami" width="100%" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; display: block;" /><br />
+      <img src="./apps/web/public/nami-outfits/east-blue-card.png" alt="East Blue Nami" width="100%" style="width: 100%; height: auto; border-radius: 10px; display: block;" /><br />
       <b>East Blue</b><br />
       <sub>Classic Navigator</sub>
     </td>
     <td width="16.66%" style="padding: 4px;">
-      <img src="./apps/web/public/nami-outfits/alabasta-card.png" alt="Alabasta Nami" width="100%" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; display: block;" /><br />
+      <img src="./apps/web/public/nami-outfits/alabasta-card.png" alt="Alabasta Nami" width="100%" style="width: 100%; height: auto; border-radius: 10px;" /><br />
       <b>Alabasta</b><br />
       <sub>Desert Explorer</sub>
     </td>
     <td width="16.66%" style="padding: 4px;">
-      <img src="./apps/web/public/nami-outfits/skypiea-card.png" alt="Skypiea Nami" width="100%" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; display: block;" /><br />
+      <img src="./apps/web/public/nami-outfits/skypiea-card.png" alt="Skypiea Nami" width="100%" style="width: 100%; height: auto; border-radius: 10px;" /><br />
       <b>Skypiea</b><br />
       <sub>Sky Island Radar</sub>
     </td>
     <td width="16.66%" style="padding: 4px;">
-      <img src="./apps/web/public/nami-outfits/whole-cake-card.png" alt="Whole Cake Nami" width="100%" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; display: block;" /><br />
+      <img src="./apps/web/public/nami-outfits/whole-cake-card.png" alt="Whole Cake Nami" width="100%" style="width: 100%; height: auto; border-radius: 10px;" /><br />
       <b>Whole Cake</b><br />
       <sub>Tactical Chiffon</sub>
     </td>
     <td width="16.66%" style="padding: 4px;">
-      <img src="./apps/web/public/nami-outfits/wano-card.png" alt="Wano Nami" width="100%" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; display: block;" /><br />
+      <img src="./apps/web/public/nami-outfits/wano-card.png" alt="Wano Nami" width="100%" style="width: 100%; height: auto; border-radius: 10px;" /><br />
       <b>Wano Kuni</b><br />
       <sub>Kunoichi Nami</sub>
     </td>
     <td width="16.66%" style="padding: 4px;">
-      <img src="./apps/web/public/nami-outfits/egghead-card.png" alt="Egghead Nami" width="100%" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; display: block;" /><br />
+      <img src="./apps/web/public/nami-outfits/egghead-card.png" alt="Egghead Nami" width="100%" style="width: 100%; height: auto; border-radius: 10px;" /><br />
       <b>Egghead</b><br />
       <sub>Futuristic Sci-Fi</sub>
     </td>
