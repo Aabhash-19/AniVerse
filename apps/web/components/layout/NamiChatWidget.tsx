@@ -130,6 +130,8 @@ export default function NamiChatWidget() {
         sender: "nami",
         text: data.reply || "Let's chart a new course! Ask me another question!",
         anime_recommendations: data.anime_recommendations || [],
+        all_recommendations: data.all_recommendations || data.anime_recommendations || [],
+        cardOffset: 0,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
