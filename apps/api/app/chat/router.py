@@ -205,7 +205,7 @@ def nami_chat(
     current_user: Optional[User] = Depends(get_optional_user)
 ):
     """
-    Nami AI Chatbot Endpoint — 100% accurate, fast, and resilient AI navigator.
+    Nami AI Chatbot Endpoint — 100% accurate, fast, and resilient AI navigator with genre and target title support.
     """
     user_msg = req.message.strip()
     if not user_msg:
@@ -265,6 +265,20 @@ def nami_chat(
     is_plot_request = any(kw in lowered_msg for kw in PLOT_KEYWORDS)
     is_watchlist_request = any(kw in lowered_msg for kw in WATCHLIST_KEYWORDS)
 
+    # Genre Matching
+    ALL_GENRES = [
+        "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Isekai", "Mecha", 
+        "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Seinen", "Shonen", 
+        "Shoujo", "Slice of Life", "Sports", "Supernatural", "Thriller"
+    ]
+    matched_genres = [g for g in ALL_GENRES if g.lower() in lowered_msg]
+
+    # Special Genre Alias Parsing (e.g. rom-com -> Romance, Comedy)
+    if "rom-com" in lowered_msg or "romantic comedy" in lowered_msg:
+        matched_genres = list(set(matched_genres + ["Romance", "Comedy"]))
+    elif "dark fantasy" in lowered_msg:
+        matched_genres = list(set(matched_genres + ["Fantasy", "Horror", "Psychological"]))
+
     # ── 3. Handle Watchlist Queries ───────────────────────────────────────
     if is_watchlist_request:
         if current_user and (completed_titles or watching_titles or planning_titles):
@@ -318,31 +332,29 @@ def nami_chat(
                 anime_recommendations=recs_formatted[:4]
             )
 
-    # ── 5. Specific Anime Target Search (e.g. Death Note, Attack on Titan) ──
-    clean_words = [w for w in user_msg.split() if w.lower() not in [
-        "can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of", "anime", "show", "recommend", "suggest"
-    ]]
-    search_term = " ".join(clean_words).strip()
-
+    # ── 5. Specific Anime Title Search vs Genre Query ───────────────────────
     target_anime = None
-    if search_term:
-        target_anime = db.query(Anime).filter(
-            or_(
-                Anime.title_english.ilike(f"%{search_term}%"),
-                Anime.title_romaji.ilike(f"%{search_term}%"),
-                Anime.title_native.ilike(f"%{search_term}%")
-            )
-        ).first()
 
-    # Build DB candidates list for general recommendations or context
-    ALL_GENRES = [
-        "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Isekai", "Mecha", 
-        "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Seinen", "Shonen", 
-        "Shoujo", "Slice of Life", "Sports", "Supernatural", "Thriller"
-    ]
-    matched_genres = [g for g in ALL_GENRES if g.lower() in lowered_msg]
+    # Only perform specific anime title lookup if NO genre is present in message
+    if not matched_genres and not is_airing_request and not is_upcoming_request:
+        clean_words = [w for w in user_msg.split() if w.lower() not in [
+            "can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of", "anime", "show",
+            "recommend", "suggest", "good", "best", "top", "give", "find", "looking", "for"
+        ]]
+        search_term = " ".join(clean_words).strip()
 
+        if search_term and len(search_term) >= 3:
+            target_anime = db.query(Anime).filter(
+                or_(
+                    Anime.title_english.ilike(f"%{search_term}%"),
+                    Anime.title_romaji.ilike(f"%{search_term}%"),
+                    Anime.title_native.ilike(f"%{search_term}%")
+                )
+            ).first()
+
+    # Build DB candidates list based on genre or target or general score
     query = db.query(Anime)
+
     if is_upcoming_request:
         query = query.filter(or_(Anime.status == "NOT_YET_RELEASED", Anime.status == AnimeStatus.NOT_YET_RELEASED))
 
@@ -352,14 +364,6 @@ def nami_chat(
         )
     elif target_anime:
         query = query.filter(Anime.id == target_anime.id)
-    elif search_term:
-        query = query.filter(
-            or_(
-                Anime.title_english.ilike(f"%{search_term}%"),
-                Anime.title_romaji.ilike(f"%{search_term}%"),
-                Anime.description.ilike(f"%{search_term}%")
-            )
-        )
 
     db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(10).all()
     if not db_candidates:
@@ -373,6 +377,15 @@ def nami_chat(
         catalog_snippets.append(f"• Title: \"{t}\" (Score: {score}, Genres: {g}, Synopsis: {a.synopsis[:120] if a.synopsis else 'N/A'})")
     
     catalog_context = "\n".join(catalog_snippets)
+
+    RECOMMENDATION_KEYWORDS = [
+        "recommend", "suggestion", "suggest", "what should i watch", "what to watch",
+        "what anime", "give me", "show me", "find me", "i want to watch", "looking for",
+        "any good", "anything good", "best anime", "top anime", "anime for",
+        "similar to", "like this anime", "like", "new anime", "good anime",
+        "popular anime", "trending anime", "genre", "isekai", "shonen", "seinen", "shoujo"
+    ]
+    is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS) or bool(matched_genres) or is_upcoming_request
 
     # ── 6. Call Gemini AI ───────────────────────────────────────────────────
     reply_text = call_gemini_nami_ai(
@@ -390,9 +403,12 @@ def nami_chat(
             synopsis_clean = target_anime.synopsis.strip() if target_anime.synopsis else "A fantastic masterpiece entry in our NamiVerse catalog!"
             score_str = f"{target_anime.average_score:.1f}/100" if target_anime.average_score else "N/A"
             reply_text = f"Yosh! Here is the lowdown on **{t_name}**:\n\n{synopsis_clean}\n\n⭐ **Score:** {score_str} | **Genres:** {g_str} 🍊"
+
         elif matched_genres:
+            genre_name = matched_genres[0]
             titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:3]])
-            reply_text = f"Yosh! For {matched_genres[0]} lovers, I recommend checking out {titles_str}! 🍊"
+            reply_text = f"Yosh! For **{genre_name}** lovers, I've mapped out top-tier recommendations from our logbook: {titles_str}! Which one looks best for your next watch? 🍊"
+
         else:
             if any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money"]):
                 reply_text = random.choice(NAMI_BERRIES_REPLIES)
