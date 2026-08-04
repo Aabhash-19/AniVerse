@@ -81,7 +81,10 @@ export default function NamiChatWidget() {
     setLoading(true);
 
     try {
-      const history = messages.map((m) => ({ sender: m.sender, text: m.text }));
+      const history = messages
+        .filter((m) => !m.text.includes("stormy weather") && !m.text.includes("raw status") && !m.text.includes("catalog IDs"))
+        .map((m) => ({ sender: m.sender, text: m.text }));
+
       const res = await fetchWithCredentials(getApiUrl("/chat/nami"), {
         method: "POST",
         body: JSON.stringify({ message: textToSend, history })
