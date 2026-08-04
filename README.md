@@ -25,10 +25,10 @@
 
 <table align="center" width="100%" style="table-layout: fixed; width: 100%;">
   <tr valign="top">
-    <td width="26%" valign="top" style="padding: 0px;">
-      <img src="./apps/web/public/nami-outfits/nami-welcome-tall.png" alt="Nami Navigator" width="100%" style="width: 100%; height: auto; border-radius: 12px; display: block;" />
+    <td width="30%" valign="top" style="padding: 0px;">
+      <img src="./apps/web/public/nami-outfits/nami-welcome-tall.png" alt="Nami Navigator" width="100%" style="width: 100%; height: auto; border-radius: 12px 0 0 12px; display: block;" />
     </td>
-    <td width="74%" valign="top" style="padding: 8px 16px;">
+    <td width="70%" valign="top" style="padding: 12px 16px;">
       <h3><i>"Yosh, Mina-san! Welcome to NamiVerse!"</i> 💰🍊</h3>
       <p>
         I'm <b>Nami</b>, official Navigator of the Straw Hat Pirates! When I'm not steering the Thousand Sunny through treacherous Grand Line storms or counting my precious Berries (💰 100,000,000 and counting!), I chart the vast ocean of anime so you never have to waste your time on filler again!
