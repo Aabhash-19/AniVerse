@@ -23,28 +23,21 @@
 
 ## 🍊 Welcome Aboard! A Message From Navigator Nami ⛵
 
-<table align="center" width="100%">
-  <tr>
-    <td width="32%" align="center" valign="middle" style="padding: 4px;">
-      <img src="./apps/web/public/nami-outfits/nami-user-welcome.png" alt="Nami Navigator" width="100%" style="width: 100%; height: auto; display: block;" />
-    </td>
-    <td width="68%" valign="top" style="padding: 12px 16px;">
-      <h3><i>"Yosh, Mina-san! Welcome to NamiVerse!"</i> 💰🍊</h3>
-      <p>
-        I'm <b>Nami</b>, official Navigator of the Straw Hat Pirates! When I'm not steering the Thousand Sunny through treacherous Grand Line storms or counting my precious Berries (💰 100,000,000 and counting!), I chart the vast ocean of anime so you never have to waste your time on filler again!
-      </p>
-      <p>
-        I built <b>NamiVerse</b> using state-of-the-art AI maps, dense 384-dimensional vector calculations, real-time weather forecasting for upcoming airing shows, and a secure media vault. Whether you need a 10/10 masterpiece recommended by my AI Log Pose, want to track your personal watchlist logbook, or check the weekly broadcast weather, I've got you covered!
-      </p>
-      <ul>
-        <li>⚡ <b>Clima-Tact Weather Radar</b>: Precise broadcast countdowns & weekly release schedule.</li>
-        <li>🧭 <b>Log Pose AI Chatbot</b>: Ask me anything! I recommend shows tailored to your exact mood.</li>
-        <li>🧠 <b>Tactical Vector Engine</b>: Sub-second mathematical similarity search powered by PostgreSQL <code>pgvector</code>.</li>
-        <li>🎬 <b>Media Vault & Trivia Lounge</b>: HD trailers, opening sequences, and a 6-question lore quiz!</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+<p>
+  <img align="left" src="./apps/web/public/nami-outfits/nami-user-welcome.png" alt="Nami Navigator" width="260" style="margin-right: 24px; margin-bottom: 12px; max-width: 100%; height: auto;" />
+  <h3><i>"Yosh, Mina-san! Welcome to NamiVerse!"</i> 💰🍊</h3>
+  I'm <b>Nami</b>, official Navigator of the Straw Hat Pirates! When I'm not steering the Thousand Sunny through treacherous Grand Line storms or counting my precious Berries (💰 100,000,000 and counting!), I chart the vast ocean of anime so you never have to waste your time on filler again!
+  <br /><br />
+  I built <b>NamiVerse</b> using state-of-the-art AI maps, dense 384-dimensional vector calculations, real-time weather forecasting for upcoming airing shows, and a secure media vault. Whether you need a 10/10 masterpiece recommended by my AI Log Pose, want to track your personal watchlist logbook, or check the weekly broadcast weather, I've got you covered!
+</p>
+
+<ul>
+  <li>⚡ <b>Clima-Tact Weather Radar</b>: Precise broadcast countdowns & weekly release schedule.</li>
+  <li>🧭 <b>Log Pose AI Chatbot</b>: Ask me anything! I recommend shows tailored to your exact mood.</li>
+  <li>🧠 <b>Tactical Vector Engine</b>: Sub-second mathematical similarity search powered by PostgreSQL <code>pgvector</code>.</li>
+  <li>🎬 <b>Media Vault & Trivia Lounge</b>: HD trailers, opening sequences, and a 6-question lore quiz!</li>
+</ul>
+<br clear="left" />
 
 ---
 
