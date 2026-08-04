@@ -21,24 +21,37 @@
 
 ## 🍊 Meet Your Navigator: Nami
 
-<table align="center">
-  <tr>
-    <td width="26%" align="center" valign="middle">
-      <img src="./apps/web/public/nami-outfits/nami-readme.png" alt="Nami Navigator" width="100%" style="border-radius: 12px; display: block;" />
-    </td>
-    <td width="74%" valign="middle">
-      <h3><i>"Yosh! Welcome aboard NamiVerse!"</i> ⛵</h3>
-      <p>
-        I'm <b>Nami</b>, your official Straw Hat Navigator! Whether you're searching for a 10/10 masterpiece, checking the upcoming airing weather, or looking for official media clips, I've mapped out the entire Grand Line of anime just for you!
-      </p>
-      <ul>
-        <li>⚡ <b>Clima-Tact Weather Intelligence</b>: Airing countdowns & weekly release radars.</li>
-        <li>💰 <b>Bounty & Score Tracking</b>: Log your watchlist progress and personal scores.</li>
-        <li>🤖 <b>Log Pose AI Chatbot</b>: Ask me for personalized recommendations anytime!</li>
-      </ul>
-    </td>
-  </tr>
+<table align="center" width="100%" cellspacing="0" cellpadding="0">
+<tr>
+
+<td width="36%" align="center" valign="top">
+<img src="./apps/web/public/nami-outfits/nami-readme2.png"
+     alt="Nami Navigator"
+     width="95%">
+</td>
+
+<td width="64%" valign="middle">
+
+<h2><i>"Yosh! Welcome aboard NamiVerse!"</i> ⛵</h2>
+
+<p>
+I'm <b>Nami</b>, your official Straw Hat Navigator! Whether you're searching for a 10/10 masterpiece, checking the upcoming airing weather, or looking for official media clips, I've mapped out the entire Grand Line of anime just for you!
+</p>
+
+<br>
+
+<ul>
+<li>⚡ <b>Clima-Tact Weather Intelligence</b>: Airing countdowns &amp; weekly release radars.</li>
+<li>💰 <b>Bounty &amp; Score Tracking</b>: Log your watchlist progress and personal scores.</li>
+<li>🤖 <b>Log Pose AI Chatbot</b>: Ask me for personalized recommendations anytime!</li>
+</ul>
+
+</td>
+
+</tr>
 </table>
+
+---
 
 ---
 
