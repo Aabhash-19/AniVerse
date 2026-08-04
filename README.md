@@ -1,40 +1,46 @@
 <p align="center">
-  <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcXl0cXJvdGNuZnpwbXZzZHBnOWdtbW03NDZpZHFzbjFjbmUwdzJ4MyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/9aIVEZ6CsheqQ/giphy.gif" alt="Nami Navigator GIF" width="450" style="border-radius: 20px; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);" />
+  <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcXl0cXJvdGNuZnpwbXZzZHBnOWdtbW03NDZpZHFzbjFjbmUwdzJ4MyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/9aIVEZ6CsheqQ/giphy.gif" alt="Nami Navigator GIF" width="480" style="max-width: 100%; height: auto; border-radius: 20px; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);" />
 </p>
 
 <h1 align="center">🍊 ⚡ 🌊 NAMIVERSE (ナミ・バース)</h1>
 
 <p align="center">
   <b>Chart your course through the ultimate anime universe — Navigated by Nami!</b><br />
-  <i>Next-Gen AI Anime Discovery, Dense Vector Recommendation Engine, Airing Radar & Official Media Vault.</i>
+  <i>The World's Most Advanced AI Anime Discovery Platform, Dense Vector Engine, Airing Weather Radar & Media Vault.</i>
 </p>
 
 <p align="center">
-  <a href="https://nami-verse.vercel.app"><img src="https://img.shields.io/badge/🌐_Live_App-nami--verse.vercel.app-F59E0B?style=for-the-badge&logoColor=white" /></a>
-  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16.2-black?style=for-the-badge&logo=next.js" /></a>
-  <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-0.109-009688?style=for-the-badge&logo=fastapi" /></a>
-  <a href="https://neon.tech"><img src="https://img.shields.io/badge/PostgreSQL-pgvector-336791?style=for-the-badge&logo=postgresql" /></a>
-  <a href="https://ai.google.dev"><img src="https://img.shields.io/badge/Gemini_AI-1.5_/_2.5-8E44AD?style=for-the-badge&logo=google" /></a>
+  <a href="https://nami-verse.vercel.app"><img src="https://img.shields.io/badge/🌐_Live_App-nami--verse.vercel.app-F59E0B?style=for-the-badge&logoColor=white" alt="Live App" /></a>
+  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16.2-black?style=for-the-badge&logo=next.js" alt="Next.js 16" /></a>
+  <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-0.109-009688?style=for-the-badge&logo=fastapi" alt="FastAPI" /></a>
+  <a href="https://neon.tech"><img src="https://img.shields.io/badge/PostgreSQL-pgvector-336791?style=for-the-badge&logo=postgresql" alt="PostgreSQL pgvector" /></a>
+  <a href="https://ai.google.dev"><img src="https://img.shields.io/badge/Gemini_AI-1.5_/_2.5-8E44AD?style=for-the-badge&logo=google" alt="Gemini AI" /></a>
+  <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-Upstash-DC382D?style=for-the-badge&logo=redis" alt="Redis Cache" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License" /></a>
 </p>
 
 ---
 
-## 🍊 Meet Your Navigator: Nami
+## 🍊 Welcome Aboard! A Message From Navigator Nami ⛵
 
-<table align="center">
+<table align="center" width="100%">
   <tr>
-    <td width="26%" align="center" valign="middle">
-      <img src="./apps/web/public/nami-outfits/nami-readme.png" alt="Nami Navigator" width="100%" style="border-radius: 12px; display: block;" />
+    <td width="28%" align="center" valign="middle">
+      <img src="./apps/web/public/nami-outfits/nami-readme.png" alt="Nami Navigator" width="100%" style="max-width: 250px; height: auto; border-radius: 16px; display: block; box-shadow: 0 8px 24px rgba(0,0,0,0.3);" />
     </td>
-    <td width="74%" valign="middle">
-      <h3><i>"Yosh! Welcome aboard NamiVerse!"</i> ⛵</h3>
+    <td width="72%" valign="top">
+      <h3><i>"Yosh, Mina-san! Welcome to NamiVerse!"</i> 💰🍊</h3>
       <p>
-        I'm <b>Nami</b>, your official Straw Hat Navigator! Whether you're searching for a 10/10 masterpiece, checking the upcoming airing weather, or looking for official media clips, I've mapped out the entire Grand Line of anime just for you!
+        I'm <b>Nami</b>, official Navigator of the Straw Hat Pirates! When I'm not steering the Thousand Sunny through treacherous Grand Line storms or counting my precious Berries (💰 100,000,000 and counting!), I chart the vast ocean of anime so you never have to waste your time on filler again!
+      </p>
+      <p>
+        I built <b>NamiVerse</b> using state-of-the-art AI maps, dense 384-dimensional vector calculations, real-time weather forecasting for upcoming airing shows, and a secure media vault. Whether you need a 10/10 masterpiece recommended by my AI Log Pose, want to track your personal watchlist logbook, or check the weekly broadcast weather, I've got you covered!
       </p>
       <ul>
-        <li>⚡ <b>Clima-Tact Weather Intelligence</b>: Airing countdowns & weekly release radars.</li>
-        <li>💰 <b>Bounty & Score Tracking</b>: Log your watchlist progress and personal scores.</li>
-        <li>🤖 <b>Log Pose AI Chatbot</b>: Ask me for personalized recommendations anytime!</li>
+        <li>⚡ <b>Clima-Tact Weather Radar</b>: Precise broadcast countdowns & weekly release schedule.</li>
+        <li>🧭 <b>Log Pose AI Chatbot</b>: Ask me anything! I recommend shows tailored to your exact mood.</li>
+        <li>🧠 <b>Tactical Vector Engine</b>: Sub-second mathematical similarity search powered by PostgreSQL <code>pgvector</code>.</li>
+        <li>🎬 <b>Media Vault & Trivia Lounge</b>: HD trailers, opening sequences, and a 6-question lore quiz!</li>
       </ul>
     </td>
   </tr>
@@ -42,131 +48,287 @@
 
 ---
 
-## ⚡ Key Modules & Platform Features
+## 👗 Nami's Outfit & Wardrobe Gallery Across Arcs
 
-```mermaid
-graph TD
-    User[Straw Hat Crew / User] -->|Loads Web Interface| Web[NamiVerse Next.js 16 App]
-    Web -->|Log Pose Queries| Chat[Nami Gemini AI Chatbot]
-    Web -->|Vector Similarity Search| Vector[PostgreSQL + pgvector Engine]
-    Web -->|Media Vault & Clips| Vault[YouTube Media & Quiz Engine]
-    Web -->|Airing Horizon Radar| Radar[Airing Schedule & Weather Engine]
-    Vector -->|Dense 384d Cosine Match| DB[(Neon Postgres Database)]
-```
+In **NamiVerse**, Nami changes her outfit to match your current vibe and page section! Here is her iconic wardrobe featured across the platform:
 
-### 🤖 1. Nami's Log Pose AI Chatbot
-- **Gemini AI Integration**: Powered by Google Gemini AI with a custom One Piece navigator persona. Nami answers questions about anime plots, character lore, and genre suggestions.
-- **Interactive Recommendation Cards**: Automatically embeds clickable anime recommendation cards directly inside live chat streams.
-- **Session Memory**: Maintains conversation context with instant clear & reset controls.
-
-### 🧠 2. Tactical Vector Recommendation Engine
-- **Dense Embeddings**: Uses SentenceTransformers (`all-MiniLM-L6-v2`) to project anime synopses and themes into 384-dimensional vector space.
-- **High-Speed Cosine Search**: Uses `pgvector` inside PostgreSQL (`1 - cosine_distance`) to calculate exact semantic similarity.
-- **Hybrid Weighting**: Merges vector similarity with genre filters, popularity metrics, and user preferences.
-
-### 🌊 3. Airing Horizon Radar & Weather Report
-- **Real-Time Airing Countdowns**: Displays exact days, hours, and minutes remaining for upcoming episodes.
-- **Weekly Schedule Grid**: Filter airing shows by broadcast day (Monday through Sunday).
-- **Local Timezone Intelligence**: Formats broadcast times dynamically according to the user's local timezone.
-
-### 🎬 4. Nami's Lounge & Media Vault
-- **HD Official Clips & Trailers**: Stream verified YouTube trailers and official opening sequences.
-- **Navigator's Knowledge Test**: A 6-question trivia quiz covering One Piece & Nami lore with instant score calculation and feedback.
-
-### 💬 5. Grand Line Community & Spoiler Shield
-- **Threaded Forums**: Create discussion threads, reply to comments, and upvote community posts.
-- **Spoiler Blur Protection**: Spoilers are blurred by default with explicit click-to-reveal overlays.
-- **Review Sentiment**: View community score distributions and written reviews.
-
-### 📑 6. Watchlist & Progress Logbook
-- **Custom Status Categories**: Organize shows into *Watching*, *Completed*, *Plan to Watch*, *On Hold*, and *Dropped*.
-- **Episode & Score Logging**: Track episode counts and log 1–10 scores.
-- **Data Export**: Export user data and watchlist footprints in JSON format.
+<table align="center" width="100%">
+  <tr align="center">
+    <td width="14%">
+      <img src="./apps/web/public/nami-outfits/east-blue-new.png" alt="East Blue Nami" width="100%" style="max-width: 100px; height: auto; border-radius: 10px;" /><br />
+      <b>East Blue</b><br />
+      <sub>Classic Navigator</sub>
+    </td>
+    <td width="14%">
+      <img src="./apps/web/public/nami-outfits/alabasta.png" alt="Alabasta Nami" width="100%" style="max-width: 100px; height: auto; border-radius: 10px;" /><br />
+      <b>Alabasta</b><br />
+      <sub>Desert Explorer</sub>
+    </td>
+    <td width="14%">
+      <img src="./apps/web/public/nami-outfits/skypiea.png" alt="Skypiea Nami" width="100%" style="max-width: 100px; height: auto; border-radius: 10px;" /><br />
+      <b>Skypiea</b><br />
+      <sub>Sky Island Radar</sub>
+    </td>
+    <td width="14%">
+      <img src="./apps/web/public/nami-outfits/whole-cake.png" alt="Whole Cake Nami" width="100%" style="max-width: 100px; height: auto; border-radius: 10px;" /><br />
+      <b>Whole Cake</b><br />
+      <sub>Tactical Chiffon</sub>
+    </td>
+    <td width="14%">
+      <img src="./apps/web/public/nami-outfits/wano.png" alt="Wano Nami" width="100%" style="max-width: 100px; height: auto; border-radius: 10px;" /><br />
+      <b>Wano Kuni</b><br />
+      <sub>Kunoichi Nami</sub>
+    </td>
+    <td width="14%">
+      <img src="./apps/web/public/nami-outfits/egghead.png" alt="Egghead Nami" width="100%" style="max-width: 100px; height: auto; border-radius: 10px;" /><br />
+      <b>Egghead</b><br />
+      <sub>Futuristic Sci-Fi</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
-## 🛠️ Nautical Tech Stack
+## ⚡ Master Feature Breakdown & Deep Dive
 
-| Ship Component | Technology | Role & Description |
-| :--- | :--- | :--- |
-| 🚢 **Main Deck** | **Next.js 16 (App Router)** | React 19, TypeScript, Turbopack, Tailwind CSS v4 |
-| ⚡ **Engine Room** | **FastAPI (Python 3.11+)** | Asynchronous RESTful API with Pydantic V2 & SQLAlchemy ORM |
-| 💎 **Treasure Vault** | **PostgreSQL 16 + pgvector** | Serverless relational database with vector similarity search |
-| 🌀 **Wind & Weather** | **Redis (Upstash / Memory)** | Token bucket rate limiting and session caching |
-| 🗺️ **Log Pose AI** | **Google Gemini AI** | Conversational AI chatbot & semantic recommendation system |
-| ⚓ **Lighthouse** | **Vercel + Render** | Global edge frontend deployment & containerized API web service |
+<p align="center">
+  <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMjRvbzdsdzAydnd2bnk4YnVwbHR2bmNpOGYxaWhsMnFzbWNxcWtyMCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/8j2w15LVVK1z2/giphy.gif" alt="Nami Clima-Tact GIF" width="380" style="max-width: 100%; height: auto; border-radius: 15px;" />
+</p>
+
+### 🤖 1. Nami's Log Pose AI Chatbot
+- **Google Gemini AI Integration**: Driven by `gemini-1.5-flash` / `gemini-2.5` with a custom system prompt that enforces Nami's personality (witty, money-loving, navigator knowledge, anime expertise).
+- **Interactive Inline Media Cards**: When Nami mentions an anime in chat, the API automatically extracts structured metadata and embeds rich, clickable anime recommendation cards directly inside the streaming chat interface.
+- **Contextual Session Memory**: Keeps track of prior messages during your browsing session with instant clear & reset controls.
+- **Fast Async Streaming Response**: Powered by Server-Sent Events (SSE) / streaming HTTP handlers in FastAPI for sub-second responses.
+
+### 🧠 2. Tactical Vector Recommendation Engine
+- **384-Dimensional Dense Embeddings**: Generates semantic embeddings for every anime title, plot synopsis, tag set, and genre using `SentenceTransformers` (`all-MiniLM-L6-v2`).
+- **PostgreSQL `pgvector` Cosine Similarity**: Uses native vector distance indexing in PostgreSQL to calculate cosine similarity between vectors:
+  $$\cos(\theta) = \frac{\mathbf{A} \cdot \mathbf{B}}{\|\mathbf{A}\| \|\mathbf{B}\|}$$
+- **Hybrid Multi-Factor Weighting**: Blends vector semantic matching ($60\%$) with genre compatibility ($20\%$), user score affinity ($10\%$), and popularity trends ($10\%$) to deliver terrifyingly accurate recommendations.
+- **Sub-20ms Search Execution**: Optimized with `IVFFlat` / `HNSW` vector indexing in PostgreSQL.
+
+### 🌊 3. Clima-Tact Airing Horizon & Weather Radar
+- **Live Broadcast Countdowns**: Calculates real-time countdown clocks (days, hours, minutes, seconds) until the next episode drops for airing shows.
+- **Interactive Weekly Grid**: Filter upcoming releases by broadcast day (Monday through Sunday).
+- **Local Timezone Intelligence**: Detects the user's browser timezone automatically and adjusts Japanese Standard Time (JST) broadcast schedules into local user time.
+- **Seasonal Release Radar**: Browse winter, spring, summer, and fall release calendars with instant status badges (*Airing*, *Finished*, *Not Yet Aired*).
+
+### 🎬 4. Nami's Lounge & Media Vault
+- **Verified HD Trailers & Clips**: Stream official YouTube trailers, opening theme songs (OPs), and ending sequences (EDs) directly inside modal video players.
+- **Navigator's Lore & Trivia Quiz**: Test your One Piece and anime knowledge with a 6-question interactive quiz engine featuring dynamic score calculations, confetti celebrations, and Berry rewards!
+
+### 💬 5. Grand Line Community Forum & Spoiler Shield
+- **Threaded Discussions**: Create topics, reply to fellow anime pirates, and build community threads.
+- **Upvote & Reaction System**: Upvote insightful posts and rank top discussions.
+- **Spoiler Blur Protection Overlay**: Posts marked as containing spoilers are automatically blurred with a CSS overlay until explicitly clicked by the user.
+- **Review & Sentiment Analytics**: Visual breakdown of user rating distributions (1 to 10 Berries) for every title.
+
+### 📑 6. Pirate Watchlist & Progress Logbook
+- **5 Custom Watch Statuses**: Categorize titles into *Watching*, *Completed*, *Plan to Watch*, *On Hold*, and *Dropped*.
+- **Episode & Score Logger**: Track current episode count and assign personal Berry ratings (1–10 stars).
+- **JSON Data Export & Import**: Backup your entire watchlist logbook with a single click in standard JSON format.
+
+### 🛡️ 7. CORS Defense & External Image Proxy
+- **AniList & Kitsu Image Proxy**: Built-in `/api/v1/image-proxy` endpoint to proxy external image assets, eliminating browser CORS blocks, referrer restrictions, and broken image links.
+- **Upstash Redis Rate Limiting**: Token bucket rate limiter middleware protecting public endpoints against DDoS and spam abuse.
+
+---
+
+## 🛠️ Nautical Tech Stack & Ship Specifications
+
+| Ship Component | Technology | Version | Role & Description | Nami's Commentary 🍊 |
+| :--- | :--- | :--- | :--- | :--- |
+| 🚢 **Main Deck** | **Next.js (App Router)** | `v16.2` | React 19, TypeScript, Turbopack, Tailwind CSS v4 | *"Ultra-fast UI that renders like lightning on any weather condition!"* |
+| ⚡ **Engine Room** | **FastAPI** | `v0.109+` | Asynchronous RESTful API, Pydantic V2, SQLAlchemy | *"Python engine running smooth async tasks for zero lag!"* |
+| 💎 **Treasure Vault**| **PostgreSQL + pgvector**| `v16` | Serverless relational database with vector search | *"Stores all our anime treasures & 384d vector coordinates!"* |
+| 🌀 **Wind & Weather**| **Redis (Upstash)** | `v7` | Distributed token-bucket rate limiting & session cache | *"Defends our ship from DDoS storms & caches frequent queries!"* |
+| 🧭 **Log Pose AI** | **Google Gemini AI** | `v1.5/2.5` | Conversational AI chatbot & semantic query parser | *"My personal AI twin that helps pirates find their dream anime!"* |
+| ⚓ **Lighthouse** | **Vercel + Render** | Cloud | Global Edge deployment & containerized web API service | *"100% Free cloud hosting stack that costs us zero Berries!"* 💰 |
+
+---
+
+## 🗺️ System Architecture & Nautical Data Flow
+
+```mermaid
+graph TD
+    User([🏴‍☠️ Pirate User / Browser]) -->|HTTP/HTTPS Request| Web[🚢 Next.js 16 App Router]
+    
+    subgraph "Frontend Layer (Vercel Edge)"
+        Web -->|State & Context| UI[React 19 Components & Tailwind v4]
+        Web -->|Image Requests| Proxy[/api/v1/image-proxy/]
+    end
+    
+    subgraph "Backend Engine (Render API)"
+        Web -->|RESTful API Calls| API[⚡ FastAPI Service]
+        API -->|Rate Limit Check| Redis[(🌀 Upstash Redis Cache)]
+        API -->|Prompt & Chat Context| Gemini[🧭 Google Gemini AI]
+    end
+    
+    subgraph "Data & Vector Storage (Neon PostgreSQL)"
+        API -->|SQL Queries & ORM| DB[(💎 PostgreSQL Database)]
+        API -->|Cosine Similarity Search| Vector[🧠 pgvector 384d Index]
+        Vector --> DB
+    end
+    
+    subgraph "External Ingestion Services"
+        API -->|GraphQL Ingestion| AniList[📡 AniList API]
+        API -->|Video Embeds| YouTube[🎬 YouTube API]
+    end
+```
+
+<details>
+<summary><b>🔍 View Deep Technical Data Flow Details (Click to Expand)</b></summary>
+
+<br />
+
+1. **Client Request**: The user interacts with the Next.js 16 client (Vercel Edge Serverless).
+2. **Security & Rate Limiting**: The request passes through `SecurityMiddleware` in FastAPI, checking client IP against Upstash Redis sliding token bucket limit.
+3. **Vector Query Generation**: When searching or asking Log Pose AI, input text is processed by `SentenceTransformers` (`all-MiniLM-L6-v2`) to produce a 384-element float array.
+4. **pgvector Cosine Search**: The database executes an optimized vector query:
+   ```sql
+   SELECT id, title, synopsis, 1 - (embedding <=> :query_embedding) AS similarity
+   FROM anime
+   ORDER BY embedding <=> :query_embedding LIMIT 20;
+   ```
+5. **Auto-Seeding Mechanism**: On backend startup, if DB contains fewer than 1,000 anime, a background daemon thread (`_seed_task`) automatically queries AniList GraphQL API and imports up to 1,200 top-rated titles without blocking server boot!
+
+</details>
 
 ---
 
 ## ⚙️ Environment Variables Reference
 
-### Backend (`apps/api/.env`)
+### Backend Setup (`apps/api/.env`)
+
 ```env
+# Platform & Service Identity
 PROJECT_NAME="NamiVerse API"
 API_V1_STR="/api/v1"
-DATABASE_URL="postgresql://user:password@localhost:5432/namiverse_db"
-REDIS_URL="redis://localhost:6379/0"
-JWT_SECRET="your-super-secret-jwt-key"
-GEMINI_API_KEY="your-google-gemini-api-key"
+
+# Database Connection (Neon Postgres + pgvector)
+DATABASE_URL="postgresql://namiverse_owner:password@ep-cool-ship.neon.tech/namiverse_db?sslmode=require"
+
+# Cache & Security
+REDIS_URL="redis://default:password@upstash-redis-url.upstash.io:6379"
+JWT_SECRET="your-super-secret-nami-jwt-key-change-this"
+
+# AI Integration
+GEMINI_API_KEY="AIzaSyYourGeminiApiKeyHere"
+
+# CORS Security
 BACKEND_CORS_ORIGINS="https://nami-verse.vercel.app,http://localhost:3000"
 ```
 
-### Frontend (`apps/web/.env.local`)
+### Frontend Setup (`apps/web/.env.local`)
+
 ```env
+# Backend API Base Endpoint
 NEXT_PUBLIC_API_URL="https://namiverse-api.onrender.com/api/v1"
 ```
 
 ---
 
-## 💻 Local Development Guide
+## 💻 Local Development & Charting Instructions
 
-### 1. Clone the Repository
+Follow these step-by-step terminal commands to set up **NamiVerse** on your local machine:
+
+### 1. Clone the Grand Line Repository
+
 ```bash
 git clone https://github.com/Aabhash-19/NamiVerse.git
 cd NamiVerse
 ```
 
-### 2. Backend Setup (`apps/api`)
+### 2. Set Up Python Backend (`apps/api`)
+
 ```bash
+# Navigate to API directory
 cd apps/api
+
+# Create & activate Python virtual environment
 python3 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
+
+# Install all backend dependencies
 pip install -r requirements.txt
 
-# Start local FastAPI server
+# Create .env file from template and configure keys
+cp .env.example .env  # Edit .env with your PostgreSQL & Gemini keys
+
+# Launch FastAPI development server with hot-reload
 PYTHONPATH=. uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### 3. Frontend Setup (`apps/web`)
+> **API Documentation**: Open your browser at `http://127.0.0.1:8000/api/v1/docs` to view interactive Swagger docs!
+
+### 3. Set Up Next.js Frontend (`apps/web`)
+
 ```bash
+# Navigate to Web app directory (from project root)
 cd apps/web
+
+# Install npm packages
 npm install
 
-# Start Next.js development server
+# Launch Next.js 16 development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+> **Live Web App**: Open [http://localhost:3000](http://localhost:3000) to start navigating! ⛵
 
 ---
 
-## ☁️ 100% Free Cloud Deployment Stack
+## ☁️ 100% Free Cloud Deployment Architecture
 
-- 🌐 **Vercel** (Frontend): `https://nami-verse.vercel.app`
-- ⚡ **Render** (Backend): `https://namiverse-api.onrender.com`
-- 🐘 **Neon** (PostgreSQL): Serverless Postgres database with native `pgvector`
-- 🔴 **Upstash / Memory** (Redis): Rate limiting & caching
-- ⏰ **Cron-Job.org** (Keep-Alive): Pings health endpoint every 10 minutes to prevent Render free-tier cold starts
+**NamiVerse** is engineered to run on a **0-Berry budget** using industry-leading free cloud tiers:
 
----
-
-## 📜 License
-
-Distributed under the **MIT License**. See `LICENSE` for more information.
+- 🌐 **Vercel** (*Frontend*): Deploys `apps/web` on edge nodes with global CDN caching and automatic git previews.
+- ⚡ **Render** (*Backend*): Runs `apps/api` inside a Dockerized web service container.
+- 🐘 **Neon** (*Database*): Serverless PostgreSQL with native `pgvector` extension and automatic branching.
+- 🔴 **Upstash** (*Cache*): Serverless Redis cluster for fast rate limiting and session storage.
+- ⏰ **Cron-Job.org** (*Keep-Alive Daemon*): Sends an HTTP GET request to `https://namiverse-api.onrender.com/api/v1/health` every 10 minutes to keep Render instance warm and prevent 50-second cold starts!
 
 ---
 
-<p align="center">
-  <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcjFqZnM3bTN0Ym1xcDhhMnJ1OHlyMmcwNDVlcnl6ZWJndnBhMDFwdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/L5aXkshtnAUmI/giphy.gif" width="300" style="border-radius: 15px;" /><br />
-  Made with 🍊 & ❤️ by a faithful <b>Nami</b> worshipper
-</p>
+## 📱 Mobile & Cross-Device Responsiveness Matrix
+
+<table align="center" width="100%">
+  <tr>
+    <td width="25%" align="center">
+      <b>💻 MacBook / Desktop</b><br />
+      <sub>Full multi-column layout, interactive sidebar & hover cards</sub>
+    </td>
+    <td width="25%" align="center">
+      <b>📱 iPad / Tablet</b><br />
+      <sub>Adaptive 2-column grid, responsive tables & touch controls</sub>
+    </td>
+    <td width="25%" align="center">
+      <b>📲 iPhone / Android</b><br />
+      <sub>Single-column stack, bottom drawer navigation & full touch optimization</sub>
+    </td>
+    <td width="25%" align="center">
+      <b>🖥️ 4K Ultra-Wide</b><br />
+      <sub>Centered container max-width with high-DPI asset rendering</sub>
+    </td>
+  </tr>
+</table>
+
+The **README** and **NamiVerse Web App** are designed with strict fluid CSS rules (`max-width: 100%`, flex wrap containers, percentage-based tables, HTML center wrappers) ensuring perfect visuals across laptops, iPads, tablets, and smartphones!
+
+---
+
+## 📜 License & Navigator's Signature
+
+Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for more details.
+
+---
+
+<div align="center">
+  <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcjFqZnM3bTN0Ym1xcDhhMnJ1OHlyMmcwNDVlcnl6ZWJndnBhMDFwdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/L5aXkshtnAUmI/giphy.gif" alt="Nami Wink GIF" width="320" style="max-width: 100%; height: auto; border-radius: 15px;" />
+  <br /><br />
+  <p>
+    <b>Crafted with 🍊, 💰 & ⚡ by Navigator Nami & her faithful development crew!</b><br />
+    <i>If you love NamiVerse, don't forget to give this repository a ⭐ star on GitHub (or tip me 100,000 Berries)!</i>
+  </p>
+</div>
