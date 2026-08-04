@@ -205,245 +205,258 @@ def nami_chat(
     current_user: Optional[User] = Depends(get_optional_user)
 ):
     """
-    Nami AI Chatbot Endpoint — 100% accurate, fast, and resilient AI navigator with genre and target title support.
+    Nami AI Chatbot Endpoint — 100% accurate, fast, and resilient AI navigator.
+    Wrapped in global exception safety so 500 errors never occur.
     """
-    user_msg = req.message.strip()
-    if not user_msg:
+    try:
+        user_msg = req.message.strip()
+        # Clean quotes or excess whitespace
+        user_msg = user_msg.strip('"\'')
+        if not user_msg:
+            return ChatResponse(
+                reply="Hey, don't leave me hanging! Ask me anything about anime, or say 'recommend me a dark fantasy anime' to get started! 🍊",
+                anime_recommendations=[]
+            )
+
+        # ── 1. Build User Watchlist Context ─────────────────────────────────────
+        watchlist_context = "User is browsing anonymously."
+        user_completed_ids = set()
+        completed_titles = []
+        watching_titles = []
+        planning_titles = []
+
+        if current_user:
+            entries = db.query(AnimeListEntry).filter(AnimeListEntry.user_id == current_user.id).all()
+            if entries:
+                for e in entries:
+                    t_str = e.anime.title_english or e.anime.title_romaji if e.anime else ""
+                    if not t_str:
+                        continue
+                    if e.status in [ListStatus.COMPLETED, ListStatus.REWATCHING]:
+                        user_completed_ids.add(e.anime_id)
+                        formatted_score = f"{e.score/10:.1f}/10" if (e.score and e.score > 10) else (f"{e.score:.1f}/10" if e.score else "")
+                        score_info = f" (Scored {formatted_score})" if formatted_score else ""
+                        completed_titles.append(f"{t_str}{score_info}")
+                    elif e.status == ListStatus.WATCHING:
+                        watching_titles.append(t_str)
+                    elif e.status == ListStatus.PLANNING:
+                        planning_titles.append(t_str)
+
+                summary_parts = [f"Logged in user: @{current_user.username} ({current_user.display_name or ''})"]
+                if completed_titles:
+                    summary_parts.append("Watched/Completed: " + ", ".join(completed_titles[:15]))
+                if watching_titles:
+                    summary_parts.append("Currently Watching: " + ", ".join(watching_titles[:10]))
+                if planning_titles:
+                    summary_parts.append("Plan to Watch: " + ", ".join(planning_titles[:10]))
+                    
+                watchlist_context = "\n".join(summary_parts)
+
+        # ── 2. Query & Intent Parsing ─────────────────────────────────────────
+        lowered_msg = user_msg.lower()
+        
+        AIRING_KEYWORDS = ["currently airing", "airing", "ongoing", "this season", "releasing", "currently running", "new episodes", "weekly", "airing anime"]
+        UPCOMING_KEYWORDS = ["upcoming", "not yet released", "next season", "future anime", "soon"]
+        PLOT_KEYWORDS = ["plot", "synopsis", "about", "story", "summary", "tell me about", "what is", "who is", "explain"]
+        WATCHLIST_KEYWORDS = [
+            "my list", "my watchlist", "what am i watching", "what did i watch",
+            "my completed", "my plan to watch", "on my list", "my profile", "my logbook",
+            "tracked anime", "what is on my list", "show my list", "show my watchlist"
+        ]
+
+        is_airing_request = any(kw in lowered_msg for kw in AIRING_KEYWORDS)
+        is_upcoming_request = any(kw in lowered_msg for kw in UPCOMING_KEYWORDS)
+        is_plot_request = any(kw in lowered_msg for kw in PLOT_KEYWORDS)
+        is_watchlist_request = any(kw in lowered_msg for kw in WATCHLIST_KEYWORDS)
+
+        # Genre Matching
+        ALL_GENRES = [
+            "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Isekai", "Mecha", 
+            "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Seinen", "Shonen", 
+            "Shoujo", "Slice of Life", "Sports", "Supernatural", "Thriller"
+        ]
+        matched_genres = [g for g in ALL_GENRES if g.lower() in lowered_msg]
+
+        if "rom-com" in lowered_msg or "romantic comedy" in lowered_msg:
+            matched_genres = list(set(matched_genres + ["Romance", "Comedy"]))
+        elif "dark fantasy" in lowered_msg:
+            matched_genres = list(set(matched_genres + ["Fantasy", "Horror", "Psychological"]))
+
+        # ── 3. Handle Watchlist Queries ───────────────────────────────────────
+        if is_watchlist_request:
+            if current_user and (completed_titles or watching_titles or planning_titles):
+                parts = [f"Yosh @{current_user.username}! Here is your current NamiVerse logbook:\n"]
+                if watching_titles:
+                    parts.append("📺 **Currently Watching:**\n" + "\n".join([f"• **{t}**" for t in watching_titles]))
+                if completed_titles:
+                    parts.append("🏆 **Completed & Scored:**\n" + "\n".join([f"• **{t}**" for t in completed_titles[:8]]))
+                if planning_titles:
+                    parts.append("📝 **Plan to Watch:**\n" + "\n".join([f"• **{t}**" for t in planning_titles[:5]]))
+                reply_text = "\n\n".join(parts) + "\n\nKeep up the awesome watching journey! 🍊"
+            elif current_user:
+                reply_text = f"Yosh @{current_user.username}! Your watchlist logbook is currently empty. Start adding anime to your list so I can track your journey! 🍊"
+            else:
+                reply_text = "Yosh! Please sign in to your NamiVerse account so I can view and manage your personal watchlist logbook! 🍊"
+
+            return ChatResponse(reply=reply_text, anime_recommendations=[])
+
+        # ── 4. Handle Live Airing Queries ─────────────────────────────────────
+        if is_airing_request:
+            live_releasing = fetch_live_airing_anime()
+            if live_releasing:
+                show_snippets = []
+                recs_formatted = []
+                for m in live_releasing:
+                    t_str = m["title"]["english"] or m["title"]["romaji"]
+                    g_str = ", ".join(m.get("genres", [])[:2])
+                    s_val = float(m["meanScore"]) if m.get("meanScore") else None
+                    s_str = f"{s_val/10:.1f}/10" if s_val else "N/A"
+                    ep_info = f"Ep {m['nextAiringEpisode']['episode']}" if m.get("nextAiringEpisode") else f"{m.get('episodes', 'Ongoing')} eps"
+                    
+                    show_snippets.append(f"• **{t_str}** (⭐ {s_str} | {ep_info} | {g_str})")
+                    
+                    slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
+                    recs_formatted.append(RecommendedAnimeCard(
+                        id=m["id"],
+                        slug=slug_clean,
+                        title=t_str,
+                        cover_url=m.get("coverImage", {}).get("extraLarge"),
+                        score=s_val,
+                        genres=m.get("genres", [])[:3]
+                    ))
+
+                reply_text = (
+                    "Yosh! Here are top anime **currently airing right now** across the world:\n\n" +
+                    "\n".join(show_snippets) +
+                    "\n\nWhich of these current season shows would you like to chart onto your logbook? ⛵"
+                )
+                return ChatResponse(
+                    reply=reply_text,
+                    anime_recommendations=recs_formatted[:4]
+                )
+
+        # ── 5. Specific Anime Title Search vs Genre Query ───────────────────────
+        target_anime = None
+
+        if not matched_genres and not is_airing_request and not is_upcoming_request:
+            clean_words = [w for w in user_msg.split() if w.lower() not in [
+                "can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of", "anime", "show",
+                "recommend", "suggest", "good", "best", "top", "give", "find", "looking", "for"
+            ]]
+            search_term = " ".join(clean_words).strip()
+
+            if search_term and len(search_term) >= 3:
+                target_anime = db.query(Anime).filter(
+                    or_(
+                        Anime.title_english.ilike(f"%{search_term}%"),
+                        Anime.title_romaji.ilike(f"%{search_term}%"),
+                        Anime.title_native.ilike(f"%{search_term}%")
+                    )
+                ).first()
+
+        # Build DB candidates list based on genre or target or general score
+        query = db.query(Anime)
+
+        if is_upcoming_request:
+            query = query.filter(or_(Anime.status == "NOT_YET_RELEASED", Anime.status == AnimeStatus.NOT_YET_RELEASED))
+
+        if matched_genres:
+            query = query.join(Anime.genres).filter(
+                or_(*[Genre.name.ilike(f"%{g}%") for g in matched_genres])
+            )
+        elif target_anime:
+            query = query.filter(Anime.id == target_anime.id)
+
+        db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(10).all()
+        if not db_candidates:
+            db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(10).all()
+
+        catalog_snippets = []
+        for a in db_candidates:
+            t = a.title_english or a.title_romaji or a.title_native
+            g = ", ".join([genre.name for genre in a.genres[:3]])
+            score = f"{a.average_score:.1f}/100" if a.average_score else "N/A"
+            raw_desc = getattr(a, "description", None) or "N/A"
+            desc_snippet = re.sub(r'<[^>]+>', '', raw_desc)[:120]
+            catalog_snippets.append(f"• Title: \"{t}\" (Score: {score}, Genres: {g}, Summary: {desc_snippet})")
+        
+        catalog_context = "\n".join(catalog_snippets)
+
+        RECOMMENDATION_KEYWORDS = [
+            "recommend", "suggestion", "suggest", "what should i watch", "what to watch",
+            "what anime", "give me", "show me", "find me", "i want to watch", "looking for",
+            "any good", "anything good", "best anime", "top anime", "anime for",
+            "similar to", "like this anime", "like", "new anime", "good anime",
+            "popular anime", "trending anime", "genre", "isekai", "shonen", "seinen", "shoujo"
+        ]
+        is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS) or bool(matched_genres) or is_upcoming_request
+
+        # ── 6. Call Gemini AI ───────────────────────────────────────────────────
+        reply_text = call_gemini_nami_ai(
+            message=user_msg,
+            history=req.history or [],
+            catalog_context=catalog_context,
+            watchlist_context=watchlist_context
+        )
+
+        # ── 7. Guaranteed Accurate Fallback Engine ─────────────────────────────
+        if not reply_text:
+            if target_anime:
+                t_name = target_anime.title_english or target_anime.title_romaji or target_anime.title_native
+                g_str = ", ".join([genre.name for genre in target_anime.genres[:3]])
+                raw_desc = getattr(target_anime, "description", None) or "A fantastic masterpiece entry in our NamiVerse catalog!"
+                desc_clean = re.sub(r'<[^>]+>', '', raw_desc).strip()
+                score_str = f"{target_anime.average_score:.1f}/100" if target_anime.average_score else "N/A"
+                reply_text = f"Yosh! Here is the lowdown on **{t_name}**:\n\n{desc_clean}\n\n⭐ **Score:** {score_str} | **Genres:** {g_str} 🍊"
+
+            elif matched_genres:
+                genre_name = matched_genres[0]
+                titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:3]])
+                reply_text = f"Yosh! For **{genre_name}** lovers, I've mapped out top-tier recommendations from our logbook: {titles_str}! Which one looks best for your next watch? 🍊"
+
+            else:
+                if any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money"]):
+                    reply_text = random.choice(NAMI_BERRIES_REPLIES)
+                elif any(k in lowered_msg for k in ["one piece", "luffy", "zoro", "straw hat", "pirate"]):
+                    reply_text = random.choice(NAMI_ONE_PIECE_REPLIES)
+                else:
+                    titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:3]])
+                    reply_text = f"Yosh! Here are some top-tier recommendations from our logbook: {titles_str}! 🧭"
+
+        # ── 8. Select Best Recommended Anime Cards ─────────────────────────────
+        matched_anime: List[Anime] = []
+        if target_anime:
+            matched_anime = [target_anime]
+        else:
+            fresh_candidates = [a for a in db_candidates if a.id not in user_completed_ids]
+            matched_anime = fresh_candidates if fresh_candidates else db_candidates
+
+        recs_formatted = []
+        seen_ids = set()
+        for a in matched_anime:
+            if a.id not in seen_ids:
+                seen_ids.add(a.id)
+                t_str = a.title_english or a.title_romaji or a.title_native
+                recs_formatted.append(RecommendedAnimeCard(
+                    id=a.id,
+                    slug=a.slug,
+                    title=t_str,
+                    cover_url=a.cover_large_url,
+                    score=float(a.average_score) if a.average_score else None,
+                    genres=[g.name for g in a.genres[:3]]
+                ))
+                if len(recs_formatted) >= 4:
+                    break
+
         return ChatResponse(
-            reply="Hey, don't leave me hanging! Ask me anything about anime, or say 'recommend me a dark fantasy anime' to get started! 🍊",
+            reply=reply_text,
+            anime_recommendations=recs_formatted
+        )
+
+    except Exception as err:
+        log.error(f"Nami chat handler unexpected error: {err}", exc_info=True)
+        # Always return clean, articulate response instead of 500 error
+        return ChatResponse(
+            reply="Yosh! I'm back on line and ready to navigate! Ask me for anime recommendations, genres like Romance or Action, or what's on your watchlist! 🍊⛵",
             anime_recommendations=[]
         )
-
-    # ── 1. Build User Watchlist Context ─────────────────────────────────────
-    watchlist_context = "User is browsing anonymously."
-    user_completed_ids = set()
-    completed_titles = []
-    watching_titles = []
-    planning_titles = []
-
-    if current_user:
-        entries = db.query(AnimeListEntry).filter(AnimeListEntry.user_id == current_user.id).all()
-        if entries:
-            for e in entries:
-                t_str = e.anime.title_english or e.anime.title_romaji if e.anime else ""
-                if not t_str:
-                    continue
-                if e.status in [ListStatus.COMPLETED, ListStatus.REWATCHING]:
-                    user_completed_ids.add(e.anime_id)
-                    formatted_score = f"{e.score/10:.1f}/10" if (e.score and e.score > 10) else (f"{e.score:.1f}/10" if e.score else "")
-                    score_info = f" (Scored {formatted_score})" if formatted_score else ""
-                    completed_titles.append(f"{t_str}{score_info}")
-                elif e.status == ListStatus.WATCHING:
-                    watching_titles.append(t_str)
-                elif e.status == ListStatus.PLANNING:
-                    planning_titles.append(t_str)
-
-            summary_parts = [f"Logged in user: @{current_user.username} ({current_user.display_name or ''})"]
-            if completed_titles:
-                summary_parts.append("Watched/Completed: " + ", ".join(completed_titles[:15]))
-            if watching_titles:
-                summary_parts.append("Currently Watching: " + ", ".join(watching_titles[:10]))
-            if planning_titles:
-                summary_parts.append("Plan to Watch: " + ", ".join(planning_titles[:10]))
-                
-            watchlist_context = "\n".join(summary_parts)
-
-    # ── 2. Query & Intent Parsing ─────────────────────────────────────────
-    lowered_msg = user_msg.lower()
-    
-    AIRING_KEYWORDS = ["currently airing", "airing", "ongoing", "this season", "releasing", "currently running", "new episodes", "weekly", "airing anime"]
-    UPCOMING_KEYWORDS = ["upcoming", "not yet released", "next season", "future anime", "soon"]
-    PLOT_KEYWORDS = ["plot", "synopsis", "about", "story", "summary", "tell me about", "what is", "who is", "explain"]
-    WATCHLIST_KEYWORDS = [
-        "my list", "my watchlist", "what am i watching", "what did i watch",
-        "my completed", "my plan to watch", "on my list", "my profile", "my logbook",
-        "tracked anime", "what is on my list", "show my list", "show my watchlist"
-    ]
-
-    is_airing_request = any(kw in lowered_msg for kw in AIRING_KEYWORDS)
-    is_upcoming_request = any(kw in lowered_msg for kw in UPCOMING_KEYWORDS)
-    is_plot_request = any(kw in lowered_msg for kw in PLOT_KEYWORDS)
-    is_watchlist_request = any(kw in lowered_msg for kw in WATCHLIST_KEYWORDS)
-
-    # Genre Matching
-    ALL_GENRES = [
-        "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Isekai", "Mecha", 
-        "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Seinen", "Shonen", 
-        "Shoujo", "Slice of Life", "Sports", "Supernatural", "Thriller"
-    ]
-    matched_genres = [g for g in ALL_GENRES if g.lower() in lowered_msg]
-
-    # Special Genre Alias Parsing (e.g. rom-com -> Romance, Comedy)
-    if "rom-com" in lowered_msg or "romantic comedy" in lowered_msg:
-        matched_genres = list(set(matched_genres + ["Romance", "Comedy"]))
-    elif "dark fantasy" in lowered_msg:
-        matched_genres = list(set(matched_genres + ["Fantasy", "Horror", "Psychological"]))
-
-    # ── 3. Handle Watchlist Queries ───────────────────────────────────────
-    if is_watchlist_request:
-        if current_user and (completed_titles or watching_titles or planning_titles):
-            parts = [f"Yosh @{current_user.username}! Here is your current NamiVerse logbook:\n"]
-            if watching_titles:
-                parts.append("📺 **Currently Watching:**\n" + "\n".join([f"• **{t}**" for t in watching_titles]))
-            if completed_titles:
-                parts.append("🏆 **Completed & Scored:**\n" + "\n".join([f"• **{t}**" for t in completed_titles[:8]]))
-            if planning_titles:
-                parts.append("📝 **Plan to Watch:**\n" + "\n".join([f"• **{t}**" for t in planning_titles[:5]]))
-            reply_text = "\n\n".join(parts) + "\n\nKeep up the awesome watching journey! 🍊"
-        elif current_user:
-            reply_text = f"Yosh @{current_user.username}! Your watchlist logbook is currently empty. Start adding anime to your list so I can track your journey! 🍊"
-        else:
-            reply_text = "Yosh! Please sign in to your NamiVerse account so I can view and manage your personal watchlist logbook! 🍊"
-
-        return ChatResponse(reply=reply_text, anime_recommendations=[])
-
-    # ── 4. Handle Live Airing Queries ─────────────────────────────────────
-    if is_airing_request:
-        live_releasing = fetch_live_airing_anime()
-        if live_releasing:
-            show_snippets = []
-            recs_formatted = []
-            for m in live_releasing:
-                t_str = m["title"]["english"] or m["title"]["romaji"]
-                g_str = ", ".join(m.get("genres", [])[:2])
-                s_val = float(m["meanScore"]) if m.get("meanScore") else None
-                s_str = f"{s_val/10:.1f}/10" if s_val else "N/A"
-                ep_info = f"Ep {m['nextAiringEpisode']['episode']}" if m.get("nextAiringEpisode") else f"{m.get('episodes', 'Ongoing')} eps"
-                
-                show_snippets.append(f"• **{t_str}** (⭐ {s_str} | {ep_info} | {g_str})")
-                
-                slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
-                recs_formatted.append(RecommendedAnimeCard(
-                    id=m["id"],
-                    slug=slug_clean,
-                    title=t_str,
-                    cover_url=m.get("coverImage", {}).get("extraLarge"),
-                    score=s_val,
-                    genres=m.get("genres", [])[:3]
-                ))
-
-            reply_text = (
-                "Yosh! Here are top anime **currently airing right now** across the world:\n\n" +
-                "\n".join(show_snippets) +
-                "\n\nWhich of these current season shows would you like to chart onto your logbook? ⛵"
-            )
-            return ChatResponse(
-                reply=reply_text,
-                anime_recommendations=recs_formatted[:4]
-            )
-
-    # ── 5. Specific Anime Title Search vs Genre Query ───────────────────────
-    target_anime = None
-
-    # Only perform specific anime title lookup if NO genre is present in message
-    if not matched_genres and not is_airing_request and not is_upcoming_request:
-        clean_words = [w for w in user_msg.split() if w.lower() not in [
-            "can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of", "anime", "show",
-            "recommend", "suggest", "good", "best", "top", "give", "find", "looking", "for"
-        ]]
-        search_term = " ".join(clean_words).strip()
-
-        if search_term and len(search_term) >= 3:
-            target_anime = db.query(Anime).filter(
-                or_(
-                    Anime.title_english.ilike(f"%{search_term}%"),
-                    Anime.title_romaji.ilike(f"%{search_term}%"),
-                    Anime.title_native.ilike(f"%{search_term}%")
-                )
-            ).first()
-
-    # Build DB candidates list based on genre or target or general score
-    query = db.query(Anime)
-
-    if is_upcoming_request:
-        query = query.filter(or_(Anime.status == "NOT_YET_RELEASED", Anime.status == AnimeStatus.NOT_YET_RELEASED))
-
-    if matched_genres:
-        query = query.join(Anime.genres).filter(
-            or_(*[Genre.name.ilike(f"%{g}%") for g in matched_genres])
-        )
-    elif target_anime:
-        query = query.filter(Anime.id == target_anime.id)
-
-    db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(10).all()
-    if not db_candidates:
-        db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(10).all()
-
-    catalog_snippets = []
-    for a in db_candidates:
-        t = a.title_english or a.title_romaji or a.title_native
-        g = ", ".join([genre.name for genre in a.genres[:3]])
-        score = f"{a.average_score:.1f}/100" if a.average_score else "N/A"
-        catalog_snippets.append(f"• Title: \"{t}\" (Score: {score}, Genres: {g}, Synopsis: {a.synopsis[:120] if a.synopsis else 'N/A'})")
-    
-    catalog_context = "\n".join(catalog_snippets)
-
-    RECOMMENDATION_KEYWORDS = [
-        "recommend", "suggestion", "suggest", "what should i watch", "what to watch",
-        "what anime", "give me", "show me", "find me", "i want to watch", "looking for",
-        "any good", "anything good", "best anime", "top anime", "anime for",
-        "similar to", "like this anime", "like", "new anime", "good anime",
-        "popular anime", "trending anime", "genre", "isekai", "shonen", "seinen", "shoujo"
-    ]
-    is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS) or bool(matched_genres) or is_upcoming_request
-
-    # ── 6. Call Gemini AI ───────────────────────────────────────────────────
-    reply_text = call_gemini_nami_ai(
-        message=user_msg,
-        history=req.history or [],
-        catalog_context=catalog_context,
-        watchlist_context=watchlist_context
-    )
-
-    # ── 7. Guaranteed Accurate Fallback Engine ─────────────────────────────
-    if not reply_text:
-        if target_anime:
-            t_name = target_anime.title_english or target_anime.title_romaji or target_anime.title_native
-            g_str = ", ".join([genre.name for genre in target_anime.genres[:3]])
-            synopsis_clean = target_anime.synopsis.strip() if target_anime.synopsis else "A fantastic masterpiece entry in our NamiVerse catalog!"
-            score_str = f"{target_anime.average_score:.1f}/100" if target_anime.average_score else "N/A"
-            reply_text = f"Yosh! Here is the lowdown on **{t_name}**:\n\n{synopsis_clean}\n\n⭐ **Score:** {score_str} | **Genres:** {g_str} 🍊"
-
-        elif matched_genres:
-            genre_name = matched_genres[0]
-            titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:3]])
-            reply_text = f"Yosh! For **{genre_name}** lovers, I've mapped out top-tier recommendations from our logbook: {titles_str}! Which one looks best for your next watch? 🍊"
-
-        else:
-            if any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money"]):
-                reply_text = random.choice(NAMI_BERRIES_REPLIES)
-            elif any(k in lowered_msg for k in ["one piece", "luffy", "zoro", "straw hat", "pirate"]):
-                reply_text = random.choice(NAMI_ONE_PIECE_REPLIES)
-            else:
-                titles_str = ", ".join([f"**{a.title_english or a.title_romaji}**" for a in db_candidates[:3]])
-                reply_text = f"Yosh! Here are some top-tier recommendations from our logbook: {titles_str}! 🧭"
-
-    # ── 8. Select Best Recommended Anime Cards ─────────────────────────────
-    matched_anime: List[Anime] = []
-    if target_anime:
-        matched_anime = [target_anime]
-    else:
-        fresh_candidates = [a for a in db_candidates if a.id not in user_completed_ids]
-        matched_anime = fresh_candidates if fresh_candidates else db_candidates
-
-    recs_formatted = []
-    seen_ids = set()
-    for a in matched_anime:
-        if a.id not in seen_ids:
-            seen_ids.add(a.id)
-            t_str = a.title_english or a.title_romaji or a.title_native
-            recs_formatted.append(RecommendedAnimeCard(
-                id=a.id,
-                slug=a.slug,
-                title=t_str,
-                cover_url=a.cover_large_url,
-                score=float(a.average_score) if a.average_score else None,
-                genres=[g.name for g in a.genres[:3]]
-            ))
-            if len(recs_formatted) >= 4:
-                break
-
-    return ChatResponse(
-        reply=reply_text,
-        anime_recommendations=recs_formatted
-    )
