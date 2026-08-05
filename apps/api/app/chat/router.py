@@ -177,7 +177,15 @@ def fetch_anilist_anime_details(query: str) -> List[dict]:
     """
     if not query or len(query.strip()) < 2:
         return []
-    clean_q = query.strip()
+
+    clean_raw = query.strip()
+    terms_to_try = [
+        clean_raw,
+        clean_raw.replace("s ", "'s "),
+        re.sub(r'[^a-zA-Z0-9\s]', '', clean_raw),
+        ' '.join([w[:-1] if (w.endswith('s') and len(w) > 3) else w for w in clean_raw.split()])
+    ]
+
     gql = """
     query ($search: String) {
       Page(page: 1, perPage: 5) {
@@ -195,61 +203,63 @@ def fetch_anilist_anime_details(query: str) -> List[dict]:
       }
     }
     """
-    try:
-        req = urllib.request.Request(
-            "https://graphql.anilist.co",
-            data=json.dumps({"query": gql, "variables": {"search": clean_q}}).encode("utf-8"),
-            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
-        )
-        with urllib.request.urlopen(req, timeout=4) as res:
-            data = json.loads(res.read().decode("utf-8"))
-            media = data.get("data", {}).get("Page", {}).get("media", [])
-            if not media:
-                return []
 
-            # Prioritize Season 1 if user didn't specify a season
-            has_season_specifier = any(kw in query.lower() for kw in [
-                "season 2", "season 3", "season 4", "season 5", "s2", "s3", "s4", "s5",
-                "2nd season", "3rd season", "4th season", "final season", "part 2", "part 3", "movie", "film"
-            ])
-
-            if not has_season_specifier:
-                s1_matches = [
-                    m for m in media
-                    if not any(skw in ((m.get("title", {}).get("english") or m.get("title", {}).get("romaji") or "").lower()) for skw in [
-                        "season 2", "season 3", "season 4", "2nd season", "3rd season", "4th season",
-                        "final season", "part 2", "part 3", "cour 2", "movie", "film"
+    for search_term in terms_to_try:
+        try:
+            req = urllib.request.Request(
+                "https://graphql.anilist.co",
+                data=json.dumps({"query": gql, "variables": {"search": search_term}}).encode("utf-8"),
+                headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+            )
+            with urllib.request.urlopen(req, timeout=4) as res:
+                data = json.loads(res.read().decode("utf-8"))
+                media = data.get("data", {}).get("Page", {}).get("media", [])
+                if media:
+                    # Prioritize Season 1 if user didn't specify a season
+                    has_season_specifier = any(kw in query.lower() for kw in [
+                        "season 2", "season 3", "season 4", "season 5", "s2", "s3", "s4", "s5",
+                        "2nd season", "3rd season", "4th season", "final season", "part 2", "part 3", "movie", "film"
                     ])
-                ]
-                if s1_matches:
-                    media = s1_matches + [m for m in media if m not in s1_matches]
 
-            output = []
-            for item in media:
-                t_str = item.get("title", {}).get("english") or item.get("title", {}).get("romaji") or ""
-                desc = item.get("description") or ""
-                clean_desc = re.sub(r'<[^>]+>', '', desc)
-                clean_desc = re.sub(r'\s+', ' ', clean_desc).strip()
-                score = f"{item['meanScore']/10:.1f}" if item.get("meanScore") else "N/A"
-                episodes = item.get("episodes") or "Ongoing"
-                status = item.get("status") or "Unknown"
-                studios_list = ", ".join([s.get("name") for s in item.get("studios", {}).get("nodes", [])]) or "Unknown Studio"
-                genres_list = ", ".join(item.get("genres", [])) or "Anime"
-                output.append({
-                    "title": t_str,
-                    "mal_id": item.get("id"),
-                    "synopsis": clean_desc[:400],
-                    "score": score,
-                    "episodes": episodes,
-                    "status": status,
-                    "studios": studios_list,
-                    "genres": genres_list,
-                    "image_url": item.get("coverImage", {}).get("extraLarge")
-                })
-            return output
-    except Exception as ex:
-        log.warning(f"AniList API search fallback error for '{query}': {ex}")
-        return []
+                    if not has_season_specifier:
+                        s1_matches = [
+                            m for m in media
+                            if not any(skw in ((m.get("title", {}).get("english") or m.get("title", {}).get("romaji") or "").lower()) for skw in [
+                                "season 2", "season 3", "season 4", "2nd season", "3rd season", "4th season",
+                                "final season", "part 2", "part 3", "cour 2", "movie", "film"
+                            ])
+                        ]
+                        if s1_matches:
+                            media = s1_matches + [m for m in media if m not in s1_matches]
+
+                    output = []
+                    for item in media:
+                        t_str = item.get("title", {}).get("english") or item.get("title", {}).get("romaji") or ""
+                        desc = item.get("description") or ""
+                        clean_desc = re.sub(r'<[^>]+>', '', desc)
+                        clean_desc = re.sub(r'\s+', ' ', clean_desc).strip()
+                        score = f"{item['meanScore']/10:.1f}" if item.get("meanScore") else "N/A"
+                        episodes = item.get("episodes") or "Ongoing"
+                        status = item.get("status") or "Unknown"
+                        studios_list = ", ".join([s.get("name") for s in item.get("studios", {}).get("nodes", [])]) or "Unknown Studio"
+                        genres_list = ", ".join(item.get("genres", [])) or "Anime"
+                        output.append({
+                            "title": t_str,
+                            "mal_id": item.get("id"),
+                            "synopsis": clean_desc[:400],
+                            "score": score,
+                            "episodes": episodes,
+                            "status": status,
+                            "studios": studios_list,
+                            "genres": genres_list,
+                            "image_url": item.get("coverImage", {}).get("extraLarge")
+                        })
+                    return output
+        except Exception as ex:
+            log.warning(f"AniList API search fallback error for '{search_term}': {ex}")
+            continue
+
+    return []
 
 
 def get_nami_lore_fallback(lowered_msg: str) -> Optional[str]:
@@ -800,7 +810,20 @@ def nami_chat(
                 elif any(k in lowered_msg for k in ["one piece", "pirate", "straw hat"]):
                     reply_text = random.choice(NAMI_ONE_PIECE_REPLIES)
                 else:
-                    reply_text = "Yosh! I'm Nami, your official NamiVerse Navigator! Ask me anything about anime, or tell me what kind of show you're in the mood to watch! 🍊⛵"
+                    if is_greeting_or_casual:
+                        greetings = [
+                            "Yosh! Hey there! I'm Nami, your official Straw Hat Navigator! How are you doing today? Ready to talk anime, or just dropping by to say hi? 🍊⛵",
+                            "Hey! Good to see you! What's on your mind today? Want some anime recommendations, or just here to hang out on the Sunny? 🍊",
+                            "Yosh! Weather report looks great today! What kind of anime vibe are you in the mood for? 🧭"
+                        ]
+                        reply_text = random.choice(greetings)
+                    else:
+                        funny_fallbacks = [
+                            "Fufufu! That's an intriguing question! As Navigator of the Straw Hat Pirates, I'd say every great question leads to an even greater anime adventure! What else is on your mind? 🍊⛵",
+                            "Ah, asking about that? Sailing the Grand Line has taught me to expect the unexpected! What kind of anime mood are you in today? 💰✨",
+                            "Fufufu! You've got great curiosity! Speaking as your Navigator, let me know what you'd like to explore next! 🧭🍊"
+                        ]
+                        reply_text = random.choice(funny_fallbacks)
 
         # ── 8. Select Best Recommended Anime Cards & Build All Recommendations Pool ──
         recs_formatted = []
@@ -870,7 +893,7 @@ def nami_chat(
                     ))
 
         # ONLY attach recommendation card embeddings when discussing anime / recommendations / plot queries
-        if is_recommendation_request or is_airing_request or is_upcoming_request or target_anime or matched_genres or is_plot_request or (jikan_anime and len(jikan_anime) > 0):
+        if not is_greeting_or_casual and (is_recommendation_request or is_airing_request or is_upcoming_request or target_anime or matched_genres or is_plot_request or (jikan_anime and len(jikan_anime) > 0)):
             recs_formatted = all_recs_pool[:4]
         else:
             recs_formatted = []
