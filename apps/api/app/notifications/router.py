@@ -1,7 +1,8 @@
 from datetime import datetime, date, timedelta, timezone
 from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
