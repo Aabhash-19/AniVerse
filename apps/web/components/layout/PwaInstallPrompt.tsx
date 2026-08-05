@@ -85,8 +85,8 @@ export default function PwaInstallPrompt() {
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 rounded-2xl bg-zinc-950 border border-amber-500/40 overflow-hidden flex-shrink-0 p-0.5 shadow-md">
             <img
-              src="/icons/icon-192x192.png"
-              alt="NamiVerse App Icon"
+              src="/nami-wano-avatar.jpg"
+              alt="NamiVerse Mascot Icon"
               className="w-full h-full object-cover rounded-xl"
             />
           </div>
