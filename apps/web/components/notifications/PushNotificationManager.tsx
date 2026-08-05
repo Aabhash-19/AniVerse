@@ -157,12 +157,12 @@ export default function PushNotificationManager() {
     // Fallback: Trigger native browser Notification directly
     try {
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-        new Notification("🍊 Nami's Broadcast Alert! ⛵", {
-          body: "Yosh! NamiVerse Web Push Alerts are active on your device! You'll get live alerts whenever a show on your list airs! 💰",
+        new Notification("🍊 Nami's Broadcast Weather Alert! ⛵", {
+          body: "Yosh, Mina-san! Nami here, official Navigator of NamiVerse! 💰 Whenever a show on your list airs a new episode or trailer, I'll chart the skies and send a live alert directly to your device so you never miss a release! Keep sailing! 🍊✨",
           icon: "/nami-wano-avatar.jpg",
           badge: "/icons/icon-192x192.png",
         });
-        setStatusMsg("Nami test notification fired on your screen! 🚀");
+        setStatusMsg("Nami broadcast alert triggered on your screen! 🍊");
       } else {
         setStatusMsg("Please enable notification permissions first!");
       }
@@ -207,7 +207,7 @@ export default function PushNotificationManager() {
                 disabled={loading}
                 className="px-3 py-1.5 rounded-xl text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-all"
               >
-                Test Alert 🚀
+                Test Alert
               </button>
             </div>
           )}

@@ -425,8 +425,8 @@ def test_nami_push_notification(
         )
 
     sent_count = 0
-    title = "🍊 Nami's Broadcast Alert! ⛵"
-    body = f"Yosh, {current_user.username or 'Mina-san'}! NamiVerse Web Push Alerts are live on your device! You'll get instant alerts whenever a show on your list airs! 💰"
+    title = "🍊 Nami's Broadcast Weather Alert! ⛵"
+    body = f"Yosh, {current_user.username or 'Mina-san'}! Nami here, your official Navigator! 💰 Whenever a show on your list airs a new episode or trailer, I'll chart the skies and send a live alert directly to your device so you never miss a release! Keep sailing with NamiVerse! 🍊✨"
 
     for sub in subs:
         info = {"endpoint": sub.endpoint, "p256dh": sub.p256dh, "auth": sub.auth}
