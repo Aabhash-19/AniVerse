@@ -269,13 +269,17 @@ def get_airing_schedule(
             Video.video_type == "TRAILER"
         ).first()
 
+        airing_utc = ep.airing_at.replace(tzinfo=timezone.utc) if (ep.airing_at and ep.airing_at.tzinfo is None) else ep.airing_at
+        now_utc = datetime.now(timezone.utc)
+        countdown = max(0, int((airing_utc - now_utc).total_seconds())) if airing_utc else 0
+
         events.append(AiringEpisodeEvent(
             anime_id=anime.id,
             anime_title=anime.title_english or anime.title_romaji or "",
             cover_url=anime.cover_large_url,
             episode_number=float(ep.episode_number),
-            airing_at=ep.airing_at,
-            countdown_seconds=max(0, int((ep.airing_at - now).total_seconds())),
+            airing_at=airing_utc,
+            countdown_seconds=countdown,
             trailer_url=trailer.provider_video_id if trailer else None,
             season=anime.season.value if anime.season else None,
             format=anime.format.value if anime.format else "TV",

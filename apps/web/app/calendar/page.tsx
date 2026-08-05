@@ -244,7 +244,7 @@ export default function CalendarPage() {
   const selectedDayActivities = activitiesByDate[selectedKey] || [];
 
   const formatTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleTimeString("en-US", {
+    return parseUtcDate(dateStr).toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
