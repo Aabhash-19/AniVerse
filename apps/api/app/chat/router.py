@@ -423,14 +423,14 @@ def fetch_live_airing_anime() -> List[dict]:
 
 def fetch_anilist_genre_anime(genre_name: Optional[str] = None) -> List[dict]:
     """
-    Fetch top-rated anime for a genre (or general top anime) from AniList GraphQL API.
-    Guarantees a rich pool of 20+ candidate cards for any genre request.
+    Fetch top-rated FINISHED anime for a genre from AniList.
+    Only returns already-released shows — NOT_YET_RELEASED and airing-only shows are excluded.
     """
     if genre_name:
         gql = """
         query ($genre: String) {
-          Page(page: 1, perPage: 25) {
-            media(type: ANIME, genre: $genre, sort: [SCORE_DESC, POPULARITY_DESC]) {
+          Page(page: 1, perPage: 30) {
+            media(type: ANIME, genre: $genre, status: FINISHED, sort: [SCORE_DESC, POPULARITY_DESC]) {
               id
               title { english romaji }
               status
@@ -445,8 +445,8 @@ def fetch_anilist_genre_anime(genre_name: Optional[str] = None) -> List[dict]:
     else:
         gql = """
         query {
-          Page(page: 1, perPage: 25) {
-            media(type: ANIME, sort: [SCORE_DESC, POPULARITY_DESC]) {
+          Page(page: 1, perPage: 30) {
+            media(type: ANIME, status: FINISHED, sort: [SCORE_DESC, POPULARITY_DESC]) {
               id
               title { english romaji }
               status
@@ -465,7 +465,7 @@ def fetch_anilist_genre_anime(genre_name: Optional[str] = None) -> List[dict]:
             data=json.dumps({"query": gql, "variables": variables}).encode("utf-8"),
             headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
         )
-        with urllib.request.urlopen(req, timeout=4) as res:
+        with urllib.request.urlopen(req, timeout=6) as res:
             data = json.loads(res.read().decode("utf-8"))
             return data.get("data", {}).get("Page", {}).get("media", [])
     except Exception as ex:
@@ -875,18 +875,51 @@ def nami_chat(
 
         # ── 7. UNIFIED NAMI AI 4-PILLAR DISPATCHER ─────────────────────────────
 
-        # Pillar 1: Nami & Straw Hat Crew Lore (Fandom Wiki Base)
-        nami_lore_hit = get_nami_lore_fallback(lowered_msg)
+        # Pillar 1: Nami & One Piece Lore — powered by Gemini AI (knows all of One Piece natively)
+        # Triggers on any question about Nami, her crewmates, One Piece world, weapons, backstory
+        ONE_PIECE_LORE_KEYWORDS = [
+            # About Nami herself
+            "nami", "navigator", "cat burglar", "clima", "tact", "zeus", "thunderbolt",
+            "bell-mere", "bellmere", "nojiko", "arlong", "cocoyasi", "conomi", "weatheria",
+            "bounty", "wanted", "reward", "tangerine", "map", "cartography",
+            # Crewmates
+            "luffy", "zoro", "sanji", "usopp", "chopper", "robin", "franky", "brook", "jinbe",
+            "straw hat crew", "straw hats", "thousand sunny", "going merry",
+            # One Piece world
+            "one piece", "grand line", "new world", "east blue", "west blue", "north blue", "south blue",
+            "marine", "navy", "world government", "yonko", "emperor", "shichibukai", "warlord",
+            "devil fruit", "haki", "conqueror", "armament", "observation",
+            "alabasta", "skypiea", "water seven", "enies lobby", "thriller bark",
+            "sabaody", "impel down", "marineford", "fishman island", "punk hazard",
+            "dressrosa", "zou", "whole cake", "wano", "egghead",
+        ]
+        is_one_piece_lore = any(k in lowered_msg for k in ONE_PIECE_LORE_KEYWORDS)
 
-        if nami_lore_hit:
+        if is_one_piece_lore and not is_recommendation_request and not is_greeting_or_casual:
+            # Use Gemini AI for all One Piece / Nami lore — Gemini knows the full One Piece universe
+            lore_context = (
+                "ONE PIECE LORE QUESTION:\n"
+                "The user is asking about One Piece lore, characters, world, or Nami herself. "
+                "Answer with 100% accurate One Piece canon knowledge. "
+                "Speak as Nami — first person for questions about yourself, third person for other characters. "
+                "Be engaging, accurate, and in full Nami character."
+            )
             ai_reply = call_gemini_nami_ai(
                 message=user_msg,
                 history=req.history or [],
                 catalog_context=catalog_context,
                 watchlist_context=watchlist_context,
-                jikan_context=f"OFFICIAL FANDOM WIKI LORE GROUND TRUTH: {nami_lore_hit}"
+                jikan_context=lore_context
             )
-            reply_text = ai_reply if ai_reply else nami_lore_hit
+            if ai_reply:
+                reply_text = ai_reply
+            else:
+                # Fallback: use hardcoded lore only when Gemini is unavailable
+                lore_hit = get_nami_lore_fallback(lowered_msg)
+                reply_text = lore_hit if lore_hit else (
+                    "Fufufu! That's a deep One Piece question! "
+                    "My navigator's logbook covers all the seas — ask me anything about the Straw Hats! 🍊⛵"
+                )
             recs_formatted = []
             all_recs_pool = []
 
