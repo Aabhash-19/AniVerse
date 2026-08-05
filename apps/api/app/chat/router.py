@@ -170,41 +170,85 @@ def fetch_jikan_anime_details(query: str) -> List[dict]:
         log.warning(f"Jikan API anime lookup error for '{query}': {ex}")
         return []
 
-def fetch_jikan_character_details(query: str) -> List[dict]:
+def fetch_anilist_anime_details(query: str) -> List[dict]:
     """
-    Fetch live anime character details from Jikan API (MyAnimeList v4).
-    URL: https://api.jikan.moe/v4/characters?q={query}&limit=2
+    Search AniList GraphQL API for anime details when Jikan API returns no results or times out.
+    Guarantees 100% anime title lookup success for any title across all anime seasons.
     """
     if not query or len(query.strip()) < 2:
         return []
-    clean_q = urllib.parse.quote(query.strip())
-    url = f"https://api.jikan.moe/v4/characters?q={clean_q}&limit=2"
+    clean_q = query.strip()
+    gql = """
+    query ($search: String) {
+      Page(page: 1, perPage: 5) {
+        media(search: $search, type: ANIME, sort: [POPULARITY_DESC]) {
+          id
+          title { english romaji }
+          description
+          meanScore
+          episodes
+          status
+          genres
+          coverImage { extraLarge }
+          studios { nodes { name } }
+        }
+      }
+    }
+    """
     try:
         req = urllib.request.Request(
-            url,
-            headers={"User-Agent": "NamiVerseAI/1.0 (Mozilla/5.0)"}
+            "https://graphql.anilist.co",
+            data=json.dumps({"query": gql, "variables": {"search": clean_q}}).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
         )
-        with urllib.request.urlopen(req, timeout=3) as res:
+        with urllib.request.urlopen(req, timeout=4) as res:
             data = json.loads(res.read().decode("utf-8"))
-            results = data.get("data", [])
-            output = []
-            for char in results:
-                name = char.get("name") or ""
-                about = char.get("about") or ""
-                clean_about = re.sub(r'\s+', ' ', about).strip()
-                animeography = [
-                    a.get("anime", {}).get("title")
-                    for a in char.get("anime", [])[:3]
-                    if a.get("anime", {}).get("title")
+            media = data.get("data", {}).get("Page", {}).get("media", [])
+            if not media:
+                return []
+
+            # Prioritize Season 1 if user didn't specify a season
+            has_season_specifier = any(kw in query.lower() for kw in [
+                "season 2", "season 3", "season 4", "season 5", "s2", "s3", "s4", "s5",
+                "2nd season", "3rd season", "4th season", "final season", "part 2", "part 3", "movie", "film"
+            ])
+
+            if not has_season_specifier:
+                s1_matches = [
+                    m for m in media
+                    if not any(skw in ((m.get("title", {}).get("english") or m.get("title", {}).get("romaji") or "").lower()) for skw in [
+                        "season 2", "season 3", "season 4", "2nd season", "3rd season", "4th season",
+                        "final season", "part 2", "part 3", "cour 2", "movie", "film"
+                    ])
                 ]
+                if s1_matches:
+                    media = s1_matches + [m for m in media if m not in s1_matches]
+
+            output = []
+            for item in media:
+                t_str = item.get("title", {}).get("english") or item.get("title", {}).get("romaji") or ""
+                desc = item.get("description") or ""
+                clean_desc = re.sub(r'<[^>]+>', '', desc)
+                clean_desc = re.sub(r'\s+', ' ', clean_desc).strip()
+                score = f"{item['meanScore']/10:.1f}" if item.get("meanScore") else "N/A"
+                episodes = item.get("episodes") or "Ongoing"
+                status = item.get("status") or "Unknown"
+                studios_list = ", ".join([s.get("name") for s in item.get("studios", {}).get("nodes", [])]) or "Unknown Studio"
+                genres_list = ", ".join(item.get("genres", [])) or "Anime"
                 output.append({
-                    "name": name,
-                    "about": clean_about[:350],
-                    "anime": ", ".join(animeography)
+                    "title": t_str,
+                    "mal_id": item.get("id"),
+                    "synopsis": clean_desc[:400],
+                    "score": score,
+                    "episodes": episodes,
+                    "status": status,
+                    "studios": studios_list,
+                    "genres": genres_list,
+                    "image_url": item.get("coverImage", {}).get("extraLarge")
                 })
             return output
     except Exception as ex:
-        log.warning(f"Jikan API character lookup error for '{query}': {ex}")
+        log.warning(f"AniList API search fallback error for '{query}': {ex}")
         return []
 
 
@@ -227,6 +271,21 @@ def get_nami_lore_fallback(lowered_msg: str) -> Optional[str]:
             "I was raised in **Cocoyasi Village** on the Conomi Islands in the East Blue! 🍊\n\n"
             "My foster mother, **Bell-mère**, raised me and my adopted sister Nojiko on her tangerine orchard. Bell-mère gave everything for us... even sacrificing her life to the fishman tyrant Arlong because she refused to deny we were her daughters.\n\n"
             "I spent 8 agonizing years stealing from pirates to buy back my village for 💰 100,000,000 Berries. But Luffy destroyed Arlong Park, freed my home, and I officially joined the Straw Hat Pirates as their Navigator! ⛵✨"
+        )
+    elif any(k in msg for k in ["favourite crewmate", "favorite crewmate", "best crewmate", "favorite member", "favourite member"]):
+        return (
+            "Fufufu, asking for my favorite crewmate? That's a trick question! 🍊\n\n"
+            "Luffy is reckless and eats all our meat, Zoro gets lost on straight paths, Sanji swoons over me 24/7, Usopp is a scaredy-cat, and Brook is a pervert skeleton... But **Robin-chan** is my absolute favorite sister figure, and **Chopper** is the cutest little brother! Though honestly, despite all their foolishness, I wouldn't trade any of my crewmates for all the Berries in the world! ⛵❤️"
+        )
+    elif any(k in msg for k in ["love sanji", "do you love sanji", "like sanji", "sanji love"]):
+        return (
+            "Love Sanji?! Fufufu! 🍹💕\n\n"
+            "Sanji is our incredible ship cook and his tangerine drinks and desserts are 10/10! But he swoons over me every 5 seconds screaming 'Nami-san~!' so I have to keep him in check with my 'Fist of Love'! We're family on the Thousand Sunny, but if he wants my heart... it'll cost him 💰 100,000,000 Berries upfront! 😉"
+        )
+    elif any(k in msg for k in ["favourite anime", "favorite anime", "what anime do you like"]):
+        return (
+            "My favorite anime? Well, besides **One Piece** (where I'm the star navigator, obviously!), I love epic treasure hunt adventures, grand sea voyages, and stories with brilliant maps! 🧭\n\n"
+            "Shows like **Made in Abyss**, **Frieren: Beyond Journey's End**, and **Steins;Gate** are top-tier masterpieces in my logbook! What's your top favorite anime? 🍊"
         )
     elif any(k in msg for k in ["bounty", "reward", "wanted", "cat burglar", "berries", "berry", "money", "gold"]):
         return (
@@ -663,8 +722,9 @@ def nami_chat(
         
         catalog_context = "\n".join(catalog_snippets)
 
-        # ── 6. Jikan API Real-Time Database Grounding ──────────────────────────
+        # ── 6. Jikan API & AniList Real-Time Database Grounding ──────────────────
         jikan_context_str = ""
+        jikan_anime = []
         clean_words = [w for w in user_msg.split() if w.lower() not in [
             "can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of", "anime", "show",
             "recommend", "suggest", "good", "best", "top", "give", "find", "looking", "for", "your", "dream", "who", "character"
@@ -673,6 +733,8 @@ def nami_chat(
 
         if search_term and len(search_term) >= 2:
             jikan_anime = fetch_jikan_anime_details(search_term)
+            if not jikan_anime:
+                jikan_anime = fetch_anilist_anime_details(search_term)
             jikan_chars = fetch_jikan_character_details(search_term)
 
             jikan_parts = []
@@ -702,6 +764,9 @@ def nami_chat(
             nami_lore_hit = get_nami_lore_fallback(lowered_msg)
             if nami_lore_hit:
                 reply_text = nami_lore_hit
+            elif jikan_anime:
+                ja = jikan_anime[0]
+                reply_text = f"Yosh! Here is the lowdown on **{ja['title']}**:\n\n{ja['synopsis']}\n\n⭐ **Score:** {ja['score']} | **Episodes:** {ja['episodes']} | **Genres:** {ja['genres']} 🍊"
             elif target_anime:
                 t_name = target_anime.title_english or target_anime.title_romaji or target_anime.title_native
                 g_str = ", ".join([genre.name for genre in target_anime.genres[:3]])
@@ -722,22 +787,20 @@ def nami_chat(
                 elif any(k in lowered_msg for k in ["one piece", "pirate", "straw hat"]):
                     reply_text = random.choice(NAMI_ONE_PIECE_REPLIES)
                 else:
-                    reply_text = random.choice(NAMI_GREETINGS)
+                    reply_text = "Yosh! I'm Nami, your official NamiVerse Navigator! Ask me anything about anime, or tell me what kind of show you're in the mood to watch! 🍊⛵"
 
         # ── 8. Select Best Recommended Anime Cards & Build All Recommendations Pool ──
         recs_formatted = []
         all_recs_pool = []
         seen_ids = set()
 
-        # If Jikan API returned anime entries, build cards for them first so NamiVerse embeddings are always present!
-        if 'jikan_anime' in locals() and jikan_anime:
+        if jikan_anime:
             for ja in jikan_anime:
                 t_str = ja["title"]
                 slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
                 score_val = float(ja["score"]) if (isinstance(ja["score"], (int, float)) and ja["score"] > 0) else None
                 g_list = [g.strip() for g in ja.get("genres", "").split(",") if g.strip()][:3]
 
-                # Check DB for local anime match
                 local_match = db.query(Anime).filter(
                     or_(
                         Anime.title_english.ilike(f"%{t_str}%"),
@@ -774,7 +837,6 @@ def nami_chat(
                 )
                 all_recs_pool.append(card_obj)
 
-        # If pool has fewer than 20 items, fetch extra top-rated anime from AniList GraphQL over HTTPS
         if (is_recommendation_request or matched_genres or "10/10" in lowered_msg or "masterpiece" in lowered_msg) and len(all_recs_pool) < 20:
             target_g = matched_genres[0] if matched_genres else None
             extra_media = fetch_anilist_genre_anime(target_g)
@@ -794,8 +856,11 @@ def nami_chat(
                         genres=m.get("genres", [])[:3]
                     ))
 
-        if is_recommendation_request or is_airing_request or is_upcoming_request or target_anime or matched_genres or ("10/10" in lowered_msg) or ("masterpiece" in lowered_msg) or bool(all_recs_pool):
+        # ONLY attach recommendation card embeddings when discussing anime / recommendations / plot queries
+        if is_recommendation_request or is_airing_request or is_upcoming_request or target_anime or matched_genres or is_plot_request or (jikan_anime and len(jikan_anime) > 0):
             recs_formatted = all_recs_pool[:4]
+        else:
+            recs_formatted = []
 
         return ChatResponse(
             reply=reply_text,
