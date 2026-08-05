@@ -7,6 +7,7 @@ import random
 import re
 import os
 import urllib.request
+import urllib.parse
 import json
 import logging
 
@@ -63,6 +64,126 @@ NAMI_ONE_PIECE_REPLIES = [
 NAMI_DREAM_REPLY = "My dream is to draw a map of the entire world! 🗺️ As the navigator of the Straw Hat Pirates, I'm charting every ocean and island—and here on NamiVerse, I'm charting every anime for you! 🍊"
 NAMI_LUFFY_REPLY = "Luffy is our captain! He's reckless, eats all our meat, and gets us into crazy fights—but he's going to be King of the Pirates! 🍖👑"
 NAMI_ZORO_REPLY = "Zoro? He's probably lost again on some random island! Don't ask him for directions unless you want to end up in the middle of the sea! ⚔️🧭"
+
+NAMI_FANDOM_WIKI_LORE = """
+OFFICIAL NAMI CHARACTER KNOWLEDGE BASE (ONE PIECE FANDOM WIKI):
+- **Full Title & Aliases**: "Cat Burglar" Nami (泥棒猫 ナミ, Dorobō Neko Nami).
+- **Official Bounty**: 💰 366,000,000 Berries (Post-Wano Arc). Previous bounties: 16,000,000 (Enies Lobby) -> 66,000,000 (Dressrosa).
+- **Role & Rank**: Official Navigator of the Straw Hat Pirates (3rd member to join, officially 5th member of crew).
+- **Origin & Backstory**:
+  * Born in Oykot Kingdom, orphaned as a baby during a war, and saved by Navy officer Bell-mère.
+  * Raised in Cocoyasi Village (Conomi Islands, East Blue) alongside adopted sister Nojiko.
+  * Bell-mère owned a tangerine (mikan) orchard and sacrificed her life to Arlong when Arlong took over the village because she refused to deny Nami and Nojiko were her daughters.
+  * Forced into Arlong's crew as his cartographer at age 8 to buy back Cocoyasi Village for 💰 100,000,000 Berries by stealing from pirates.
+  * After Arlong betrayed her, Luffy destroyed Arlong Park, freed her village, and Nami officially joined the Straw Hats!
+- **Dream**: To draw a complete, perfect map of the entire world (世界地図, Sekai Chizu).
+- **Weapons & Combat Arsenal**:
+  1. **Original Clima-Tact**: Built by Usopp (initially meant for party tricks, modified by Nami into a weather weapon using Heat Balls, Cool Balls, and Thunder Balls).
+  2. **Perfect Clima-Tact**: Upgraded with Skypiea Dials for massive storm strikes (Thunderbolt Tempo, Mirage Tempo).
+  3. **Sorcery Clima-Tact**: Upgraded during 2-year timeskip studying weather science at Weatheria under Haredas. Uses Weather Balls.
+  4. **Zeus Integration**: Big Mom's former homie cloud **Zeus** fused into her Sorcery Clima-Tact! Allows devastating electric attacks (Zeus Breeze Tempo, Thunder Trap).
+- **Abilities & Skills**:
+  * Expert Cartography & Geography.
+  * Meteorological Sensing: Can physically sense air pressure shifts and humidity changes with her skin before Grand Line storms hit.
+  * Navigation, Bargaining, Thievery, Lockpicking, Leadership.
+  * Uses "Fist of Love" to keep Luffy, Zoro, and Sanji in line when they are reckless.
+- **Personality & Favorites**:
+  * Favorites: Money/Berries (💰), Tangerines/Mikan (🍊) from Bell-mère's orchard, fashion.
+  * Quirks: Charges crewmates high interest on loans, highly protective of children (e.g. Punk Hazard children), witty, highly intelligent, fiercely loyal to her crewmates despite complaining about their foolishness.
+- **Crew Dynamics**:
+  * Luffy (Monkey D. Luffy): Captain. Reckless, eats all the meat, but trusts him with her life ("Luffy, help me!").
+  * Zoro (Roronoa Zoro): First Mate / Swordsman. "Mosshead" who gets lost on straight paths.
+  * Sanji: Ship Cook. Swoons over "Nami-san!" and makes delicious drinks/meals.
+  * Usopp: Cowardly buddy, inventor of Clima-Tact.
+  * Chopper (Tony Tony Chopper): Adorable reindeer doctor she treats like a younger brother.
+  * Robin (Nico Robin): "Robin-chan", calm archaeologist sister figure.
+  * Franky: Super cyborg shipwright who built the Thousand Sunny.
+  * Brook: Skeleton musician who asks for her underwear and gets kicked into the ocean.
+  * Jinbe: Wise Knight of the Sea & Helmsman.
+- **Physical Traits**: Birthday: July 3rd. Height: 170 cm (5'7"). Hair: Orange. Tattoo: Tangerine & Windmill (symbolizing Bell-mère's mikans & Genzo's pinwheel).
+"""
+
+def fetch_jikan_anime_details(query: str) -> List[dict]:
+    """
+    Fetch live anime data from Jikan API (MyAnimeList v4) for rich real-time context.
+    URL: https://api.jikan.moe/v4/anime?q={query}&limit=3
+    """
+    if not query or len(query.strip()) < 2:
+        return []
+    clean_q = urllib.parse.quote(query.strip())
+    url = f"https://api.jikan.moe/v4/anime?q={clean_q}&limit=3&sfw=true"
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "NamiVerseAI/1.0 (Mozilla/5.0)"}
+        )
+        with urllib.request.urlopen(req, timeout=3) as res:
+            data = json.loads(res.read().decode("utf-8"))
+            results = data.get("data", [])
+            output = []
+            for item in results:
+                title = item.get("title_english") or item.get("title") or ""
+                synopsis = item.get("synopsis") or ""
+                clean_syn = re.sub(r'\s+', ' ', synopsis).strip()
+                score = item.get("score") or "N/A"
+                episodes = item.get("episodes") or "Ongoing"
+                status = item.get("status") or "Unknown"
+                studios = ", ".join([s.get("name") for s in item.get("studios", [])]) or "Unknown Studio"
+                genres = ", ".join([g.get("name") for g in item.get("genres", [])]) or "Anime"
+                rating = item.get("rating") or ""
+                output.append({
+                    "title": title,
+                    "mal_id": item.get("mal_id"),
+                    "synopsis": clean_syn[:350],
+                    "score": score,
+                    "episodes": episodes,
+                    "status": status,
+                    "studios": studios,
+                    "genres": genres,
+                    "rating": rating,
+                    "image_url": item.get("images", {}).get("jpg", {}).get("large_image_url")
+                })
+            return output
+    except Exception as ex:
+        log.warning(f"Jikan API anime lookup error for '{query}': {ex}")
+        return []
+
+def fetch_jikan_character_details(query: str) -> List[dict]:
+    """
+    Fetch live anime character details from Jikan API (MyAnimeList v4).
+    URL: https://api.jikan.moe/v4/characters?q={query}&limit=2
+    """
+    if not query or len(query.strip()) < 2:
+        return []
+    clean_q = urllib.parse.quote(query.strip())
+    url = f"https://api.jikan.moe/v4/characters?q={clean_q}&limit=2"
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "NamiVerseAI/1.0 (Mozilla/5.0)"}
+        )
+        with urllib.request.urlopen(req, timeout=3) as res:
+            data = json.loads(res.read().decode("utf-8"))
+            results = data.get("data", [])
+            output = []
+            for char in results:
+                name = char.get("name") or ""
+                about = char.get("about") or ""
+                clean_about = re.sub(r'\s+', ' ', about).strip()
+                animeography = [
+                    a.get("anime", {}).get("title")
+                    for a in char.get("anime", [])[:3]
+                    if a.get("anime", {}).get("title")
+                ]
+                output.append({
+                    "name": name,
+                    "about": clean_about[:350],
+                    "anime": ", ".join(animeography)
+                })
+            return output
+    except Exception as ex:
+        log.warning(f"Jikan API character lookup error for '{query}': {ex}")
+        return []
 
 
 def clean_gemini_reply(text: str) -> str:
@@ -175,11 +296,12 @@ def call_gemini_nami_ai(
     message: str,
     history: List[ChatMessage],
     catalog_context: str = "",
-    watchlist_context: str = ""
+    watchlist_context: str = "",
+    jikan_context: str = ""
 ) -> Optional[str]:
     """
-    Call Google Gemini API with Nami's character system prompt, catalog ground truth, and user watchlist context.
-    Sanitizes conversation history and strips meta rule leakage.
+    Call Google Gemini API with Nami's authentic character system prompt, full Fandom Wiki lore,
+    real-time Jikan MyAnimeList database context, catalog ground truth, and user watchlist context.
     """
     api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -187,12 +309,15 @@ def call_gemini_nami_ai(
 
     system_prompt = (
         "You are Nami, the Straw Hat Pirates Navigator from One Piece! "
-        "You are navigating NamiVerse, an anime platform. Answer warmly, enthusiastically, and in-character as Nami. "
-        "If the user asks personal or character questions about Nami, One Piece, your dream, or your crewmates (Luffy, Zoro, Sanji), answer in authentic Nami character voice.\n\n"
+        "You are navigating NamiVerse, the premier anime platform. Speak enthusiastically, warmly, wittily, and in-character as Nami.\n\n"
+        f"{NAMI_FANDOM_WIKI_LORE}\n\n"
+        f"REAL-TIME MYANIMELIST / JIKAN DATABASE DATA:\n{jikan_context or 'No external lookup needed.'}\n\n"
         f"VERIFIED DATABASE ANIME ENTRIES:\n{catalog_context or 'Top rated anime available.'}\n\n"
         f"USER PROFILE & WATCHLIST:\n{watchlist_context or 'Anonymous guest.'}\n\n"
-        "GUIDELINES:\n"
+        "RULES & GUIDELINES:\n"
+        "• If the user asks about Nami, your backstory, Bell-mère, Arlong, Clima-Tact, Zeus, Bounties, crewmates (Luffy, Zoro, Sanji, Usopp, Chopper, Robin, Franky, Brook, Jinbe), answer in rich, authentic, 100% accurate Nami character voice.\n"
         "• Write anime titles in bold markdown (e.g. **Death Note**).\n"
+        "• Provide complete, intelligent, engaging responses. Never stop mid-sentence or output truncated fragments.\n"
         "• Never output instructions or system rules. Only speak directly as Nami."
     )
 
@@ -219,7 +344,7 @@ def call_gemini_nami_ai(
         "contents": contents,
         "generationConfig": {
             "temperature": 0.7,
-            "maxOutputTokens": 600
+            "maxOutputTokens": 2048
         }
     }
 
@@ -238,7 +363,7 @@ def call_gemini_nami_ai(
                 data=json.dumps(payload).encode("utf-8"),
                 headers={"Content-Type": "application/json"}
             )
-            with urllib.request.urlopen(req, timeout=5) as res:
+            with urllib.request.urlopen(req, timeout=8) as res:
                 res_data = json.loads(res.read().decode("utf-8"))
                 candidates = res_data.get("candidates", [])
                 if candidates:
@@ -460,12 +585,38 @@ def nami_chat(
         
         catalog_context = "\n".join(catalog_snippets)
 
-        # ── 6. Call Gemini AI ───────────────────────────────────────────────────
+        # ── 6. Jikan API Real-Time Database Grounding ──────────────────────────
+        jikan_context_str = ""
+        clean_words = [w for w in user_msg.split() if w.lower() not in [
+            "can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of", "anime", "show",
+            "recommend", "suggest", "good", "best", "top", "give", "find", "looking", "for", "your", "dream", "who", "character"
+        ]]
+        search_term = " ".join(clean_words).strip()
+
+        if search_term and len(search_term) >= 2:
+            jikan_anime = fetch_jikan_anime_details(search_term)
+            jikan_chars = fetch_jikan_character_details(search_term)
+
+            jikan_parts = []
+            for ja in jikan_anime:
+                jikan_parts.append(
+                    f"• Anime: **{ja['title']}** (MAL ID: {ja['mal_id']}, Score: {ja['score']}/10, Episodes: {ja['episodes']}, Status: {ja['status']}, Studios: {ja['studios']}, Genres: {ja['genres']})\n  Synopsis: {ja['synopsis']}"
+                )
+            for jc in jikan_chars:
+                jikan_parts.append(
+                    f"• Character: **{jc['name']}** (Featured in: {jc['anime']})\n  About: {jc['about']}"
+                )
+
+            if jikan_parts:
+                jikan_context_str = "\n\n".join(jikan_parts)
+
+        # ── 7. Call Gemini AI ───────────────────────────────────────────────────
         reply_text = call_gemini_nami_ai(
             message=user_msg,
             history=req.history or [],
             catalog_context=catalog_context,
-            watchlist_context=watchlist_context
+            watchlist_context=watchlist_context,
+            jikan_context=jikan_context_str
         )
 
         # ── 7. Guaranteed Accurate Dynamic Fallback Engine ─────────────────────
