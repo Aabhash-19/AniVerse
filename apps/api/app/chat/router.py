@@ -486,9 +486,10 @@ def call_gemini_nami_ai(
     }
 
     models_to_try = [
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
         "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-2.0-flash-exp",
+        "gemini-2.5-flash",
         "gemini-flash-latest"
     ]
 
@@ -723,32 +724,44 @@ def nami_chat(
         catalog_context = "\n".join(catalog_snippets)
 
         # ── 6. Jikan API & AniList Real-Time Database Grounding ──────────────────
+        is_greeting_or_casual = (
+            lowered_msg in ["hi", "hello", "hey", "yo", "yosh", "nami", "hi nami", "hey nami", "hello nami", "yo nami", "sup", "howdy", "thanks", "thank you"] or
+            any(kw in lowered_msg for kw in [
+                "how are you", "what's up", "whats up", "how do you do", "good morning", "good evening", "good night",
+                "favourite crewmate", "favorite crewmate", "best crewmate", "love sanji", "like sanji", "favorite anime", "favourite anime",
+                "clima tact", "clima-tact", "where are you from", "your dream", "your bounty", "who are you", "tell me about yourself",
+                "about nami", "about you"
+            ])
+        )
+
         jikan_context_str = ""
         jikan_anime = []
-        clean_words = [w for w in user_msg.split() if w.lower() not in [
-            "can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of", "anime", "show",
-            "recommend", "suggest", "good", "best", "top", "give", "find", "looking", "for", "your", "dream", "who", "character"
-        ]]
-        search_term = " ".join(clean_words).strip()
 
-        if search_term and len(search_term) >= 2:
-            jikan_anime = fetch_jikan_anime_details(search_term)
-            if not jikan_anime:
-                jikan_anime = fetch_anilist_anime_details(search_term)
-            jikan_chars = fetch_jikan_character_details(search_term)
+        if not is_greeting_or_casual:
+            clean_words = [w for w in user_msg.split() if w.lower() not in [
+                "can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of", "anime", "show",
+                "recommend", "suggest", "good", "best", "top", "give", "find", "looking", "for", "your", "dream", "who", "character"
+            ]]
+            search_term = " ".join(clean_words).strip()
 
-            jikan_parts = []
-            for ja in jikan_anime:
-                jikan_parts.append(
-                    f"• Anime: **{ja['title']}** (MAL ID: {ja['mal_id']}, Score: {ja['score']}/10, Episodes: {ja['episodes']}, Status: {ja['status']}, Studios: {ja['studios']}, Genres: {ja['genres']})\n  Synopsis: {ja['synopsis']}"
-                )
-            for jc in jikan_chars:
-                jikan_parts.append(
-                    f"• Character: **{jc['name']}** (Featured in: {jc['anime']})\n  About: {jc['about']}"
-                )
+            if search_term and len(search_term) >= 2:
+                jikan_anime = fetch_jikan_anime_details(search_term)
+                if not jikan_anime:
+                    jikan_anime = fetch_anilist_anime_details(search_term)
+                jikan_chars = fetch_jikan_character_details(search_term)
 
-            if jikan_parts:
-                jikan_context_str = "\n\n".join(jikan_parts)
+                jikan_parts = []
+                for ja in jikan_anime:
+                    jikan_parts.append(
+                        f"• Anime: **{ja['title']}** (MAL ID: {ja['mal_id']}, Score: {ja['score']}/10, Episodes: {ja['episodes']}, Status: {ja['status']}, Studios: {ja['studios']}, Genres: {ja['genres']})\n  Synopsis: {ja['synopsis']}"
+                    )
+                for jc in jikan_chars:
+                    jikan_parts.append(
+                        f"• Character: **{jc['name']}** (Featured in: {jc['anime']})\n  About: {jc['about']}"
+                    )
+
+                if jikan_parts:
+                    jikan_context_str = "\n\n".join(jikan_parts)
 
         # ── 7. Call Gemini AI ───────────────────────────────────────────────────
         reply_text = call_gemini_nami_ai(
