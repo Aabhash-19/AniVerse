@@ -484,7 +484,7 @@ def call_gemini_nami_ai(
     Call Google Gemini API with Nami's authentic character system prompt, full Fandom Wiki lore,
     real-time Jikan MyAnimeList database context, catalog ground truth, and user watchlist context.
     """
-    api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
+    api_key = (settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY") or "").strip()
     if not api_key:
         return None
 
@@ -548,7 +548,10 @@ def call_gemini_nami_ai(
         req = urllib.request.Request(
             url,
             data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"}
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 NamiVerse/1.0"
+            }
         )
 
         for attempt in range(2):
@@ -797,10 +800,10 @@ def nami_chat(
                         pass
                     target_anime = None
 
-        # Build DB candidates list safely with fallback to AniList GraphQL
+        # Build DB candidates — only FINISHED shows (no unreleased/airing)
         db_candidates = []
         try:
-            query = db.query(Anime)
+            query = db.query(Anime).filter(Anime.status == AnimeStatus.FINISHED)
             if matched_genres:
                 clean_g = matched_genres[0]
                 query = query.join(Anime.genres).filter(Genre.name.ilike(f"%{clean_g}%"))
@@ -809,7 +812,9 @@ def nami_chat(
 
             db_candidates = query.order_by(Anime.average_score.desc()).limit(30).all()
             if not db_candidates:
-                db_candidates = db.query(Anime).order_by(Anime.average_score.desc()).limit(30).all()
+                db_candidates = db.query(Anime).filter(
+                    Anime.status == AnimeStatus.FINISHED
+                ).order_by(Anime.average_score.desc()).limit(30).all()
         except Exception as db_err:
             log.warning(f"DB candidates query warning: {db_err}")
             try:
@@ -1172,6 +1177,20 @@ def nami_chat(
 
                 elif any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money", "beli"]):
                     reply_text = random.choice(NAMI_BERRIES_REPLIES)
+
+                elif any(k in lowered_msg for k in ["favourite arc", "favorite arc", "best arc", "fav arc",
+                                                     "favourite one piece", "favorite one piece", "favourite op arc",
+                                                     "best one piece arc", "favourite saga", "favorite saga"]):
+                    reply_text = (
+                        "Fufufu! My favourite One Piece arc? Easy! 🍊\n\n"
+                        "**The Arlong Park Arc** holds a special place in my heart — it's MY arc, the one where Luffy finally smashed "
+                        "Arlong's face into his own map room and freed my village after 8 years of suffering! 🍊⛵\n\n"
+                        "But if I'm being objective about storytelling quality:\n"
+                        "• **Marineford** — the most emotionally devastating war in One Piece history\n"
+                        "• **Enies Lobby** — Robin's 'I want to live!' still gives me chills every time\n"
+                        "• **Wano** — the grandest stage, samurai aesthetics, and Zoro finally going full Conqueror's Haki!\n\n"
+                        "What's YOUR favourite arc, Irray? 🧭"
+                    )
 
                 elif any(k in lowered_msg for k in ["one piece", "pirate", "straw hat", "grand line"]):
                     reply_text = random.choice(NAMI_ONE_PIECE_REPLIES)
