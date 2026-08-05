@@ -106,20 +106,42 @@ OFFICIAL NAMI CHARACTER KNOWLEDGE BASE (ONE PIECE FANDOM WIKI):
 def fetch_jikan_anime_details(query: str) -> List[dict]:
     """
     Fetch live anime data from Jikan API (MyAnimeList v4) for rich real-time context.
-    URL: https://api.jikan.moe/v4/anime?q={query}&limit=3
+    Defaults to Season 1 / Main title unless user explicitly specifies another season/movie.
+    URL: https://api.jikan.moe/v4/anime?q={query}&limit=5
     """
     if not query or len(query.strip()) < 2:
         return []
     clean_q = urllib.parse.quote(query.strip())
-    url = f"https://api.jikan.moe/v4/anime?q={clean_q}&limit=3&sfw=true"
+    url = f"https://api.jikan.moe/v4/anime?q={clean_q}&limit=5&sfw=true"
     try:
         req = urllib.request.Request(
             url,
             headers={"User-Agent": "NamiVerseAI/1.0 (Mozilla/5.0)"}
         )
-        with urllib.request.urlopen(req, timeout=3) as res:
+        with urllib.request.urlopen(req, timeout=4) as res:
             data = json.loads(res.read().decode("utf-8"))
             results = data.get("data", [])
+            if not results:
+                return []
+
+            # Check if user explicitly asked for another season or movie
+            has_season_specifier = any(kw in query.lower() for kw in [
+                "season 2", "season 3", "season 4", "season 5", "s2", "s3", "s4", "s5",
+                "2nd season", "3rd season", "4th season", "final season", "part 2", "part 3", "movie", "film"
+            ])
+
+            if not has_season_specifier:
+                # Prioritize Season 1 / main original series entry
+                s1_matches = [
+                    item for item in results
+                    if not any(skw in (item.get("title_english") or item.get("title") or "").lower() for skw in [
+                        "season 2", "season 3", "season 4", "2nd season", "3rd season", "4th season",
+                        "final season", "part 2", "part 3", "cour 2", "movie", "film"
+                    ])
+                ]
+                if s1_matches:
+                    results = s1_matches + [r for r in results if r not in s1_matches]
+
             output = []
             for item in results:
                 title = item.get("title_english") or item.get("title") or ""
@@ -134,7 +156,7 @@ def fetch_jikan_anime_details(query: str) -> List[dict]:
                 output.append({
                     "title": title,
                     "mal_id": item.get("mal_id"),
-                    "synopsis": clean_syn[:350],
+                    "synopsis": clean_syn[:400],
                     "score": score,
                     "episodes": episodes,
                     "status": status,
@@ -184,6 +206,62 @@ def fetch_jikan_character_details(query: str) -> List[dict]:
     except Exception as ex:
         log.warning(f"Jikan API character lookup error for '{query}': {ex}")
         return []
+
+
+def get_nami_lore_fallback(lowered_msg: str) -> Optional[str]:
+    """
+    Returns authentic Nami self-knowledge lore response whenever the query is about Nami,
+    her weapons, backstory, bounty, crew, or personal preferences.
+    Guarantees Nami ALWAYS knows herself with 100% precision even if Gemini API is unreachable.
+    """
+    msg = lowered_msg.lower()
+
+    if any(k in msg for k in ["clima", "tact", "clima-tact", "climatact", "weapon", "zeus", "weather rod", "thunderbolt"]):
+        return (
+            "My **Clima-Tact (天候棒)** is my ultimate weather weapon! ⚡\n\n"
+            "Usopp originally built the first version for me out of hollow steel poles for party tricks, but I modified it into a deadly weather weapon using Heat Balls, Cool Balls, and Thunder Balls!\n\n"
+            "After studying weather science for 2 years on the sky island of **Weatheria** under Haredas, I upgraded it to the **Sorcery Clima-Tact**. And now? Big Mom's former homie cloud **Zeus** is fused right inside my Clima-Tact! I can summon Thunderbolt Tempos, Mirage Tempos, and electric storms that can wipe out entire fleets! 🍊⚡"
+        )
+    elif any(k in msg for k in ["where", "from", "origin", "hometown", "born", "home", "village", "bell-mere", "bellmere", "nojiko", "arlong"]):
+        return (
+            "I was raised in **Cocoyasi Village** on the Conomi Islands in the East Blue! 🍊\n\n"
+            "My foster mother, **Bell-mère**, raised me and my adopted sister Nojiko on her tangerine orchard. Bell-mère gave everything for us... even sacrificing her life to the fishman tyrant Arlong because she refused to deny we were her daughters.\n\n"
+            "I spent 8 agonizing years stealing from pirates to buy back my village for 💰 100,000,000 Berries. But Luffy destroyed Arlong Park, freed my home, and I officially joined the Straw Hat Pirates as their Navigator! ⛵✨"
+        )
+    elif any(k in msg for k in ["bounty", "reward", "wanted", "cat burglar", "berries", "berry", "money", "gold"]):
+        return (
+            "My current official Marine bounty is **💰 366,000,000 Berries** after our raid on Onigashima in Wano! The World Government calls me **'Cat Burglar' Nami (泥棒猫)**! 💰✨\n\n"
+            "And remember... money makes the world go round! While first advice on NamiVerse is free, any gold chests you find belong to me! Fufufu~ 🍊"
+        )
+    elif any(k in msg for k in ["dream", "goal", "map", "world map", "cartography"]):
+        return (
+            "My dream is to draw a complete, perfect map of the entire world (**世界地図**)! 🗺️\n\n"
+            "As Navigator of the Straw Hat Pirates, I've charted every sea from the East Blue to the New World—and here on NamiVerse, I'm charting the entire ocean of anime for you! ⛵🍊"
+        )
+    elif any(k in msg for k in ["luffy", "captain"]):
+        return "Luffy (Monkey D. Luffy) is our captain! He's reckless, eats all our meat, and gets us into crazy fights—but he's going to be King of the Pirates! 🍖👑"
+    elif any(k in msg for k in ["zoro", "swordsman"]):
+        return "Zoro? That mosshead is probably lost again on some random island! Don't ask him for directions unless you want to end up in the middle of the sea! ⚔️🧭"
+    elif any(k in msg for k in ["sanji", "cook"]):
+        return "Sanji is our ship's cook! He always makes the most delicious meals and tangerine drinks for me ('Nami-san~!'), even if he gets a bit too passionate! 🍹💕"
+    elif any(k in msg for k in ["usopp", "sniper"]):
+        return "Usopp is our sniper and the genius inventor who originally built my Clima-Tact! He can be a big coward, but he's super reliable when it counts! 🎯"
+    elif any(k in msg for k in ["chopper", "doctor"]):
+        return "Chopper is our adorable reindeer doctor! He's like a cute little younger brother to me and keeps everyone healthy! 🌸"
+    elif any(k in msg for k in ["robin", "archaeologist"]):
+        return "Nico Robin ('Robin-chan') is our calm, brilliant archaeologist! She's like a wonderful older sister figure to me! 📖"
+    elif any(k in msg for k in ["franky", "shipwright", "sunny", "thousand sunny"]):
+        return "Franky is our super cyborg shipwright! He built our amazing ship, the **Thousand Sunny**! 🚢"
+    elif any(k in msg for k in ["brook", "skeleton", "musician"]):
+        return "Brook is our skeleton musician! He keeps asking to see my panties, so I have to kick him into the ocean regularly! Yohohoho~! 🎻"
+    elif any(k in msg for k in ["jinbe", "helmsman"]):
+        return "Jinbe is our wise Knight of the Sea and helmsman! Steering the Sunny through massive waves with him is an absolute breeze! 🌊"
+    elif any(k in msg for k in ["who are you", "tell me about yourself", "about nami", "about you"]):
+        return (
+            "Yosh! I'm **Nami**, official Navigator of the Straw Hat Pirates! 🍊⛵\n\n"
+            "I steer the Thousand Sunny through Grand Line storms, draw maps of the world, and keep Luffy, Zoro, and Sanji in line! My bounty is 💰 366,000,000 Berries, my favorite things are tangerines and money, and here on NamiVerse, I'm your personal anime guide! Ask me anything about anime or my crew! 🍊"
+        )
+    return None
 
 
 def clean_gemini_reply(text: str) -> str:
@@ -621,12 +699,9 @@ def nami_chat(
 
         # ── 7. Guaranteed Accurate Dynamic Fallback Engine ─────────────────────
         if not reply_text:
-            if any(k in lowered_msg for k in ["dream", "goal", "map"]):
-                reply_text = NAMI_DREAM_REPLY
-            elif any(k in lowered_msg for k in ["luffy", "captain"]):
-                reply_text = NAMI_LUFFY_REPLY
-            elif any(k in lowered_msg for k in ["zoro", "swordsman"]):
-                reply_text = NAMI_ZORO_REPLY
+            nami_lore_hit = get_nami_lore_fallback(lowered_msg)
+            if nami_lore_hit:
+                reply_text = nami_lore_hit
             elif target_anime:
                 t_name = target_anime.title_english or target_anime.title_romaji or target_anime.title_native
                 g_str = ", ".join([genre.name for genre in target_anime.genres[:3]])
@@ -653,6 +728,37 @@ def nami_chat(
         recs_formatted = []
         all_recs_pool = []
         seen_ids = set()
+
+        # If Jikan API returned anime entries, build cards for them first so NamiVerse embeddings are always present!
+        if 'jikan_anime' in locals() and jikan_anime:
+            for ja in jikan_anime:
+                t_str = ja["title"]
+                slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
+                score_val = float(ja["score"]) if (isinstance(ja["score"], (int, float)) and ja["score"] > 0) else None
+                g_list = [g.strip() for g in ja.get("genres", "").split(",") if g.strip()][:3]
+
+                # Check DB for local anime match
+                local_match = db.query(Anime).filter(
+                    or_(
+                        Anime.title_english.ilike(f"%{t_str}%"),
+                        Anime.title_romaji.ilike(f"%{t_str}%")
+                    )
+                ).first()
+
+                card_id = local_match.id if local_match else ja["mal_id"]
+                cover_url = local_match.cover_large_url if (local_match and local_match.cover_large_url) else ja.get("image_url")
+                card_slug = local_match.slug if local_match else slug_clean
+
+                if card_id not in seen_ids:
+                    seen_ids.add(card_id)
+                    all_recs_pool.append(RecommendedAnimeCard(
+                        id=card_id,
+                        slug=card_slug,
+                        title=t_str,
+                        cover_url=cover_url,
+                        score=score_val,
+                        genres=g_list
+                    ))
 
         for a in db_candidates:
             if a.id not in user_completed_ids and a.id not in seen_ids:
@@ -688,7 +794,7 @@ def nami_chat(
                         genres=m.get("genres", [])[:3]
                     ))
 
-        if is_recommendation_request or is_airing_request or is_upcoming_request or target_anime or matched_genres or ("10/10" in lowered_msg) or ("masterpiece" in lowered_msg):
+        if is_recommendation_request or is_airing_request or is_upcoming_request or target_anime or matched_genres or ("10/10" in lowered_msg) or ("masterpiece" in lowered_msg) or bool(all_recs_pool):
             recs_formatted = all_recs_pool[:4]
 
         return ChatResponse(
