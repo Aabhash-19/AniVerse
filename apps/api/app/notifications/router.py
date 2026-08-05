@@ -369,3 +369,72 @@ def get_user_activity_logs(
     activities.sort(key=lambda x: x.timestamp, reverse=True)
     return activities
 
+
+# --- Web Push Notification Endpoints ---
+
+class PushSubscribeRequest(BaseModel):
+    endpoint: str
+    p256dh: str
+    auth: str
+
+
+@router.get("/notifications/push/public-key")
+def get_push_public_key():
+    from app.notifications.webpush import get_vapid_public_key
+    return {"public_key": get_vapid_public_key()}
+
+
+@router.post("/notifications/push/subscribe", status_code=status.HTTP_201_CREATED)
+def subscribe_push_notifications(
+    req: PushSubscribeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from app.notifications.models import PushSubscription
+    existing = db.query(PushSubscription).filter(PushSubscription.endpoint == req.endpoint).first()
+    if not existing:
+        sub = PushSubscription(
+            user_id=current_user.id,
+            endpoint=req.endpoint,
+            p256dh=req.p256dh,
+            auth=req.auth
+        )
+        db.add(sub)
+    else:
+        existing.user_id = current_user.id
+        existing.p256dh = req.p256dh
+        existing.auth = req.auth
+
+    db.commit()
+    return {"message": "Push notification device registered successfully."}
+
+
+@router.post("/notifications/push/test")
+def test_nami_push_notification(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from app.notifications.models import PushSubscription
+    from app.notifications.webpush import send_nami_push
+
+    subs = db.query(PushSubscription).filter(PushSubscription.user_id == current_user.id).all()
+    if not subs:
+        raise HTTPException(
+            status_code=404,
+            detail="No push notification device registered for your account. Enable notifications in your settings first!"
+        )
+
+    sent_count = 0
+    title = "🍊 Nami's Broadcast Alert! ⛵"
+    body = f"Yosh, {current_user.username or 'Mina-san'}! NamiVerse Web Push Alerts are live on your device! You'll get instant alerts whenever a show on your list airs! 💰"
+
+    for sub in subs:
+        info = {"endpoint": sub.endpoint, "p256dh": sub.p256dh, "auth": sub.auth}
+        if send_nami_push(info, title=title, body=body, url="/calendar"):
+            sent_count += 1
+
+    return {
+        "message": f"Successfully sent Nami broadcast alert to {sent_count} device(s)!",
+        "sent_count": sent_count
+    }
+

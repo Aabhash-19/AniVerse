@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Header from "@/components/layout/Header";
+import PushNotificationManager from "@/components/notifications/PushNotificationManager";
 import { fetchWithCredentials, getApiUrl } from "@/lib/auth";
 
 interface AiringEvent {
@@ -309,7 +310,7 @@ export default function CalendarPage() {
                   onClick={() => setViewMode(view.id as any)}
                   className={`text-xs px-4 py-2 rounded-lg font-bold transition-all ${
                     viewMode === view.id
-                      ? "bg-purple-600 text-white shadow-md shadow-purple-950/20"
+                      ? "bg-purple-600 text-white shadow-md shadow-purple-950/40"
                       : "text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
@@ -319,6 +320,9 @@ export default function CalendarPage() {
             </div>
           </div>
         </div>
+
+        {/* Nami Web Push Broadcast Notification Manager */}
+        <PushNotificationManager />
 
         {/* Nami's Airing Weather Report Banner */}
         <div className="bg-gradient-to-r from-zinc-900 via-amber-950/20 to-zinc-900 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-4 shadow-lg">
