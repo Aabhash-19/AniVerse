@@ -787,7 +787,11 @@ def nami_chat(
         # Build DB candidates — only FINISHED shows (no unreleased/airing)
         db_candidates = []
         try:
-            query = db.query(Anime).filter(Anime.status == AnimeStatus.FINISHED)
+            query = db.query(Anime).filter(
+                Anime.status == AnimeStatus.FINISHED,
+                Anime.average_score >= 65,
+                Anime.average_score <= 97  # cap: exclude inflated 100/100 single-vote entries
+            )
             if matched_genres:
                 clean_g = matched_genres[0]
                 query = query.join(Anime.genres).filter(Genre.name.ilike(f"%{clean_g}%"))
@@ -795,12 +799,6 @@ def nami_chat(
                 query = query.filter(Anime.id == target_anime.id)
 
             db_candidates = query.order_by(Anime.average_score.desc()).limit(30).all()
-            if not db_candidates:
-                db_candidates = db.query(Anime).filter(
-                    Anime.status == AnimeStatus.FINISHED,
-                    Anime.average_score >= 65,
-                    Anime.average_score <= 97  # cap: exclude inflated niche shows with perfect scores
-                ).order_by(Anime.average_score.desc()).limit(30).all()
         except Exception as db_err:
             log.warning(f"DB candidates query warning: {db_err}")
             try:
@@ -923,8 +921,8 @@ def nami_chat(
             all_recs_pool = []
 
         # Pillar 2: Anime Title Search / Synopsis Query (AniList only)
-        # Guard: skip if this is a recommendation/genre request — let Pillar 3 handle it
-        elif not is_greeting_or_casual and not is_recommendation_request and (anilist_anime or is_plot_request or len(user_msg.split()) <= 4):
+        # Guard: skip if recommendation, genre, airing, or upcoming request — let Pillar 3 handle it
+        elif not is_greeting_or_casual and not is_recommendation_request and not is_airing_request and not is_upcoming_request and (anilist_anime or is_plot_request or len(user_msg.split()) <= 4):
             if not anilist_anime:
                 search_query_raw = " ".join([w for w in user_msg.split() if w.lower() not in ["can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of"]]).strip()
                 if search_query_raw:
@@ -1004,7 +1002,18 @@ def nami_chat(
 
                 recs_formatted = all_recs_pool[:4]
             else:
-                reply_text = f"Yosh! I searched my logbook for **\"{user_msg.strip()}\"**, but couldn't find a matching anime title! Check the spelling or ask me to recommend a genre! 🍊"
+                # If no anime title matched, fall back to Gemini AI instead of failing with a static error
+                ai_reply = call_gemini_nami_ai(
+                    message=user_msg,
+                    history=req.history or [],
+                    catalog_context=catalog_context,
+                    watchlist_context=watchlist_context,
+                    jikan_context=anilist_context_str
+                )
+                if ai_reply:
+                    reply_text = ai_reply
+                else:
+                    reply_text = f"Yosh! I searched my logbook for **\"{user_msg.strip()}\"**, but couldn't find a matching anime title! Check the spelling or ask me to recommend a genre! 🍊"
                 recs_formatted = []
                 all_recs_pool = []
 
