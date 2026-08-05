@@ -788,76 +788,44 @@ def nami_chat(
                 if jikan_parts:
                     jikan_context_str = "\n\n".join(jikan_parts)
 
-        # ── 7. Call Gemini AI ───────────────────────────────────────────────────
-        reply_text = call_gemini_nami_ai(
-            message=user_msg,
-            history=req.history or [],
-            catalog_context=catalog_context,
-            watchlist_context=watchlist_context,
-            jikan_context=jikan_context_str
-        )
+        # ── 7. 4-PILLAR INTENT DISPATCHER & CARD GENERATOR ─────────────────────
 
-        # ── 7. Guaranteed Accurate Dynamic Fallback Engine ─────────────────────
-        if not reply_text:
-            nami_lore_hit = get_nami_lore_fallback(lowered_msg)
-            if nami_lore_hit:
-                reply_text = nami_lore_hit
-            elif jikan_anime:
-                ja = jikan_anime[0]
-                reply_text = f"Yosh! Here is the lowdown on **{ja['title']}**:\n\n{ja['synopsis']}\n\n⭐ **Score:** {ja['score']} | **Episodes:** {ja['episodes']} | **Genres:** {ja['genres']} 🍊"
-            elif target_anime:
-                t_name = target_anime.title_english or target_anime.title_romaji or target_anime.title_native
-                g_str = ", ".join([genre.name for genre in target_anime.genres[:3]])
-                raw_desc = getattr(target_anime, "description", None) or "A fantastic masterpiece entry in our NamiVerse catalog!"
-                desc_clean = re.sub(r'<[^>]+>', '', raw_desc).strip()
-                score_str = f"{target_anime.average_score:.1f}/100" if target_anime.average_score else "N/A"
-                reply_text = f"Yosh! Here is the lowdown on **{t_name}**:\n\n{desc_clean}\n\n⭐ **Score:** {score_str} | **Genres:** {g_str} 🍊"
-            elif "10/10" in lowered_msg or "masterpiece" in lowered_msg:
-                reply_text = "Yosh! Here are certified 10/10 masterpiece anime from our logbook! 🏆"
-            elif matched_genres:
-                genre_name = matched_genres[0]
-                reply_text = f"Yosh! For **{genre_name}** lovers, I've mapped out top-tier recommendations from our logbook! Which one looks best for your next watch? 🍊"
-            elif is_recommendation_request:
-                reply_text = "Yosh! Here are some top-tier recommendations from our logbook! 🧭"
-            else:
-                if any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money"]):
-                    reply_text = random.choice(NAMI_BERRIES_REPLIES)
-                elif any(k in lowered_msg for k in ["one piece", "pirate", "straw hat"]):
-                    reply_text = random.choice(NAMI_ONE_PIECE_REPLIES)
-                else:
-                    if is_greeting_or_casual:
-                        greetings = [
-                            "Yosh! Hey there! I'm Nami, your official Straw Hat Navigator! How are you doing today? Ready to talk anime, or just dropping by to say hi? 🍊⛵",
-                            "Hey! Good to see you! What's on your mind today? Want some anime recommendations, or just here to hang out on the Sunny? 🍊",
-                            "Yosh! Weather report looks great today! What kind of anime vibe are you in the mood for? 🧭"
-                        ]
-                        reply_text = random.choice(greetings)
-                    else:
-                        funny_fallbacks = [
-                            "Fufufu! That's an intriguing question! As Navigator of the Straw Hat Pirates, I'd say every great question leads to an even greater anime adventure! What else is on your mind? 🍊⛵",
-                            "Ah, asking about that? Sailing the Grand Line has taught me to expect the unexpected! What kind of anime mood are you in today? 💰✨",
-                            "Fufufu! You've got great curiosity! Speaking as your Navigator, let me know what you'd like to explore next! 🧭🍊"
-                        ]
-                        reply_text = random.choice(funny_fallbacks)
+        # Pillar 1: Nami & Straw Hat Crew Lore (Fandom Wiki Base)
+        nami_lore_hit = get_nami_lore_fallback(lowered_msg)
 
-        # ── 8. Select Best Recommended Anime Cards & Build All Recommendations Pool ──
-        recs_formatted = []
-        all_recs_pool = []
-        seen_ids = set()
+        if nami_lore_hit:
+            reply_text = nami_lore_hit
+            recs_formatted = []
+            all_recs_pool = []
 
-        if jikan_anime:
-            for ja in jikan_anime:
-                t_str = ja["title"]
+        # Pillar 2: Anime Title Search / Synopsis Query (Jikan + AniList)
+        elif jikan_anime:
+            ja = jikan_anime[0]
+            score_str = ja["score"] if ja.get("score") else "N/A"
+            ep_str = ja["episodes"] if ja.get("episodes") else "Ongoing"
+            studio_str = ja["studios"] if ja.get("studios") else "Studio"
+            genre_str = ja["genres"] if ja.get("genres") else "Anime"
+
+            reply_text = (
+                f"Yosh! Here is the lowdown on **{ja['title']}**:\n\n"
+                f"{ja['synopsis']}\n\n"
+                f"⭐ **Score:** {score_str}/10 | **Episodes:** {ep_str} | **Studio:** {studio_str} | **Genres:** {genre_str} 🍊"
+            )
+
+            all_recs_pool = []
+            seen_ids = set()
+            for item in jikan_anime:
+                t_str = item["title"]
                 slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
                 
                 score_val = None
-                if ja.get("score") and str(ja["score"]) != "N/A":
+                if item.get("score") and str(item["score"]) != "N/A":
                     try:
-                        score_val = float(ja["score"])
+                        score_val = float(item["score"])
                     except Exception:
                         score_val = None
 
-                g_list = [g.strip() for g in ja.get("genres", "").split(",") if g.strip()][:3]
+                g_list = [g.strip() for g in item.get("genres", "").split(",") if g.strip()][:3]
 
                 local_match = db.query(Anime).filter(
                     or_(
@@ -866,8 +834,8 @@ def nami_chat(
                     )
                 ).first()
 
-                card_id = local_match.id if local_match else ja["mal_id"]
-                cover_url = local_match.cover_large_url if (local_match and local_match.cover_large_url) else ja.get("image_url")
+                card_id = local_match.id if local_match else item["mal_id"]
+                cover_url = local_match.cover_large_url if (local_match and local_match.cover_large_url) else item.get("image_url")
                 card_slug = local_match.slug if local_match else slug_clean
 
                 if card_id not in seen_ids:
@@ -881,44 +849,83 @@ def nami_chat(
                         genres=g_list
                     ))
 
-        for a in db_candidates:
-            if a.id not in user_completed_ids and a.id not in seen_ids:
-                seen_ids.add(a.id)
-                t_str = a.title_english or a.title_romaji or a.title_native
-                card_obj = RecommendedAnimeCard(
-                    id=a.id,
-                    slug=a.slug,
-                    title=t_str,
-                    cover_url=a.cover_large_url,
-                    score=float(a.average_score) if a.average_score else None,
-                    genres=[g.name for g in a.genres[:3]]
-                )
-                all_recs_pool.append(card_obj)
-
-        if (is_recommendation_request or matched_genres or "10/10" in lowered_msg or "masterpiece" in lowered_msg) and len(all_recs_pool) < 20:
-            target_g = matched_genres[0] if matched_genres else None
-            extra_media = fetch_anilist_genre_anime(target_g)
-            for m in extra_media:
-                m_id = m["id"]
-                if m_id not in seen_ids:
-                    seen_ids.add(m_id)
-                    t_str = m["title"]["english"] or m["title"]["romaji"]
-                    s_val = float(m["meanScore"]) if m.get("meanScore") else None
-                    slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
-                    all_recs_pool.append(RecommendedAnimeCard(
-                        id=m_id,
-                        slug=slug_clean,
-                        title=t_str,
-                        cover_url=m.get("coverImage", {}).get("extraLarge"),
-                        score=s_val,
-                        genres=m.get("genres", [])[:3]
-                    ))
-
-        # ONLY attach recommendation card embeddings when discussing anime / recommendations / plot queries
-        if not is_greeting_or_casual and (is_recommendation_request or is_airing_request or is_upcoming_request or target_anime or matched_genres or is_plot_request or (jikan_anime and len(jikan_anime) > 0)):
             recs_formatted = all_recs_pool[:4]
+
+        # Pillar 3: Genre Recommendations & Specific Recommendation Queries
+        elif is_recommendation_request or matched_genres or is_airing_request or is_upcoming_request:
+            if matched_genres:
+                g_name = matched_genres[0]
+                reply_text = f"Yosh! For **{g_name}** lovers, I've mapped out top-tier recommendations from our logbook! Which one looks best for your next watch? 🍊"
+            elif is_airing_request:
+                reply_text = "Yosh! Here are top anime currently airing right now! ⛵"
+            elif is_upcoming_request:
+                reply_text = "Yosh! Here are upcoming anime releases charted on our logbook! 🧭"
+            else:
+                reply_text = "Yosh! Here are top-tier recommendations from our logbook! 🧭"
+
+            all_recs_pool = []
+            seen_ids = set()
+            for a in db_candidates:
+                if a.id not in user_completed_ids and a.id not in seen_ids:
+                    seen_ids.add(a.id)
+                    t_str = a.title_english or a.title_romaji or a.title_native
+                    card_obj = RecommendedAnimeCard(
+                        id=a.id,
+                        slug=a.slug,
+                        title=t_str,
+                        cover_url=a.cover_large_url,
+                        score=float(a.average_score) if a.average_score else None,
+                        genres=[g.name for g in a.genres[:3]]
+                    )
+                    all_recs_pool.append(card_obj)
+
+            if len(all_recs_pool) < 20:
+                target_g = matched_genres[0] if matched_genres else None
+                extra_media = fetch_anilist_genre_anime(target_g)
+                for m in extra_media:
+                    m_id = m["id"]
+                    if m_id not in seen_ids:
+                        seen_ids.add(m_id)
+                        t_str = m["title"]["english"] or m["title"]["romaji"]
+                        s_val = float(m["meanScore"]) if m.get("meanScore") else None
+                        slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
+                        all_recs_pool.append(RecommendedAnimeCard(
+                            id=m_id,
+                            slug=slug_clean,
+                            title=t_str,
+                            cover_url=m.get("coverImage", {}).get("extraLarge"),
+                            score=s_val,
+                            genres=m.get("genres", [])[:3]
+                        ))
+
+            recs_formatted = all_recs_pool[:4]
+
+        # Pillar 4: Fun, Random & Casual AI Conversation (Gemini AI)
         else:
+            gemini_reply = call_gemini_nami_ai(
+                message=user_msg,
+                history=req.history or [],
+                catalog_context=catalog_context,
+                watchlist_context=watchlist_context,
+                jikan_context=jikan_context_str
+            )
+            if gemini_reply:
+                reply_text = gemini_reply
+            else:
+                if any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money"]):
+                    reply_text = random.choice(NAMI_BERRIES_REPLIES)
+                elif any(k in lowered_msg for k in ["one piece", "pirate", "straw hat"]):
+                    reply_text = random.choice(NAMI_ONE_PIECE_REPLIES)
+                else:
+                    greetings = [
+                        "Yosh! Hey there! I'm Nami, your official Straw Hat Navigator! How are you doing today? Ready to talk anime, or just dropping by to say hi? 🍊⛵",
+                        "Hey! Good to see you! What's on your mind today? Want some anime recommendations, or just here to hang out on the Sunny? 🍊",
+                        "Yosh! Weather report looks great today! What kind of anime vibe are you in the mood for? 🧭"
+                    ]
+                    reply_text = random.choice(greetings)
+
             recs_formatted = []
+            all_recs_pool = []
 
         return ChatResponse(
             reply=reply_text,
