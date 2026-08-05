@@ -528,12 +528,13 @@ def call_gemini_nami_ai(
         "parts": [{"text": full_instruction}]
     })
 
+    # Models ordered by: cheapest quota usage first so free tier lasts longer
     models_to_try = [
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-001",
-        "gemini-2.5-flash-preview-05-20",
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-latest"
+        "gemini-2.0-flash-lite",      # cheapest, lowest quota usage ✅
+        "gemini-2.0-flash",           # standard free tier ✅
+        "gemini-1.5-flash-8b",        # ultra-lightweight fallback ✅
+        "gemini-1.5-flash-002",       # versioned 1.5 flash ✅
+        "gemini-1.5-pro-001",         # pro fallback ✅
     ]
 
     for model_name in models_to_try:
@@ -554,7 +555,7 @@ def call_gemini_nami_ai(
             }
         )
 
-        for attempt in range(2):
+        for attempt in range(3):
             try:
                 with urllib.request.urlopen(req, timeout=12) as res:
                     res_data = json.loads(res.read().decode("utf-8"))
@@ -567,9 +568,11 @@ def call_gemini_nami_ai(
                             if cleaned_resp:
                                 return cleaned_resp
             except urllib.error.HTTPError as he:
-                if he.code == 429 and attempt == 0:
-                    time.sleep(0.4)
+                if he.code == 429 and attempt < 2:
+                    time.sleep(2.0)   # proper backoff for rate limit
                     continue
+                elif he.code == 404:
+                    break             # model doesn't exist, try next immediately
                 else:
                     log.warning(f"Gemini API model {model_name} HTTP {he.code}: {he}")
                     break
