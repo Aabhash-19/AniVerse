@@ -388,8 +388,8 @@ def fetch_anilist_genre_anime(genre_name: Optional[str] = None) -> List[dict]:
               type: ANIME,
               genre: $genre,
               status: FINISHED,
+              countryOfOrigin: "JP",
               sort: [POPULARITY_DESC, SCORE_DESC],
-              popularity_greater: 5000,
               averageScore_greater: 60
             ) {
               id
@@ -410,8 +410,8 @@ def fetch_anilist_genre_anime(genre_name: Optional[str] = None) -> List[dict]:
             media(
               type: ANIME,
               status: FINISHED,
+              countryOfOrigin: "JP",
               sort: [POPULARITY_DESC, SCORE_DESC],
-              popularity_greater: 10000,
               averageScore_greater: 70
             ) {
               id
@@ -797,7 +797,9 @@ def nami_chat(
             db_candidates = query.order_by(Anime.average_score.desc()).limit(30).all()
             if not db_candidates:
                 db_candidates = db.query(Anime).filter(
-                    Anime.status == AnimeStatus.FINISHED
+                    Anime.status == AnimeStatus.FINISHED,
+                    Anime.average_score >= 65,
+                    Anime.average_score <= 97  # cap: exclude inflated niche shows with perfect scores
                 ).order_by(Anime.average_score.desc()).limit(30).all()
         except Exception as db_err:
             log.warning(f"DB candidates query warning: {db_err}")
@@ -921,7 +923,8 @@ def nami_chat(
             all_recs_pool = []
 
         # Pillar 2: Anime Title Search / Synopsis Query (AniList only)
-        elif not is_greeting_or_casual and (anilist_anime or is_plot_request or (len(user_msg.split()) <= 4 and not is_recommendation_request)):
+        # Guard: skip if this is a recommendation/genre request — let Pillar 3 handle it
+        elif not is_greeting_or_casual and not is_recommendation_request and (anilist_anime or is_plot_request or len(user_msg.split()) <= 4):
             if not anilist_anime:
                 search_query_raw = " ".join([w for w in user_msg.split() if w.lower() not in ["can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of"]]).strip()
                 if search_query_raw:
