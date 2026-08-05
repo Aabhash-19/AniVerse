@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import CookieBanner from "@/components/layout/CookieBanner";
 import NamiChatWidget from "@/components/layout/NamiChatWidget";
+import PwaInstallPrompt from "@/components/layout/PwaInstallPrompt";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,13 +15,28 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#09090b",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: {
-    default: "NamiVerse — Anime Discovery, Media & Watchlist Platform",
+    default: "NamiVerse — AI Anime Discovery, Media & Watchlist Platform",
     template: "%s | NamiVerse",
   },
   description:
     "NamiVerse is an AI-powered anime discovery platform. Browse a verified catalogue, watch official trailers, track your watchlist, and get personalized recommendations — all for free.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "NamiVerse",
+  },
   keywords: [
     "anime",
     "anime catalogue",
@@ -29,6 +45,8 @@ export const metadata: Metadata = {
     "official anime media",
     "anime recommendation",
     "NamiVerse",
+    "PWA",
+    "anime app",
   ],
   authors: [{ name: "NamiVerse Team" }],
   openGraph: {
@@ -41,9 +59,12 @@ export const metadata: Metadata = {
       "AI-powered anime discovery with official media, verified catalogues, progress tracking, and recommendations.",
   },
   icons: {
-    icon: "/nami-wano-avatar.jpg",
-    shortcut: "/nami-wano-avatar.jpg",
-    apple: "/nami-wano-avatar.jpg",
+    icon: [
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/icons/icon-192x192.png",
+    apple: "/icons/apple-touch-icon.png",
   },
   twitter: {
     card: "summary_large_image",
@@ -73,6 +94,7 @@ export default function RootLayout({
         {children}
         <CookieBanner />
         <NamiChatWidget />
+        <PwaInstallPrompt />
       </body>
     </html>
   );
