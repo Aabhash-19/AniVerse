@@ -739,14 +739,20 @@ def nami_chat(
 
             if search_term and len(search_term) >= 3:
                 try:
-                    target_anime = db.query(Anime).filter(
-                        or_(
-                            Anime.title_english.ilike(f"%{search_term}%"),
-                            Anime.title_romaji.ilike(f"%{search_term}%"),
-                            Anime.title_native.ilike(f"%{search_term}%")
-                        )
-                    ).first()
-                except Exception:
+                    clean_t = re.sub(r'[^a-zA-Z0-9\s]', '', search_term)
+                    if clean_t:
+                        target_anime = db.query(Anime).filter(
+                            or_(
+                                Anime.title_english.ilike(f"%{clean_t}%"),
+                                Anime.title_romaji.ilike(f"%{clean_t}%")
+                            )
+                        ).first()
+                except Exception as ex:
+                    log.warning(f"Target anime query error for '{search_term}': {ex}")
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
                     target_anime = None
 
         # Build DB candidates list safely with fallback to AniList GraphQL
@@ -896,6 +902,10 @@ def nami_chat(
                             ).first()
                     except Exception as db_ex:
                         log.warning(f"Local anime match query error for '{t_str}': {db_ex}")
+                        try:
+                            db.rollback()
+                        except Exception:
+                            pass
                         local_match = None
 
                     card_id = int(local_match.id) if (local_match and hasattr(local_match, "id") and isinstance(local_match.id, int)) else item["mal_id"]
