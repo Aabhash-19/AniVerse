@@ -24,6 +24,10 @@ log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["Nami AI Navigator"])
 
+# In-memory Gemini response cache — avoids re-calling API for repeated/similar prompts
+_gemini_cache: dict = {}
+_GEMINI_CACHE_MAX = 50
+
 class ChatMessage(BaseModel):
     sender: str  # "user" or "nami"
     text: str
@@ -105,72 +109,6 @@ OFFICIAL NAMI CHARACTER KNOWLEDGE BASE (ONE PIECE FANDOM WIKI):
 - **Physical Traits**: Birthday: July 3rd. Height: 170 cm (5'7"). Hair: Orange. Tattoo: Tangerine & Windmill (symbolizing Bell-mère's mikans & Genzo's pinwheel).
 """
 
-def fetch_jikan_anime_details(query: str) -> List[dict]:
-    """
-    Fetch live anime data from Jikan API (MyAnimeList v4) for rich real-time context.
-    Defaults to Season 1 / Main title unless user explicitly specifies another season/movie.
-    URL: https://api.jikan.moe/v4/anime?q={query}&limit=5
-    """
-    if not query or len(query.strip()) < 2:
-        return []
-    clean_q = urllib.parse.quote(query.strip())
-    url = f"https://api.jikan.moe/v4/anime?q={clean_q}&limit=5&sfw=true"
-    try:
-        req = urllib.request.Request(
-            url,
-            headers={"User-Agent": "NamiVerseAI/1.0 (Mozilla/5.0)"}
-        )
-        with urllib.request.urlopen(req, timeout=4) as res:
-            data = json.loads(res.read().decode("utf-8"))
-            results = data.get("data", [])
-            if not results:
-                return []
-
-            # Check if user explicitly asked for another season or movie
-            has_season_specifier = any(kw in query.lower() for kw in [
-                "season 2", "season 3", "season 4", "season 5", "s2", "s3", "s4", "s5",
-                "2nd season", "3rd season", "4th season", "final season", "part 2", "part 3", "movie", "film"
-            ])
-
-            if not has_season_specifier:
-                # Prioritize Season 1 / main original series entry
-                s1_matches = [
-                    item for item in results
-                    if not any(skw in (item.get("title_english") or item.get("title") or "").lower() for skw in [
-                        "season 2", "season 3", "season 4", "2nd season", "3rd season", "4th season",
-                        "final season", "part 2", "part 3", "cour 2", "movie", "film"
-                    ])
-                ]
-                if s1_matches:
-                    results = s1_matches + [r for r in results if r not in s1_matches]
-
-            output = []
-            for item in results:
-                title = item.get("title_english") or item.get("title") or ""
-                synopsis = item.get("synopsis") or ""
-                clean_syn = re.sub(r'\s+', ' ', synopsis).strip()
-                score = item.get("score") or "N/A"
-                episodes = item.get("episodes") or "Ongoing"
-                status = item.get("status") or "Unknown"
-                studios = ", ".join([s.get("name") for s in item.get("studios", [])]) or "Unknown Studio"
-                genres = ", ".join([g.get("name") for g in item.get("genres", [])]) or "Anime"
-                rating = item.get("rating") or ""
-                output.append({
-                    "title": title,
-                    "mal_id": item.get("mal_id"),
-                    "synopsis": clean_syn[:400],
-                    "score": score,
-                    "episodes": episodes,
-                    "status": status,
-                    "studios": studios,
-                    "genres": genres,
-                    "rating": rating,
-                    "image_url": item.get("images", {}).get("jpg", {}).get("large_image_url")
-                })
-            return output
-    except Exception as ex:
-        log.warning(f"Jikan API anime lookup error for '{query}': {ex}")
-        return []
 
 def fetch_anilist_anime_details(query: str) -> List[dict]:
     """
@@ -264,35 +202,51 @@ def fetch_anilist_anime_details(query: str) -> List[dict]:
     return []
 
 
-def fetch_jikan_character_details(query: str) -> List[dict]:
-    """Fetch character details from Jikan API safely."""
+
+def fetch_anilist_character_details(query: str) -> List[dict]:
+    """Search AniList GraphQL for character details — replaces Jikan character search."""
     if not query or len(query.strip()) < 2:
         return []
-    clean_q = urllib.parse.quote(query.strip())
-    url = f"https://api.jikan.moe/v4/characters?q={clean_q}&limit=2"
+
+    gql = """
+    query ($search: String) {
+      Page(page: 1, perPage: 2) {
+        characters(search: $search) {
+          name { full native }
+          description
+          media(type: ANIME, sort: POPULARITY_DESC, page: 1, perPage: 3) {
+            nodes { title { english romaji } }
+          }
+        }
+      }
+    }
+    """
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=3) as res:
+        req = urllib.request.Request(
+            "https://graphql.anilist.co",
+            data=json.dumps({"query": gql, "variables": {"search": query.strip()}}).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+        )
+        with urllib.request.urlopen(req, timeout=5) as res:
             data = json.loads(res.read().decode("utf-8"))
-            results = data.get("data", [])
+            chars = data.get("data", {}).get("Page", {}).get("characters", [])
             output = []
-            for char in results:
-                name = char.get("name") or ""
-                about = char.get("about") or ""
-                clean_about = re.sub(r'\s+', ' ', about).strip()
-                animeography = [
-                    a.get("anime", {}).get("title")
-                    for a in char.get("anime", [])[:3]
-                    if a.get("anime", {}).get("title")
+            for c in chars:
+                name = c.get("name", {}).get("full") or ""
+                desc = re.sub(r'<[^>]+>', '', c.get("description") or "").strip()[:350]
+                anime_titles = [
+                    (n.get("title", {}).get("english") or n.get("title", {}).get("romaji"))
+                    for n in c.get("media", {}).get("nodes", [])[:3]
+                    if n.get("title")
                 ]
                 output.append({
                     "name": name,
-                    "about": clean_about[:350],
-                    "anime": ", ".join(animeography)
+                    "about": desc,
+                    "anime": ", ".join([t for t in anime_titles if t])
                 })
             return output
     except Exception as ex:
-        log.warning(f"Jikan character search warning for '{query}': {ex}")
+        log.warning(f"AniList character search error for '{query}': {ex}")
         return []
 
 
@@ -481,9 +435,14 @@ def call_gemini_nami_ai(
     jikan_context: str = ""
 ) -> Optional[str]:
     """
-    Call Google Gemini API with Nami's authentic character system prompt, full Fandom Wiki lore,
-    real-time Jikan MyAnimeList database context, catalog ground truth, and user watchlist context.
+    Call Google Gemini API with Nami's persona, AniList database context, and user watchlist.
+    Includes in-memory cache to avoid repeated API calls for same/similar prompts.
     """
+    # Cache check
+    cache_key = message.lower()[:120]
+    if cache_key in _gemini_cache:
+        return _gemini_cache[cache_key]
+
     api_key = (settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY") or "").strip()
     if not api_key:
         return None
@@ -493,7 +452,7 @@ def call_gemini_nami_ai(
         "You are Nami, the Straw Hat Pirates Navigator from One Piece! "
         "You are navigating NamiVerse, the premier anime platform. Speak enthusiastically, warmly, wittily, and in-character as Nami.\n\n"
         f"{NAMI_FANDOM_WIKI_LORE}\n\n"
-        f"REAL-TIME MYANIMELIST / JIKAN DATABASE DATA:\n{jikan_context or 'No external lookup needed.'}\n\n"
+        f"REAL-TIME ANILIST DATABASE DATA:\n{jikan_context or 'No external lookup needed.'}\n\n"
         f"VERIFIED DATABASE ANIME ENTRIES:\n{catalog_context or 'Top rated anime available.'}\n\n"
         f"USER PROFILE & WATCHLIST:\n{watchlist_context or 'Anonymous guest.'}\n\n"
         "RULES & GUIDELINES:\n"
@@ -566,6 +525,11 @@ def call_gemini_nami_ai(
                             raw_resp = parts[0]["text"].strip()
                             cleaned_resp = clean_gemini_reply(raw_resp)
                             if cleaned_resp:
+                                # Store in cache
+                                if len(_gemini_cache) >= _GEMINI_CACHE_MAX:
+                                    oldest = next(iter(_gemini_cache))
+                                    del _gemini_cache[oldest]
+                                _gemini_cache[cache_key] = cleaned_resp
                                 return cleaned_resp
             except urllib.error.HTTPError as he:
                 if he.code == 429 and attempt < 2:
@@ -835,9 +799,9 @@ def nami_chat(
             desc_snippet = re.sub(r'<[^>]+>', '', raw_desc)[:120]
             catalog_snippets.append(f"• Title: \"{t}\" (Score: {score}, Genres: {g}, Summary: {desc_snippet})")
         
-        # ── 6. Jikan API & AniList Real-Time Database Grounding ──────────────────
-        jikan_context_str = ""
-        jikan_anime = []
+        # ── 6. AniList Real-Time Database Grounding ──────────────────────────
+        anilist_context_str = ""
+        anilist_anime = []
 
         if not is_greeting_or_casual:
             # Strip question prefixes so "tell me something about Death Note" → searches "Death Note"
@@ -863,23 +827,21 @@ def nami_chat(
             search_term = " ".join(clean_words).strip()
 
             if search_term and len(search_term) >= 2:
-                jikan_anime = fetch_anilist_anime_details(search_term)
-                if not jikan_anime:
-                    jikan_anime = fetch_jikan_anime_details(search_term)
-                jikan_chars = fetch_jikan_character_details(search_term)
+                anilist_anime = fetch_anilist_anime_details(search_term)
+                anilist_chars = fetch_anilist_character_details(search_term)
 
-                jikan_parts = []
-                for ja in jikan_anime:
-                    jikan_parts.append(
-                        f"• Anime: **{ja['title']}** (MAL ID: {ja['mal_id']}, Score: {ja['score']}/10, Episodes: {ja['episodes']}, Status: {ja['status']}, Studios: {ja['studios']}, Genres: {ja['genres']})\n  Synopsis: {ja['synopsis']}"
+                anilist_parts = []
+                for ja in anilist_anime:
+                    anilist_parts.append(
+                        f"• Anime: **{ja['title']}** (AniList ID: {ja['mal_id']}, Score: {ja['score']}/10, Episodes: {ja['episodes']}, Status: {ja['status']}, Studios: {ja['studios']}, Genres: {ja['genres']})\n  Synopsis: {ja['synopsis']}"
                     )
-                for jc in jikan_chars:
-                    jikan_parts.append(
+                for jc in anilist_chars:
+                    anilist_parts.append(
                         f"• Character: **{jc['name']}** (Featured in: {jc['anime']})\n  About: {jc['about']}"
                     )
 
-                if jikan_parts:
-                    jikan_context_str = "\n\n".join(jikan_parts)
+                if anilist_parts:
+                    anilist_context_str = "\n\n".join(anilist_parts)
 
         # ── 7. UNIFIED NAMI AI 4-PILLAR DISPATCHER ─────────────────────────────
 
@@ -931,23 +893,21 @@ def nami_chat(
             recs_formatted = []
             all_recs_pool = []
 
-        # Pillar 2: Anime Title Search / Synopsis Query (AniList + Jikan)
-        elif not is_greeting_or_casual and (jikan_anime or is_plot_request or (len(user_msg.split()) <= 4 and not is_recommendation_request)):
-            if not jikan_anime:
+        # Pillar 2: Anime Title Search / Synopsis Query (AniList only)
+        elif not is_greeting_or_casual and (anilist_anime or is_plot_request or (len(user_msg.split()) <= 4 and not is_recommendation_request)):
+            if not anilist_anime:
                 search_query_raw = " ".join([w for w in user_msg.split() if w.lower() not in ["can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of"]]).strip()
                 if search_query_raw:
-                    jikan_anime = fetch_anilist_anime_details(search_query_raw)
-                    if not jikan_anime:
-                        jikan_anime = fetch_jikan_anime_details(search_query_raw)
+                    anilist_anime = fetch_anilist_anime_details(search_query_raw)
 
-            if jikan_anime:
-                ja = jikan_anime[0]
+            if anilist_anime:
+                ja = anilist_anime[0]
                 ai_reply = call_gemini_nami_ai(
                     message=user_msg,
                     history=req.history or [],
                     catalog_context=catalog_context,
                     watchlist_context=watchlist_context,
-                    jikan_context=jikan_context_str
+                    jikan_context=anilist_context_str
                 )
 
                 if ai_reply:
@@ -1025,7 +985,7 @@ def nami_chat(
                 history=req.history or [],
                 catalog_context=catalog_context,
                 watchlist_context=watchlist_context,
-                jikan_context=jikan_context_str
+                jikan_context=anilist_context_str
             )
             if ai_reply:
                 reply_text = ai_reply
@@ -1084,7 +1044,7 @@ def nami_chat(
                 history=req.history or [],
                 catalog_context=catalog_context,
                 watchlist_context=watchlist_context,
-                jikan_context=jikan_context_str
+                jikan_context=anilist_context_str
             )
             if gemini_reply:
                 reply_text = gemini_reply
