@@ -786,6 +786,12 @@ def nami_chat(
             catalog_snippets.append(f"• Title: \"{t}\" (Score: {score}, Genres: {g}, Summary: {desc_snippet})")
         
         # ── 6. Jikan API & AniList Real-Time Database Grounding ──────────────────
+        CASUAL_QUESTION_KEYWORDS = [
+            "explain", "why", "how", "joke", "funny", "humor",
+            "physics", "science", "math", "astrophysics", "quantum", "space", "universe", "stars", "gravity"
+        ]
+        is_casual_question = any(kw in lowered_msg for kw in CASUAL_QUESTION_KEYWORDS)
+
         is_greeting_or_casual = (
             lowered_msg in ["hi", "hello", "hey", "yo", "yosh", "nami", "hi nami", "hey nami", "hello nami", "yo nami", "sup", "howdy", "thanks", "thank you"] or
             any(kw in lowered_msg for kw in [
@@ -793,7 +799,7 @@ def nami_chat(
                 "favourite crewmate", "favorite crewmate", "best crewmate", "love sanji", "like sanji", "favorite anime", "favourite anime",
                 "clima tact", "clima-tact", "where are you from", "your dream", "your bounty", "who are you", "tell me about yourself",
                 "about nami", "about you"
-            ])
+            ]) or is_casual_question
         )
 
         jikan_context_str = ""
@@ -988,7 +994,7 @@ def nami_chat(
 
             recs_formatted = all_recs_pool[:4]
 
-        # Pillar 4: Fun, Random & Casual AI Conversation (Gemini AI)
+        # Pillar 4: Fun, Random & Casual AI Conversation (Gemini AI + Rich Nami Engine)
         else:
             gemini_reply = call_gemini_nami_ai(
                 message=user_msg,
@@ -1000,17 +1006,30 @@ def nami_chat(
             if gemini_reply:
                 reply_text = gemini_reply
             else:
-                if any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money"]):
+                # Dynamic Smart Nami Response Engine for Fun & World Knowledge
+                if any(k in lowered_msg for k in ["astrophysics", "physics", "science", "space", "star", "stars", "gravity", "universe", "quantum", "math", "planet", "galaxy"]):
+                    reply_text = (
+                        "Fufufu! As Navigator of the Straw Hat Pirates, charting celestial navigation and the stars is second nature to me! 🧭✨\n\n"
+                        "Astrophysics and quantum physics are just the grand celestial map of how gravity, light, and cosmic winds move across the universe—much like how our Log Pose reads the strange magnetic fields of the Grand Line! "
+                        "When you look up at the night sky, every star is a giant burning sun guiding our course across the sea. Got any more cosmic questions for your Navigator? 🍊⛵"
+                    )
+                elif any(k in lowered_msg for k in ["joke", "funny", "laugh", "humor"]):
+                    reply_text = (
+                        "Fufufu! Here's a favorite pirate joke from the Sunny:\n\n"
+                        "Why did Zoro get lost on the way to the kitchen?\n"
+                        "Because even a straight path has too many directions for a mosshead! ⚔️🤣\n\n"
+                        "And what's a pirate's favorite letter? You'd think it's 'R', but their true love is the 'C' (and 💰 Berries, obviously!) 🍊✨"
+                    )
+                elif any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money"]):
                     reply_text = random.choice(NAMI_BERRIES_REPLIES)
                 elif any(k in lowered_msg for k in ["one piece", "pirate", "straw hat"]):
                     reply_text = random.choice(NAMI_ONE_PIECE_REPLIES)
                 else:
-                    greetings = [
-                        "Yosh! Hey there! I'm Nami, your official Straw Hat Navigator! How are you doing today? Ready to talk anime, or just dropping by to say hi? 🍊⛵",
-                        "Hey! Good to see you! What's on your mind today? Want some anime recommendations, or just here to hang out on the Sunny? 🍊",
-                        "Yosh! Weather report looks great today! What kind of anime vibe are you in the mood for? 🧭"
-                    ]
-                    reply_text = random.choice(greetings)
+                    reply_text = (
+                        f"Fufufu! That's a great question! Speaking as Navigator of the Straw Hat Pirates, "
+                        f"sailing the Grand Line has taught me that the world is full of incredible mysteries—from sky islands to deep ocean trenches! "
+                        f"What else would you like to explore today? 🍊⛵"
+                    )
 
             recs_formatted = []
             all_recs_pool = []
