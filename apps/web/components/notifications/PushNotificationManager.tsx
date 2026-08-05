@@ -222,7 +222,7 @@ export default function PushNotificationManager() {
           ) : (
             <div className="flex items-center gap-2">
               <span className="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">
-                Active ✓
+                Active
               </span>
               <button
                 onClick={triggerTestAlert}
