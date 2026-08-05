@@ -394,11 +394,10 @@ export default function AnimeDetailPage() {
     );
   }
 
+  // Use direct CDN URLs with referrerPolicy="no-referrer" — img tags don't have CORS restrictions
+  // Proxying through backend was failing on Render (extra hop, whitelist restrictions)
   const getProxiedImageUrl = (url?: string) => {
     if (!url) return "";
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-      return getApiUrl(`/image-proxy?url=${encodeURIComponent(url)}`);
-    }
     return url;
   };
 
@@ -414,10 +413,11 @@ export default function AnimeDetailPage() {
         <div className="relative h-[250px] md:h-[400px] w-full overflow-hidden bg-zinc-950">
         {anime.banner_url ? (
           <img
-            src={getProxiedImageUrl(anime.banner_url)}
+            src={anime.banner_url}
             alt={displayTitle}
             referrerPolicy="no-referrer"
             className="w-full h-full object-cover opacity-60"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-r from-purple-950/20 to-indigo-950/20 opacity-60" />
@@ -433,10 +433,11 @@ export default function AnimeDetailPage() {
             <div className="w-full aspect-[3/4] bg-zinc-950 rounded-2xl overflow-hidden shadow-2xl">
               {anime.cover_large_url ? (
                 <img
-                  src={getProxiedImageUrl(anime.cover_large_url)}
+                  src={anime.cover_large_url}
                   alt={displayTitle}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs">No Cover</div>
