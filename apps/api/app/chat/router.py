@@ -849,7 +849,14 @@ def nami_chat(
             for ja in jikan_anime:
                 t_str = ja["title"]
                 slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
-                score_val = float(ja["score"]) if (isinstance(ja["score"], (int, float)) and ja["score"] > 0) else None
+                
+                score_val = None
+                if ja.get("score") and str(ja["score"]) != "N/A":
+                    try:
+                        score_val = float(ja["score"])
+                    except Exception:
+                        score_val = None
+
                 g_list = [g.strip() for g in ja.get("genres", "").split(",") if g.strip()][:3]
 
                 local_match = db.query(Anime).filter(
