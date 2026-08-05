@@ -125,11 +125,22 @@ export default function CalendarPage() {
     fetchCalendarEvents();
   }, [currentMonth, viewMode, currentUser]);
 
+  // Helper to parse UTC timestamps safely into browser local Date object
+  const parseUtcDate = (ts: string | Date): Date => {
+    if (!ts) return new Date();
+    if (ts instanceof Date) return ts;
+    const str = String(ts).trim();
+    if (str.includes("T") && !str.endsWith("Z") && !str.includes("+") && !str.includes("-", 10)) {
+      return new Date(`${str}Z`);
+    }
+    return new Date(str);
+  };
+
   // Group events by local date string YYYY-MM-DD
   const eventsByDate = useMemo(() => {
     const map: Record<string, AiringEvent[]> = {};
     events.forEach((ev) => {
-      const d = new Date(ev.airing_at);
+      const d = parseUtcDate(ev.airing_at);
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, "0");
       const day = String(d.getDate()).padStart(2, "0");
@@ -144,7 +155,7 @@ export default function CalendarPage() {
   const activitiesByDate = useMemo(() => {
     const map: Record<string, UserActivityEvent[]> = {};
     userActivities.forEach((act) => {
-      const d = new Date(act.timestamp);
+      const d = parseUtcDate(act.timestamp);
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, "0");
       const day = String(d.getDate()).padStart(2, "0");
@@ -572,7 +583,7 @@ export default function CalendarPage() {
                                   {act.description}
                                 </p>
                                 <span className="text-[10px] text-zinc-500 font-mono mt-1 block">
-                                  {new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {parseUtcDate(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </div>
                             </div>

@@ -1,4 +1,4 @@
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
@@ -333,7 +333,7 @@ def get_user_activity_logs(
             slug=anime.slug,
             action_type="WATCHLIST_UPDATE",
             description=desc,
-            timestamp=e.updated_at,
+            timestamp=e.updated_at.replace(tzinfo=timezone.utc) if (e.updated_at and e.updated_at.tzinfo is None) else (e.updated_at or datetime.now(timezone.utc)),
             progress=e.progress,
             status=e.status.value,
             score=float(e.score) if e.score else None
@@ -359,7 +359,7 @@ def get_user_activity_logs(
             slug=anime.slug,
             action_type="SUBSCRIPTION",
             description="Subscribed to broadcast release alerts",
-            timestamp=s.created_at,
+            timestamp=s.created_at.replace(tzinfo=timezone.utc) if (s.created_at and s.created_at.tzinfo is None) else (s.created_at or datetime.now(timezone.utc)),
         ))
 
     activities.sort(key=lambda x: x.timestamp, reverse=True)

@@ -1,5 +1,5 @@
 from typing import List, Optional
-from datetime import date
+from datetime import date, datetime
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -501,7 +501,8 @@ def add_or_update_list_entry(
             rewatch_count=entry_data.rewatch_count,
             started_at=entry_data.started_at,
             completed_at=entry_data.completed_at,
-            is_private=entry_data.is_private
+            is_private=entry_data.is_private,
+            updated_at=datetime.utcnow()
         )
         db.add(entry)
     else:
@@ -513,6 +514,7 @@ def add_or_update_list_entry(
         entry.started_at = entry_data.started_at
         entry.completed_at = entry_data.completed_at
         entry.is_private = entry_data.is_private
+        entry.updated_at = datetime.utcnow()
 
     db.commit()
     db.refresh(entry)
