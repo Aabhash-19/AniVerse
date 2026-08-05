@@ -348,7 +348,7 @@ def fetch_live_airing_anime() -> List[dict]:
     gql = """
     query {
       Page(page: 1, perPage: 25) {
-        media(type: ANIME, status: RELEASING, sort: [TRENDING_DESC, POPULARITY_DESC]) {
+        media(type: ANIME, status: RELEASING, sort: [TRENDING_DESC, POPULARITY_DESC], popularity_greater: 2000) {
           id
           title { english romaji }
           status
@@ -384,7 +384,14 @@ def fetch_anilist_genre_anime(genre_name: Optional[str] = None) -> List[dict]:
         gql = """
         query ($genre: String) {
           Page(page: 1, perPage: 30) {
-            media(type: ANIME, genre: $genre, status: FINISHED, sort: [SCORE_DESC, POPULARITY_DESC]) {
+            media(
+              type: ANIME,
+              genre: $genre,
+              status: FINISHED,
+              sort: [POPULARITY_DESC, SCORE_DESC],
+              popularity_greater: 5000,
+              averageScore_greater: 60
+            ) {
               id
               title { english romaji }
               status
@@ -400,7 +407,13 @@ def fetch_anilist_genre_anime(genre_name: Optional[str] = None) -> List[dict]:
         gql = """
         query {
           Page(page: 1, perPage: 30) {
-            media(type: ANIME, status: FINISHED, sort: [SCORE_DESC, POPULARITY_DESC]) {
+            media(
+              type: ANIME,
+              status: FINISHED,
+              sort: [POPULARITY_DESC, SCORE_DESC],
+              popularity_greater: 10000,
+              averageScore_greater: 70
+            ) {
               id
               title { english romaji }
               status
@@ -614,7 +627,11 @@ def nami_chat(
             "joke", "jokes", "funny", "humor", "laugh",
             "physics", "science", "math", "mathematics", "astrophysics", "quantum",
             "space", "universe", "stars", "gravity", "planet", "galaxy", "cosmos",
+            "black hole", "dark matter", "solar system", "atom", "molecule", "neutron",
             "biology", "chemistry", "history", "technology", "engineering",
+            "evolution", "climate", "economy", "economics", "politics", "philosophy",
+            "psychology", "religion", "art", "music theory", "language", "literature",
+            "cooking", "recipe", "food", "travel", "geography", "ocean", "mountain",
             "otaku", "anime culture", "weeb", "manga culture"
         ]
         is_casual_question = any(kw in lowered_msg for kw in CASUAL_QUESTION_KEYWORDS)
@@ -826,8 +843,18 @@ def nami_chat(
             ]]
             search_term = " ".join(clean_words).strip()
 
-            if search_term and len(search_term) >= 2:
+            if search_term and len(search_term) >= 2 and not is_casual_question:
                 anilist_anime = fetch_anilist_anime_details(search_term)
+                # Title relevance check: skip if returned title doesn’t match query
+                if anilist_anime:
+                    query_words = set(search_term.lower().split())
+                    best_title = (anilist_anime[0].get("title") or "").lower()
+                    title_words = set(best_title.split())
+                    overlap = query_words & title_words
+                    # Require at least 1 word overlap or query word contained in title
+                    has_match = bool(overlap) or any(w in best_title for w in query_words if len(w) > 3)
+                    if not has_match:
+                        anilist_anime = []  # Don’t use unrelated AniList result
                 anilist_chars = fetch_anilist_character_details(search_term)
 
                 anilist_parts = []
