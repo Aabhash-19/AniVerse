@@ -788,29 +788,48 @@ def nami_chat(
                 if jikan_parts:
                     jikan_context_str = "\n\n".join(jikan_parts)
 
-        # ── 7. 4-PILLAR INTENT DISPATCHER & CARD GENERATOR ─────────────────────
+        # ── 7. UNIFIED NAMI AI 4-PILLAR DISPATCHER ─────────────────────────────
 
         # Pillar 1: Nami & Straw Hat Crew Lore (Fandom Wiki Base)
         nami_lore_hit = get_nami_lore_fallback(lowered_msg)
 
         if nami_lore_hit:
-            reply_text = nami_lore_hit
+            ai_reply = call_gemini_nami_ai(
+                message=user_msg,
+                history=req.history or [],
+                catalog_context=catalog_context,
+                watchlist_context=watchlist_context,
+                jikan_context=f"OFFICIAL FANDOM WIKI LORE GROUND TRUTH: {nami_lore_hit}"
+            )
+            reply_text = ai_reply if ai_reply else nami_lore_hit
             recs_formatted = []
             all_recs_pool = []
 
-        # Pillar 2: Anime Title Search / Synopsis Query (Jikan + AniList)
+        # Pillar 2: Anime Title Search / Synopsis Query (AniList + Jikan)
         elif jikan_anime:
             ja = jikan_anime[0]
-            score_str = ja["score"] if ja.get("score") else "N/A"
-            ep_str = ja["episodes"] if ja.get("episodes") else "Ongoing"
-            studio_str = ja["studios"] if ja.get("studios") else "Studio"
-            genre_str = ja["genres"] if ja.get("genres") else "Anime"
-
-            reply_text = (
-                f"Yosh! Here is the lowdown on **{ja['title']}**:\n\n"
-                f"{ja['synopsis']}\n\n"
-                f"⭐ **Score:** {score_str}/10 | **Episodes:** {ep_str} | **Studio:** {studio_str} | **Genres:** {genre_str} 🍊"
+            
+            ai_reply = call_gemini_nami_ai(
+                message=user_msg,
+                history=req.history or [],
+                catalog_context=catalog_context,
+                watchlist_context=watchlist_context,
+                jikan_context=jikan_context_str
             )
+
+            if ai_reply:
+                reply_text = ai_reply
+            else:
+                score_str = ja["score"] if ja.get("score") else "N/A"
+                ep_str = ja["episodes"] if ja.get("episodes") else "Ongoing"
+                studio_str = ja["studios"] if ja.get("studios") else "Studio"
+                genre_str = ja["genres"] if ja.get("genres") else "Anime"
+
+                reply_text = (
+                    f"Yosh! Here is the lowdown on **{ja['title']}**:\n\n"
+                    f"{ja['synopsis']}\n\n"
+                    f"⭐ **Score:** {score_str}/10 | **Episodes:** {ep_str} | **Studio:** {studio_str} | **Genres:** {genre_str} 🍊"
+                )
 
             all_recs_pool = []
             seen_ids = set()
@@ -853,15 +872,25 @@ def nami_chat(
 
         # Pillar 3: Genre Recommendations & Specific Recommendation Queries
         elif is_recommendation_request or matched_genres or is_airing_request or is_upcoming_request:
-            if matched_genres:
-                g_name = matched_genres[0]
-                reply_text = f"Yosh! For **{g_name}** lovers, I've mapped out top-tier recommendations from our logbook! Which one looks best for your next watch? 🍊"
-            elif is_airing_request:
-                reply_text = "Yosh! Here are top anime currently airing right now! ⛵"
-            elif is_upcoming_request:
-                reply_text = "Yosh! Here are upcoming anime releases charted on our logbook! 🧭"
+            ai_reply = call_gemini_nami_ai(
+                message=user_msg,
+                history=req.history or [],
+                catalog_context=catalog_context,
+                watchlist_context=watchlist_context,
+                jikan_context=jikan_context_str
+            )
+            if ai_reply:
+                reply_text = ai_reply
             else:
-                reply_text = "Yosh! Here are top-tier recommendations from our logbook! 🧭"
+                if matched_genres:
+                    g_name = matched_genres[0]
+                    reply_text = f"Yosh! For **{g_name}** lovers, I've mapped out top-tier recommendations from our logbook! Which one looks best for your next watch? 🍊"
+                elif is_airing_request:
+                    reply_text = "Yosh! Here are top anime currently airing right now! ⛵"
+                elif is_upcoming_request:
+                    reply_text = "Yosh! Here are upcoming anime releases charted on our logbook! 🧭"
+                else:
+                    reply_text = "Yosh! Here are top-tier recommendations from our logbook! 🧭"
 
             all_recs_pool = []
             seen_ids = set()
