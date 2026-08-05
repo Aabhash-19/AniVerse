@@ -295,6 +295,14 @@ def get_nami_lore_fallback(lowered_msg: str) -> Optional[str]:
             "My dream is to draw a complete, perfect map of the entire world (**世界地図**)! 🗺️\n\n"
             "As Navigator of the Straw Hat Pirates, I've charted every sea from the East Blue to the New World—and here on NamiVerse, I'm charting the entire ocean of anime for you! ⛵🍊"
         )
+    elif any(k in msg for k in ["clima", "tact", "weapon", "sorcery", "zeus"]):
+        return "My weapon is the **Sorcery Clima-Tact**, invented by Usopp and upgraded with Weatheria science! ⚡ I can create Heat Balls, Cool Balls, and Mirage Tempos—and I even fused Big Mom's cloud **Zeus** into it for devastating lightning strikes! 🌩️🍊"
+    elif any(k in msg for k in ["goku", "vs", "win", "fight", "stronger"]) and any(k in msg for k in ["luffy", "monkey"]):
+        return "Fufufu! Goku has Ultra Instinct and planet-destroying Kamehamehas, but our captain Luffy has Gear 5 and divine Sun God Nika cartoon physics! 🍖🔥 In a real battle Goku probably takes it on raw power, but Luffy would definitely eat all his food first! 👑"
+    elif any(k in msg for k in ["love sanji", "marry sanji", "like sanji"]):
+        return "Fufufu! Sanji-kun is our fantastic cook who makes delicious tangerine drinks for me, but romance on the Thousand Sunny? Not a chance! He gets 100,000 Berries charged to his tab every time he swoons over me! 😂💕"
+    elif any(k in msg for k in ["favourite arc", "favorite arc"]):
+        return "The **Arlong Park Arc** holds a special place in my heart—it's where Luffy destroyed Arlong Park, freed my village, and I truly became a Straw Hat! But **Enies Lobby** and **Wano** are absolute masterpieces too! 🍊⛵"
     elif any(k in msg for k in ["luffy", "captain"]):
         return "Luffy (Monkey D. Luffy) is our captain! He's reckless, eats all our meat, and gets us into crazy fights—but he's going to be King of the Pirates! 🍖👑"
     elif any(k in msg for k in ["zoro", "swordsman"]):
@@ -500,13 +508,14 @@ def call_gemini_nami_ai(
         "parts": [{"text": full_instruction}]
     })
 
-    # Models ordered by: cheapest quota usage first so free tier lasts longer
+    # Models ordered across distinct model families (each has its own separate rate limit on Google AI Studio)
     models_to_try = [
-        "gemini-2.0-flash-lite",      # cheapest, lowest quota usage ✅
-        "gemini-2.0-flash",           # standard free tier ✅
-        "gemini-1.5-flash-8b",        # ultra-lightweight fallback ✅
-        "gemini-1.5-flash-002",       # versioned 1.5 flash ✅
-        "gemini-1.5-pro-001",         # pro fallback ✅
+        "gemini-2.0-flash-lite",      # 2.0 lite quota pool
+        "gemini-1.5-flash",           # 1.5 flash quota pool
+        "gemini-2.0-flash",           # 2.0 flash quota pool
+        "gemini-1.5-pro",             # 1.5 pro quota pool
+        "gemini-2.0-flash-exp",       # 2.0 exp quota pool
+        "gemini-1.5-flash-8b",        # 1.5 flash 8b pool
     ]
 
     for model_name in models_to_try:
@@ -527,35 +536,35 @@ def call_gemini_nami_ai(
             }
         )
 
-        for attempt in range(3):
-            try:
-                with urllib.request.urlopen(req, timeout=12) as res:
-                    res_data = json.loads(res.read().decode("utf-8"))
-                    candidates = res_data.get("candidates", [])
-                    if candidates:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        if parts and parts[0].get("text"):
-                            raw_resp = parts[0]["text"].strip()
-                            cleaned_resp = clean_gemini_reply(raw_resp)
-                            if cleaned_resp:
-                                # Store in cache
-                                if len(_gemini_cache) >= _GEMINI_CACHE_MAX:
-                                    oldest = next(iter(_gemini_cache))
-                                    del _gemini_cache[oldest]
-                                _gemini_cache[cache_key] = cleaned_resp
-                                return cleaned_resp
-            except urllib.error.HTTPError as he:
-                if he.code == 429 and attempt < 2:
-                    time.sleep(2.0)   # proper backoff for rate limit
-                    continue
-                elif he.code == 404:
-                    break             # model doesn't exist, try next immediately
-                else:
-                    log.warning(f"Gemini API model {model_name} HTTP {he.code}: {he}")
-                    break
-            except Exception as ex:
-                log.warning(f"Gemini API model {model_name} error: {ex}")
-                break
+        try:
+            with urllib.request.urlopen(req, timeout=8) as res:
+                res_data = json.loads(res.read().decode("utf-8"))
+                candidates = res_data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts and parts[0].get("text"):
+                        raw_resp = parts[0]["text"].strip()
+                        cleaned_resp = clean_gemini_reply(raw_resp)
+                        if cleaned_resp:
+                            # Store in cache
+                            if len(_gemini_cache) >= _GEMINI_CACHE_MAX:
+                                oldest = next(iter(_gemini_cache))
+                                del _gemini_cache[oldest]
+                            _gemini_cache[cache_key] = cleaned_resp
+                            return cleaned_resp
+        except urllib.error.HTTPError as he:
+            if he.code == 429:
+                # 429 on this model family → INSTANTLY skip to next model family without sleeping
+                log.info(f"Gemini model {model_name} rate-limited (429), switching to next model family...")
+                continue
+            elif he.code == 404:
+                continue             # model doesn't exist, try next immediately
+            else:
+                log.warning(f"Gemini API model {model_name} HTTP {he.code}: {he}")
+                continue
+        except Exception as ex:
+            log.warning(f"Gemini API model {model_name} error: {ex}")
+            continue
 
     return None
 
