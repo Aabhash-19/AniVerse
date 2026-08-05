@@ -846,12 +846,19 @@ def nami_chat(
 
                 g_list = [g.strip() for g in item.get("genres", "").split(",") if g.strip()][:3]
 
-                local_match = db.query(Anime).filter(
-                    or_(
-                        Anime.title_english.ilike(f"%{t_str}%"),
-                        Anime.title_romaji.ilike(f"%{t_str}%")
-                    )
-                ).first()
+                local_match = None
+                try:
+                    clean_t = re.sub(r'[^a-zA-Z0-9\s]', '', t_str)
+                    if clean_t:
+                        local_match = db.query(Anime).filter(
+                            or_(
+                                Anime.title_english.ilike(f"%{clean_t}%"),
+                                Anime.title_romaji.ilike(f"%{clean_t}%")
+                            )
+                        ).first()
+                except Exception as db_ex:
+                    log.warning(f"Local anime match query error for '{t_str}': {db_ex}")
+                    local_match = None
 
                 card_id = local_match.id if local_match else item["mal_id"]
                 cover_url = local_match.cover_large_url if (local_match and local_match.cover_large_url) else item.get("image_url")
@@ -964,24 +971,8 @@ def nami_chat(
 
     except Exception as err:
         log.error(f"Nami chat handler unexpected error: {err}", exc_info=True)
-        # Always fallback to live AniList GraphQL anime so cards ALWAYS generate!
-        extra_media = fetch_anilist_genre_anime()
-        fallback_pool = []
-        for m in extra_media:
-            t_str = m["title"]["english"] or m["title"]["romaji"]
-            s_val = float(m["meanScore"]) if m.get("meanScore") else None
-            slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
-            fallback_pool.append(RecommendedAnimeCard(
-                id=m["id"],
-                slug=slug_clean,
-                title=t_str,
-                cover_url=m.get("coverImage", {}).get("extraLarge"),
-                score=s_val,
-                genres=m.get("genres", [])[:3]
-            ))
-
         return ChatResponse(
-            reply="Yosh! Here are some top-rated recommendations from our logbook! 🧭",
-            anime_recommendations=fallback_pool[:4],
-            all_recommendations=fallback_pool
+            reply="Yosh! Let's chart a course for your next anime! Ask me about any show or tell me what genre you're looking for! 🍊⛵",
+            anime_recommendations=[],
+            all_recommendations=[]
         )
