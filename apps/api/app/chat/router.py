@@ -926,7 +926,7 @@ def nami_chat(
 
                 all_recs_pool = []
                 seen_ids = set()
-                for item in jikan_anime:
+                for item in anilist_anime:
                     t_str = item["title"]
                     slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
                     
