@@ -19,3 +19,7 @@ email-validator>=2.0.0
 sentence-transformers>=2.7.0
 numpy>=1.26.0
 scikit-learn>=1.4.0
+
+# Phase 7 — Web Push Notifications
+pywebpush>=1.14.0
+cryptography>=42.0.0

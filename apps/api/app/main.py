@@ -24,7 +24,10 @@ import app.media.models
 import app.community.models
 import app.recommendations.models
 import app.notifications.models
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"Warning: Could not auto-create database tables on startup: {e}")
 
 from app.config import settings
 from app.anime.router import router as anime_router
