@@ -530,9 +530,10 @@ def call_gemini_nami_ai(
 
     models_to_try = [
         "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
-        "gemini-2.5-flash",
-        "gemini-flash-latest"
+        "gemini-2.0-flash-001",
+        "gemini-2.5-flash-preview-05-20",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest"
     ]
 
     for model_name in models_to_try:
@@ -552,7 +553,7 @@ def call_gemini_nami_ai(
 
         for attempt in range(2):
             try:
-                with urllib.request.urlopen(req, timeout=6) as res:
+                with urllib.request.urlopen(req, timeout=12) as res:
                     res_data = json.loads(res.read().decode("utf-8"))
                     candidates = res_data.get("candidates", [])
                     if candidates:
