@@ -1003,7 +1003,7 @@ def nami_chat(
     except Exception as err:
         log.error(f"Nami chat handler unexpected error: {err}", exc_info=True)
         return ChatResponse(
-            reply="Yosh! Let's chart a course for your next anime! Ask me about any show or tell me what genre you're looking for! 🍊⛵",
+            reply=f"DEBUG_ERR: {type(err).__name__}: {str(err)}",
             anime_recommendations=[],
             all_recommendations=[]
         )
