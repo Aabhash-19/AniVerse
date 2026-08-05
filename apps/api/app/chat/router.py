@@ -8,6 +8,8 @@ import re
 import os
 import urllib.request
 import urllib.parse
+import urllib.error
+import time
 import json
 import logging
 
@@ -495,42 +497,49 @@ def call_gemini_nami_ai(
     })
 
     models_to_try = [
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-2.0-flash-exp",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
         "gemini-2.5-flash",
         "gemini-flash-latest"
     ]
 
     for model_name in models_to_try:
-        try:
-            # Try combined content payload first (works across ALL API keys & models)
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-            payload = {
-                "contents": contents,
-                "generationConfig": {
-                    "temperature": 0.7,
-                    "maxOutputTokens": 2048
-                }
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        payload = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 2048
             }
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"}
-            )
-            with urllib.request.urlopen(req, timeout=8) as res:
-                res_data = json.loads(res.read().decode("utf-8"))
-                candidates = res_data.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts and parts[0].get("text"):
-                        raw_resp = parts[0]["text"].strip()
-                        cleaned_resp = clean_gemini_reply(raw_resp)
-                        if cleaned_resp:
-                            return cleaned_resp
-        except Exception as ex:
-            log.warning(f"Gemini API model {model_name} error: {ex}")
-            continue
+        }
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"}
+        )
+
+        for attempt in range(2):
+            try:
+                with urllib.request.urlopen(req, timeout=6) as res:
+                    res_data = json.loads(res.read().decode("utf-8"))
+                    candidates = res_data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts and parts[0].get("text"):
+                            raw_resp = parts[0]["text"].strip()
+                            cleaned_resp = clean_gemini_reply(raw_resp)
+                            if cleaned_resp:
+                                return cleaned_resp
+            except urllib.error.HTTPError as he:
+                if he.code == 429 and attempt == 0:
+                    time.sleep(0.4)
+                    continue
+                else:
+                    log.warning(f"Gemini API model {model_name} HTTP {he.code}: {he}")
+                    break
+            except Exception as ex:
+                log.warning(f"Gemini API model {model_name} error: {ex}")
+                break
 
     return None
 
