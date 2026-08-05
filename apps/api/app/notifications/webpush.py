@@ -8,9 +8,12 @@ logger = logging.getLogger("webpush_service")
 # Standard VAPID Public Key for NamiVerse Web Push Notifications
 VAPID_PUBLIC_KEY = os.getenv(
     "VAPID_PUBLIC_KEY",
-    "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-Skv6NuE4_26w_x-1uB2_i9iWn6vQp1_q3v1_x_1uB2_i9iWn6vQp1"
+    "BPYCD9h9Wazpgp969ZcdtRS-nsYTD-SsPv-vqyOx7MkG_UwAhx_ytLKtY19ppPFsjcSPWao0IVxHAVb-1VbH7EI"
 )
-VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "dummy_private_key")
+VAPID_PRIVATE_KEY = os.getenv(
+    "VAPID_PRIVATE_KEY",
+    "URo63_W4UEdho3DNi_XzxEzOQVHc9eHneDh_PT2HUG4"
+)
 VAPID_CLAIMS_EMAIL = os.getenv("VAPID_CLAIMS_EMAIL", "mailto:nami@namiverse.app")
 
 def get_vapid_public_key() -> str:
