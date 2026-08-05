@@ -837,76 +837,87 @@ def nami_chat(
             all_recs_pool = []
 
         # Pillar 2: Anime Title Search / Synopsis Query (AniList + Jikan)
-        elif jikan_anime:
-            ja = jikan_anime[0]
-            
-            ai_reply = call_gemini_nami_ai(
-                message=user_msg,
-                history=req.history or [],
-                catalog_context=catalog_context,
-                watchlist_context=watchlist_context,
-                jikan_context=jikan_context_str
-            )
+        elif not is_greeting_or_casual and (jikan_anime or is_plot_request or (len(user_msg.split()) <= 4 and not is_recommendation_request)):
+            if not jikan_anime:
+                search_query_raw = " ".join([w for w in user_msg.split() if w.lower() not in ["can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of"]]).strip()
+                if search_query_raw:
+                    jikan_anime = fetch_anilist_anime_details(search_query_raw)
+                    if not jikan_anime:
+                        jikan_anime = fetch_jikan_anime_details(search_query_raw)
 
-            if ai_reply:
-                reply_text = ai_reply
-            else:
-                score_str = ja["score"] if ja.get("score") else "N/A"
-                ep_str = ja["episodes"] if ja.get("episodes") else "Ongoing"
-                studio_str = ja["studios"] if ja.get("studios") else "Studio"
-                genre_str = ja["genres"] if ja.get("genres") else "Anime"
-
-                reply_text = (
-                    f"Yosh! Here is the lowdown on **{ja['title']}**:\n\n"
-                    f"{ja['synopsis']}\n\n"
-                    f"⭐ **Score:** {score_str}/10 | **Episodes:** {ep_str} | **Studio:** {studio_str} | **Genres:** {genre_str} 🍊"
+            if jikan_anime:
+                ja = jikan_anime[0]
+                ai_reply = call_gemini_nami_ai(
+                    message=user_msg,
+                    history=req.history or [],
+                    catalog_context=catalog_context,
+                    watchlist_context=watchlist_context,
+                    jikan_context=jikan_context_str
                 )
 
-            all_recs_pool = []
-            seen_ids = set()
-            for item in jikan_anime:
-                t_str = item["title"]
-                slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
-                
-                score_val = None
-                if item.get("score") and str(item["score"]) != "N/A":
-                    try:
-                        score_val = float(item["score"])
-                    except Exception:
-                        score_val = None
+                if ai_reply:
+                    reply_text = ai_reply
+                else:
+                    score_str = ja["score"] if ja.get("score") else "N/A"
+                    ep_str = ja["episodes"] if ja.get("episodes") else "Ongoing"
+                    studio_str = ja["studios"] if ja.get("studios") else "Studio"
+                    genre_str = ja["genres"] if ja.get("genres") else "Anime"
 
-                g_list = [g.strip() for g in item.get("genres", "").split(",") if g.strip()][:3]
+                    reply_text = (
+                        f"Yosh! Here is the lowdown on **{ja['title']}**:\n\n"
+                        f"{ja['synopsis']}\n\n"
+                        f"⭐ **Score:** {score_str}/10 | **Episodes:** {ep_str} | **Studio:** {studio_str} | **Genres:** {genre_str} 🍊"
+                    )
 
-                local_match = None
-                try:
-                    clean_t = re.sub(r'[^a-zA-Z0-9\s]', '', t_str)
-                    if clean_t:
-                        local_match = db.query(Anime).filter(
-                            or_(
-                                Anime.title_english.ilike(f"%{clean_t}%"),
-                                Anime.title_romaji.ilike(f"%{clean_t}%")
-                            )
-                        ).first()
-                except Exception as db_ex:
-                    log.warning(f"Local anime match query error for '{t_str}': {db_ex}")
+                all_recs_pool = []
+                seen_ids = set()
+                for item in jikan_anime:
+                    t_str = item["title"]
+                    slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
+                    
+                    score_val = None
+                    if item.get("score") and str(item["score"]) != "N/A":
+                        try:
+                            score_val = float(item["score"])
+                        except Exception:
+                            score_val = None
+
+                    g_list = [g.strip() for g in item.get("genres", "").split(",") if g.strip()][:3]
+
                     local_match = None
+                    try:
+                        clean_t = re.sub(r'[^a-zA-Z0-9\s]', '', t_str)
+                        if clean_t:
+                            local_match = db.query(Anime).filter(
+                                or_(
+                                    Anime.title_english.ilike(f"%{clean_t}%"),
+                                    Anime.title_romaji.ilike(f"%{clean_t}%")
+                                )
+                            ).first()
+                    except Exception as db_ex:
+                        log.warning(f"Local anime match query error for '{t_str}': {db_ex}")
+                        local_match = None
 
-                card_id = int(local_match.id) if (local_match and hasattr(local_match, "id") and isinstance(local_match.id, int)) else item["mal_id"]
-                cover_url = str(local_match.cover_large_url) if (local_match and getattr(local_match, "cover_large_url", None) and isinstance(local_match.cover_large_url, str)) else item.get("image_url")
-                card_slug = str(local_match.slug) if (local_match and getattr(local_match, "slug", None) and isinstance(local_match.slug, str)) else slug_clean
+                    card_id = int(local_match.id) if (local_match and hasattr(local_match, "id") and isinstance(local_match.id, int)) else item["mal_id"]
+                    cover_url = str(local_match.cover_large_url) if (local_match and getattr(local_match, "cover_large_url", None) and isinstance(local_match.cover_large_url, str)) else item.get("image_url")
+                    card_slug = str(local_match.slug) if (local_match and getattr(local_match, "slug", None) and isinstance(local_match.slug, str)) else slug_clean
 
-                if card_id not in seen_ids:
-                    seen_ids.add(card_id)
-                    all_recs_pool.append(RecommendedAnimeCard(
-                        id=card_id,
-                        slug=card_slug,
-                        title=t_str,
-                        cover_url=cover_url,
-                        score=score_val,
-                        genres=g_list
-                    ))
+                    if card_id not in seen_ids:
+                        seen_ids.add(card_id)
+                        all_recs_pool.append(RecommendedAnimeCard(
+                            id=card_id,
+                            slug=card_slug,
+                            title=t_str,
+                            cover_url=cover_url,
+                            score=score_val,
+                            genres=g_list
+                        ))
 
-            recs_formatted = all_recs_pool[:4]
+                recs_formatted = all_recs_pool[:4]
+            else:
+                reply_text = f"Yosh! I searched my logbook for **\"{user_msg.strip()}\"**, but couldn't find a matching anime title! Check the spelling or ask me to recommend a genre! 🍊"
+                recs_formatted = []
+                all_recs_pool = []
 
         # Pillar 3: Genre Recommendations & Specific Recommendation Queries
         elif is_recommendation_request or matched_genres or is_airing_request or is_upcoming_request:
