@@ -425,9 +425,15 @@ def test_nami_push_notification(
             detail="No push notification device registered for your account. Enable notifications in your settings first!"
         )
 
-    sent_count = 0
+    raw_display = (current_user.display_name or "").strip()
+    if not raw_display and current_user.username:
+        u = current_user.username.strip()
+        raw_display = u[0].upper() + u[1:] if u else "Mina-san"
+    if not raw_display:
+        raw_display = "Mina-san"
+
     title = "🍊 Nami's Broadcast Weather Alert! ⛵"
-    body = f"Yosh, {current_user.username or 'Mina-san'}! Nami here, your official Navigator! 💰 Whenever a show on your list airs a new episode or trailer, I'll chart the skies and send a live alert directly to your device so you never miss a release! Keep sailing with NamiVerse! 🍊✨"
+    body = f"Yosh, {raw_display}! Nami here, your official Navigator! 💰 Whenever a show on your list airs a new episode or trailer, I'll chart the skies and send a live alert directly to your device so you never miss a release! Keep sailing with NamiVerse! 🍊✨"
 
     for sub in subs:
         info = {"endpoint": sub.endpoint, "p256dh": sub.p256dh, "auth": sub.auth}

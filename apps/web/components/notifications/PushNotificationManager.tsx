@@ -22,8 +22,17 @@ export default function PushNotificationManager() {
   const [isIos, setIsIos] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
+      fetchWithCredentials(getApiUrl("/auth/me"))
+        .then((res) => (res.ok ? res.json() : null))
+        .then((u) => {
+          if (u) setCurrentUser(u);
+        })
+        .catch(() => {});
+
       const ua = window.navigator.userAgent;
       const isIosDevice = /iphone|ipad|ipod/i.test(ua);
       setIsIos(isIosDevice);
@@ -138,6 +147,18 @@ export default function PushNotificationManager() {
     }
   };
 
+  const getUserDisplayName = () => {
+    if (!currentUser) return "Mina-san";
+    if (currentUser.display_name && currentUser.display_name.trim() !== "") {
+      return currentUser.display_name.trim();
+    }
+    if (currentUser.username && currentUser.username.trim() !== "") {
+      const u = currentUser.username.trim();
+      return u.charAt(0).toUpperCase() + u.slice(1);
+    }
+    return "Mina-san";
+  };
+
   const triggerTestAlert = async () => {
     setLoading(true);
     setStatusMsg("");
@@ -148,17 +169,18 @@ export default function PushNotificationManager() {
         method: "POST",
       });
       if (res.ok) {
-        setStatusMsg("Nami broadcast alert sent to your device! 🚀");
+        setStatusMsg("Nami broadcast alert sent to your device!");
         setLoading(false);
         return;
       }
     } catch (_) {}
 
     // Fallback: Trigger native browser Notification directly
+    const name = getUserDisplayName();
     try {
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
         new Notification("🍊 Nami's Broadcast Weather Alert! ⛵", {
-          body: "Yosh, Mina-san! Nami here, official Navigator of NamiVerse! 💰 Whenever a show on your list airs a new episode or trailer, I'll chart the skies and send a live alert directly to your device so you never miss a release! Keep sailing! 🍊✨",
+          body: `Yosh, ${name}! Nami here, official Navigator of NamiVerse! 💰 Whenever a show on your list airs a new episode or trailer, I'll chart the skies and send a live alert directly to your device so you never miss a release! Keep sailing! 🍊✨`,
           icon: "/nami-wano-avatar.jpg",
           badge: "/icons/icon-192x192.png",
         });
