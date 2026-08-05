@@ -473,14 +473,21 @@ def call_gemini_nami_ai(
 
     contents = []
     if history:
-        for m in history[-4:]:
+        expected_role = "user"
+        for m in history[-6:]:
+            if not m.text or not m.text.strip():
+                continue
             if any(bad in m.text for bad in ["stormy weather", "catalog IDs", "Bold markdown", "raw status"]):
                 continue
             role = "user" if m.sender == "user" else "model"
-            contents.append({
-                "role": role,
-                "parts": [{"text": m.text}]
-            })
+            if role == expected_role:
+                contents.append({
+                    "role": role,
+                    "parts": [{"text": m.text.strip()}]
+                })
+                expected_role = "model" if expected_role == "user" else "user"
+        if contents and contents[-1]["role"] == "user":
+            contents.pop()
 
     contents.append({
         "role": "user",
@@ -617,11 +624,10 @@ def nami_chat(
             matched_genres = list(set(matched_genres + ["Adventure"]))
 
         RECOMMENDATION_KEYWORDS = [
-            "recommend", "suggestion", "suggest", "what should i watch", "what to watch",
-            "what anime", "give me", "show me", "find me", "i want to watch", "looking for",
-            "any good", "anything good", "best anime", "top anime", "anime for",
-            "similar to", "like this anime", "genre", "isekai", "shonen", "seinen", "shoujo",
-            "10/10", "masterpiece", "masterpieces", "top adventure", "dark fantasy", "airing season", "hits"
+            "recommend", "recommendation", "recommendations", "suggestion", "suggest",
+            "what should i watch", "what to watch", "i want to watch", "looking for anime",
+            "any good anime", "anything good to watch", "best anime to watch", "top anime to watch",
+            "anime recommendations", "similar to", "like this anime", "10/10 anime", "masterpiece anime"
         ]
         is_recommendation_request = any(kw in lowered_msg for kw in RECOMMENDATION_KEYWORDS) or bool(matched_genres) or is_upcoming_request or ("10/10" in lowered_msg) or ("masterpiece" in lowered_msg)
 
