@@ -258,7 +258,7 @@ def fetch_anilist_anime_details(query: str) -> List[dict]:
                         })
                     return output
         except Exception as ex:
-            log.warning(f"AniList API search fallback error for '{search_term}': {ex}")
+            log.warning(f"AniList API search fallback error for '{query}': {ex}")
             continue
 
     return []
@@ -753,22 +753,22 @@ def nami_chat(
         db_candidates = []
         try:
             query = db.query(Anime)
-
-            if is_upcoming_request:
-                query = query.filter(or_(Anime.status == "NOT_YET_RELEASED", Anime.status == AnimeStatus.NOT_YET_RELEASED))
-
             if matched_genres:
-                query = query.join(Anime.genres).filter(
-                    or_(*[Genre.name.ilike(f"%{g}%") for g in matched_genres])
-                )
+                clean_g = matched_genres[0]
+                query = query.join(Anime.genres).filter(Genre.name.ilike(f"%{clean_g}%"))
             elif target_anime:
                 query = query.filter(Anime.id == target_anime.id)
 
-            db_candidates = query.order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(40).all()
+            db_candidates = query.order_by(Anime.average_score.desc()).limit(30).all()
             if not db_candidates:
-                db_candidates = db.query(Anime).order_by(Anime.average_score.desc().nullslast(), Anime.popularity.desc().nullslast()).limit(40).all()
+                db_candidates = db.query(Anime).order_by(Anime.average_score.desc()).limit(30).all()
         except Exception as db_err:
             log.warning(f"DB candidates query warning: {db_err}")
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            db_candidates = []
 
         catalog_snippets = []
         for a in db_candidates[:10]:
