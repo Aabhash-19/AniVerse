@@ -636,20 +636,42 @@ def nami_chat(
         # ── 2. Query & Intent Parsing ─────────────────────────────────────────
         lowered_msg = user_msg.lower()
 
+        # ── World knowledge / casual intent detection ──────────────────────────
+        # IMPORTANT: These must route to Pillar 4 (Gemini AI), NOT Pillar 2 (anime lookup)
         CASUAL_QUESTION_KEYWORDS = [
-            "explain", "why", "how", "joke", "funny", "humor",
-            "physics", "science", "math", "astrophysics", "quantum", "space", "universe", "stars", "gravity"
+            "explain", "why", "how does", "how do", "how are", "how is",
+            "joke", "jokes", "funny", "humor", "laugh",
+            "physics", "science", "math", "mathematics", "astrophysics", "quantum",
+            "space", "universe", "stars", "gravity", "planet", "galaxy", "cosmos",
+            "biology", "chemistry", "history", "technology", "engineering",
+            "otaku", "anime culture", "weeb", "manga culture"
         ]
         is_casual_question = any(kw in lowered_msg for kw in CASUAL_QUESTION_KEYWORDS)
 
+        NAMI_PERSONAL_KEYWORDS = [
+            "your favourite", "your favorite", "nami favourite", "nami favorite",
+            "your outfit", "your clothes", "your style", "your weapon", "your hair",
+            "your personality", "your crew", "your ship", "your log pose",
+            "who do you love", "who do u love", "do you love", "nami love",
+            "what do you like", "what do u like", "your likes", "your dislikes",
+            "your power", "your strength", "your age", "your height",
+            "are you happy", "are you okay", "how are you", "how r u",
+            "what's up", "whats up", "how do you do", "good morning", "good evening", "good night",
+            "favourite crewmate", "favorite crewmate", "best crewmate",
+            "love sanji", "like sanji", "love luffy", "love zoro",
+            "favorite anime", "favourite anime", "favourite genre", "favorite genre",
+            "clima tact", "clima-tact", "sorcery clima",
+            "where are you from", "your dream", "your bounty", "who are you",
+            "tell me about yourself", "about nami", "about you"
+        ]
+        is_nami_personal = any(kw in lowered_msg for kw in NAMI_PERSONAL_KEYWORDS)
+
         is_greeting_or_casual = (
-            lowered_msg in ["hi", "hello", "hey", "yo", "yosh", "nami", "hi nami", "hey nami", "hello nami", "yo nami", "sup", "howdy", "thanks", "thank you"] or
-            any(kw in lowered_msg for kw in [
-                "how are you", "what's up", "whats up", "how do you do", "good morning", "good evening", "good night",
-                "favourite crewmate", "favorite crewmate", "best crewmate", "love sanji", "like sanji", "favorite anime", "favourite anime",
-                "clima tact", "clima-tact", "where are you from", "your dream", "your bounty", "who are you", "tell me about yourself",
-                "about nami", "about you"
-            ]) or is_casual_question
+            lowered_msg in ["hi", "hello", "hey", "yo", "yosh", "nami", "hi nami", "hey nami",
+                            "hello nami", "yo nami", "sup", "howdy", "thanks", "thank you",
+                            "ok", "okay", "cool", "nice", "wow", "great", "awesome"] or
+            is_nami_personal or
+            is_casual_question
         )
         
         AIRING_KEYWORDS = ["currently airing", "airing", "ongoing", "this season", "releasing", "currently running", "new episodes", "weekly", "airing anime", "airing season", "airing hits"]
@@ -666,13 +688,16 @@ def nami_chat(
         is_plot_request = any(kw in lowered_msg for kw in PLOT_KEYWORDS)
         is_watchlist_request = any(kw in lowered_msg for kw in WATCHLIST_KEYWORDS)
 
-        # Genre Matching
+        # Genre Matching — use word boundaries so "mechanics" does NOT trigger "mecha"
         ALL_GENRES = [
-            "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Isekai", "Mecha", 
-            "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Seinen", "Shonen", 
+            "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Isekai", "Mecha",
+            "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Seinen", "Shonen",
             "Shoujo", "Slice of Life", "Sports", "Supernatural", "Thriller"
         ]
-        matched_genres = [g for g in ALL_GENRES if g.lower() in lowered_msg]
+        matched_genres = [
+            g for g in ALL_GENRES
+            if re.search(r'\b' + re.escape(g.lower()) + r'\b', lowered_msg)
+        ]
 
         if "rom-com" in lowered_msg or "romantic comedy" in lowered_msg:
             matched_genres = list(set(matched_genres + ["Romance", "Comedy"]))
@@ -802,29 +827,29 @@ def nami_chat(
             catalog_snippets.append(f"• Title: \"{t}\" (Score: {score}, Genres: {g}, Summary: {desc_snippet})")
         
         # ── 6. Jikan API & AniList Real-Time Database Grounding ──────────────────
-        CASUAL_QUESTION_KEYWORDS = [
-            "explain", "why", "how", "joke", "funny", "humor",
-            "physics", "science", "math", "astrophysics", "quantum", "space", "universe", "stars", "gravity"
-        ]
-        is_casual_question = any(kw in lowered_msg for kw in CASUAL_QUESTION_KEYWORDS)
-
-        is_greeting_or_casual = (
-            lowered_msg in ["hi", "hello", "hey", "yo", "yosh", "nami", "hi nami", "hey nami", "hello nami", "yo nami", "sup", "howdy", "thanks", "thank you"] or
-            any(kw in lowered_msg for kw in [
-                "how are you", "what's up", "whats up", "how do you do", "good morning", "good evening", "good night",
-                "favourite crewmate", "favorite crewmate", "best crewmate", "love sanji", "like sanji", "favorite anime", "favourite anime",
-                "clima tact", "clima-tact", "where are you from", "your dream", "your bounty", "who are you", "tell me about yourself",
-                "about nami", "about you"
-            ]) or is_casual_question
-        )
-
         jikan_context_str = ""
         jikan_anime = []
 
         if not is_greeting_or_casual:
-            clean_words = [w for w in user_msg.split() if w.lower() not in [
-                "can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of", "anime", "show",
-                "recommend", "suggest", "good", "best", "top", "give", "find", "looking", "for", "your", "dream", "who", "character"
+            # Strip question prefixes so "tell me something about Death Note" → searches "Death Note"
+            QUESTION_PREFIXES = [
+                "tell me something about", "tell me about", "tell me more about",
+                "what is", "what are", "what's", "whats",
+                "can you tell me about", "can u tell me about",
+                "explain me about", "explain",
+                "give me info on", "give me information about",
+                "i want to know about", "who is", "who are",
+                "something about", "info on", "info about",
+            ]
+            stripped_msg = user_msg.strip()
+            for prefix in sorted(QUESTION_PREFIXES, key=len, reverse=True):
+                if stripped_msg.lower().startswith(prefix):
+                    stripped_msg = stripped_msg[len(prefix):].strip()
+                    break
+
+            clean_words = [w for w in stripped_msg.split() if w.lower() not in [
+                "can", "you", "the", "of", "anime", "show",
+                "recommend", "suggest", "good", "best", "top", "give", "find", "looking", "for"
             ]]
             search_term = " ".join(clean_words).strip()
 
@@ -1022,30 +1047,108 @@ def nami_chat(
             if gemini_reply:
                 reply_text = gemini_reply
             else:
-                # Dynamic Smart Nami Response Engine for Fun & World Knowledge
-                if any(k in lowered_msg for k in ["astrophysics", "physics", "science", "space", "star", "stars", "gravity", "universe", "quantum", "math", "planet", "galaxy"]):
+                # ── Rich Dynamic Nami Fallback Engine (when Gemini AI is unavailable) ──
+                # Topic-aware, rotating responses so nothing ever repeats or feels robotic.
+
+                if re.search(r'\b(hi|hello|hey|sup|howdy)\b', lowered_msg) and not is_nami_personal:
+                    reply_text = random.choice([
+                        "Yosh! Welcome aboard the Thousand Sunny, Irray! I'm Nami, your Straw Hat Navigator! Ask me about any anime, a genre you love, or just chat—I'm all ears! 🍊⛵",
+                        "Fufufu, Irray! You caught me between weather readings! What can your favorite Navigator help you with today? 🧭✨",
+                        "Hey Irray! Great to see you on deck! Ready to chart a new anime course or just here to hang out? 🍊"
+                    ])
+
+                elif any(k in lowered_msg for k in ["how are you", "how r u", "how are u", "are you okay", "are you happy"]):
+                    reply_text = random.choice([
+                        "Fufufu! I'm absolutely 100% doing great! Just calculated the best wind currents for our next voyage and pocketed 50,000 Berries from Luffy's emergency fund... he doesn't know yet! 🍊💰",
+                        "Yosh! Never better, Irray! The weather's perfect, the Log Pose is locked in, and nobody has eaten MY tangerines today! 🍊⛵",
+                        "Oh, I'm doing amazing! Just made Sanji cry by rejecting his cooking offer—for the 47th time this week! 😂 What about you? 🍊"
+                    ])
+
+                elif any(k in lowered_msg for k in ["outfit", "clothes", "style", "hair", "wear"]):
                     reply_text = (
-                        "Fufufu! As Navigator of the Straw Hat Pirates, charting celestial navigation and the stars is second nature to me! 🧭✨\n\n"
-                        "Astrophysics and quantum physics are just the grand celestial map of how gravity, light, and cosmic winds move across the universe—much like how our Log Pose reads the strange magnetic fields of the Grand Line! "
-                        "When you look up at the night sky, every star is a giant burning sun guiding our course across the sea. Got any more cosmic questions for your Navigator? 🍊⛵"
+                        "Fufufu! My fashion sense is as sharp as my navigation skills! 🍊✨\n\n"
+                        "My iconic look across the Grand Line:\n"
+                        "• **East Blue Arc**: Blue crop top + orange mini skirt 🍊\n"
+                        "• **Alabasta Arc**: White belly shirt + blue skirt\n"
+                        "• **Post-Timeskip**: Pink bikini top + jeans shorts with suspenders\n"
+                        "• **Wano Arc**: Beautiful kimono befitting the Land of Wano 🎋\n\n"
+                        "Every outfit is carefully chosen for maximum navigation efficiency AND maximum style! 💁‍♀️"
                     )
-                elif any(k in lowered_msg for k in ["joke", "funny", "laugh", "humor"]):
+
+                elif any(k in lowered_msg for k in ["favourite genre", "favorite genre", "genre do you like", "what genre"]):
                     reply_text = (
-                        "Fufufu! Here's a favorite pirate joke from the Sunny:\n\n"
-                        "Why did Zoro get lost on the way to the kitchen?\n"
-                        "Because even a straight path has too many directions for a mosshead! ⚔️🤣\n\n"
-                        "And what's a pirate's favorite letter? You'd think it's 'R', but their true love is the 'C' (and 💰 Berries, obviously!) 🍊✨"
+                        "Fufufu! Great question, Irray! 🍊 As your Navigator, I've charted every genre in the anime ocean:\n\n"
+                        "My personal top picks:\n"
+                        "• **Adventure** — because nothing beats the thrill of the open sea! ⛵\n"
+                        "• **Psychological** — I love shows that twist your mind like a Grand Line current! 🧠\n"
+                        "• **Romance** — though I'll NEVER admit I got teary-eyed at Clannad! 😤\n"
+                        "• **Action** — watching great fight scenes is almost as satisfying as collecting Berries! 💰\n\n"
+                        "Want me to recommend something from any of these? 🧭"
                     )
-                elif any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money"]):
+
+                elif any(k in lowered_msg for k in ["who do you love", "who do u love", "do you love", "nami love", "you love"]):
+                    reply_text = random.choice([
+                        "Fufufu! Love? My heart belongs to 💰 Berries and tangerines, Irray! \n\nBut if you're asking about the crew—Luffy gave me my freedom back when no one else could, Robin-chan is my wise elder sister, and Chopper is the world's most adorable brother. As for Sanji... he's family, but if he winks at me ONE more time, it'll cost him 1,000,000 Berries! 😤🍊",
+                        "Love?! Fufufu! I love three things: tangerines, drawing maps, and Berries! 🍊🗺️💰 The crew is my family and I'd fight any Sea King for them—but that's NOT the same as love, okay?! 😤"
+                    ])
+
+                elif any(k in lowered_msg for k in ["otaku", "weeb", "anime culture", "manga culture"]):
+                    reply_text = (
+                        "Fufufu! An otaku! 🍊 An **otaku** (オタク) is a Japanese term for someone deeply passionate about anime, manga, games, or pop culture!\n\n"
+                        "The word originally had a slightly negative nuance in Japan—like calling someone an obsessive shut-in—but globally it's worn as a badge of pride! 🎌\n\n"
+                        "Think of it this way: I'm an otaku for weather science and cartography, and nobody judges me for it! \n"
+                        "Being passionate about something you love is always a treasure! 💰⛵"
+                    )
+
+                elif any(k in lowered_msg for k in ["astrophysics", "astronomy", "cosmos", "galaxy", "planet", "universe", "space"]):
+                    reply_text = (
+                        "Fufufu! As Navigator of the Straw Hat Pirates, the stars are my compass! 🧭✨\n\n"
+                        "**Astrophysics** is the study of how stars, galaxies, and the entire universe work—from the birth of stars in nebulae to the crushing gravity of black holes! \n\n"
+                        "I navigate by star charts every night on the Thousand Sunny. Every star you see is an ancient burning sun, some already dead by the time their light reaches us—the universe is that vast! \n"
+                        "Just like the Grand Line, the cosmos has its own mysterious currents and magnetic fields. Got more cosmic questions, Irray? 🍊⛵"
+                    )
+
+                elif any(k in lowered_msg for k in ["physics", "quantum", "mechanics", "relativity"]):
+                    reply_text = (
+                        "Fufufu! Physics! 🍊 Let me chart this for you, Irray:\n\n"
+                        "**Quantum Mechanics** is the physics of the very small—atoms, electrons, and particles that behave like both waves AND particles at the same time. Schrödinger's cat is either alive or dead until you look—kind of like Luffy's plans! They only make sense once you see them in action! 😂\n\n"
+                        "**General Relativity** by Einstein tells us that massive objects like stars bend space and time—gravity is literally the curvature of the universe! \n\n"
+                        "On the Grand Line, our Log Pose reads mysterious magnetic fields—I like to think of it as navigating quantum currents of the sea! 🧭⚡"
+                    )
+
+                elif any(k in lowered_msg for k in ["science", "biology", "chemistry", "math", "mathematics"]):
+                    reply_text = (
+                        "Fufufu! Science is just navigation for the mind, Irray! 🍊\n\n"
+                        "I studied weather science for 2 whole years on the sky island of Weatheria under Haredas to master the Sorcery Clima-Tact—so I have DEEP respect for scientific knowledge! ⚡\n\n"
+                        "Whether it's biology, chemistry, or mathematics—every field is just humans trying to understand the map of reality. And maps? That's MY specialty! 🗺️✨\n"
+                        "Ask me about any specific topic and I'll chart it for you! 🧭"
+                    )
+
+                elif any(k in lowered_msg for k in ["joke", "jokes", "funny", "laugh", "humor", "another joke", "different joke"]):
+                    NAMI_JOKES = [
+                        "Why did Zoro get lost on the way to the kitchen?\nBecause even a straight path has too many directions for that mosshead! ⚔️🤣",
+                        "What do you call a pirate who skips school?\nCaptain Hooky! 😂🏴‍☠️\n\nLuffy actually asked me what school was, so I rest my case! 🍊",
+                        "Why doesn't Sanji ever win at poker?\nBecause every time he gets a good hand, he folds it into a heart shape and gives it to a woman! 💕🤣",
+                        "What's a navigator's least favorite movie?\nLost! Because I NEVER get lost—unlike certain swordsmen! 🧭😤",
+                        "Why did Luffy fail his math test?\nHe kept eating all the pi! 🥧😂",
+                        "What did the ocean say to the Straw Hat Pirates?\nNothing—it just waved! 🌊😂",
+                        "Why does Chopper make a terrible thief?\nBecause he always gets caught—he's too adorable to run away! 🦌🤣"
+                    ]
+                    reply_text = f"Fufufu! Here's one from the Sunny, Irray! 🍊\n\n{random.choice(NAMI_JOKES)}\n\nWant another? Just ask! 😄⛵"
+
+                elif any(k in lowered_msg for k in ["berry", "berries", "gold", "treasure", "money", "beli"]):
                     reply_text = random.choice(NAMI_BERRIES_REPLIES)
-                elif any(k in lowered_msg for k in ["one piece", "pirate", "straw hat"]):
+
+                elif any(k in lowered_msg for k in ["one piece", "pirate", "straw hat", "grand line"]):
                     reply_text = random.choice(NAMI_ONE_PIECE_REPLIES)
+
                 else:
-                    reply_text = (
-                        f"Fufufu! That's a great question! Speaking as Navigator of the Straw Hat Pirates, "
-                        f"sailing the Grand Line has taught me that the world is full of incredible mysteries—from sky islands to deep ocean trenches! "
-                        f"What else would you like to explore today? 🍊⛵"
-                    )
+                    # Truly generic catch-all — still feels alive and in-character
+                    reply_text = random.choice([
+                        f"Fufufu! That's an interesting heading, Irray! 🍊 I'm charting a course through your question right now—what else can your Navigator help you explore? ⛵",
+                        f"Yosh! Your Navigator is on it! Tell me more, Irray—the more detail you give me, the better I can chart our course! 🧭🍊",
+                        f"Hmm, that's deep waters, Irray! 🌊 Even the Grand Line has uncharted corners. Ask me anything—anime, science, life advice, or pirate trivia! 🍊⛵"
+                    ])
 
             recs_formatted = []
             all_recs_pool = []
