@@ -635,6 +635,22 @@ def nami_chat(
 
         # ── 2. Query & Intent Parsing ─────────────────────────────────────────
         lowered_msg = user_msg.lower()
+
+        CASUAL_QUESTION_KEYWORDS = [
+            "explain", "why", "how", "joke", "funny", "humor",
+            "physics", "science", "math", "astrophysics", "quantum", "space", "universe", "stars", "gravity"
+        ]
+        is_casual_question = any(kw in lowered_msg for kw in CASUAL_QUESTION_KEYWORDS)
+
+        is_greeting_or_casual = (
+            lowered_msg in ["hi", "hello", "hey", "yo", "yosh", "nami", "hi nami", "hey nami", "hello nami", "yo nami", "sup", "howdy", "thanks", "thank you"] or
+            any(kw in lowered_msg for kw in [
+                "how are you", "what's up", "whats up", "how do you do", "good morning", "good evening", "good night",
+                "favourite crewmate", "favorite crewmate", "best crewmate", "love sanji", "like sanji", "favorite anime", "favourite anime",
+                "clima tact", "clima-tact", "where are you from", "your dream", "your bounty", "who are you", "tell me about yourself",
+                "about nami", "about you"
+            ]) or is_casual_question
+        )
         
         AIRING_KEYWORDS = ["currently airing", "airing", "ongoing", "this season", "releasing", "currently running", "new episodes", "weekly", "airing anime", "airing season", "airing hits"]
         UPCOMING_KEYWORDS = ["upcoming", "not yet released", "next season", "future anime", "soon"]
