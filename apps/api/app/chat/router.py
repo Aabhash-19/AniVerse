@@ -770,9 +770,9 @@ def nami_chat(
             search_term = " ".join(clean_words).strip()
 
             if search_term and len(search_term) >= 2:
-                jikan_anime = fetch_jikan_anime_details(search_term)
+                jikan_anime = fetch_anilist_anime_details(search_term)
                 if not jikan_anime:
-                    jikan_anime = fetch_anilist_anime_details(search_term)
+                    jikan_anime = fetch_jikan_anime_details(search_term)
                 jikan_chars = fetch_jikan_character_details(search_term)
 
                 jikan_parts = []
