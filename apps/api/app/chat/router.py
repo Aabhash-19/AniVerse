@@ -264,6 +264,38 @@ def fetch_anilist_anime_details(query: str) -> List[dict]:
     return []
 
 
+def fetch_jikan_character_details(query: str) -> List[dict]:
+    """Fetch character details from Jikan API safely."""
+    if not query or len(query.strip()) < 2:
+        return []
+    clean_q = urllib.parse.quote(query.strip())
+    url = f"https://api.jikan.moe/v4/characters?q={clean_q}&limit=2"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=3) as res:
+            data = json.loads(res.read().decode("utf-8"))
+            results = data.get("data", [])
+            output = []
+            for char in results:
+                name = char.get("name") or ""
+                about = char.get("about") or ""
+                clean_about = re.sub(r'\s+', ' ', about).strip()
+                animeography = [
+                    a.get("anime", {}).get("title")
+                    for a in char.get("anime", [])[:3]
+                    if a.get("anime", {}).get("title")
+                ]
+                output.append({
+                    "name": name,
+                    "about": clean_about[:350],
+                    "anime": ", ".join(animeography)
+                })
+            return output
+    except Exception as ex:
+        log.warning(f"Jikan character search warning for '{query}': {ex}")
+        return []
+
+
 def get_nami_lore_fallback(lowered_msg: str) -> Optional[str]:
     """
     Returns authentic Nami self-knowledge lore response whenever the query is about Nami,
@@ -565,6 +597,7 @@ def nami_chat(
 
         # ── 1. Build User Watchlist Context ─────────────────────────────────────
         watchlist_context = "User is browsing anonymously."
+        catalog_context = ""
         user_completed_ids = set()
         completed_titles = []
         watching_titles = []
@@ -746,8 +779,6 @@ def nami_chat(
             desc_snippet = re.sub(r'<[^>]+>', '', raw_desc)[:120]
             catalog_snippets.append(f"• Title: \"{t}\" (Score: {score}, Genres: {g}, Summary: {desc_snippet})")
         
-        catalog_context = "\n".join(catalog_snippets)
-
         # ── 6. Jikan API & AniList Real-Time Database Grounding ──────────────────
         is_greeting_or_casual = (
             lowered_msg in ["hi", "hello", "hey", "yo", "yosh", "nami", "hi nami", "hey nami", "hello nami", "yo nami", "sup", "howdy", "thanks", "thank you"] or
@@ -860,9 +891,9 @@ def nami_chat(
                     log.warning(f"Local anime match query error for '{t_str}': {db_ex}")
                     local_match = None
 
-                card_id = local_match.id if local_match else item["mal_id"]
-                cover_url = local_match.cover_large_url if (local_match and local_match.cover_large_url) else item.get("image_url")
-                card_slug = local_match.slug if local_match else slug_clean
+                card_id = int(local_match.id) if (local_match and hasattr(local_match, "id") and isinstance(local_match.id, int)) else item["mal_id"]
+                cover_url = str(local_match.cover_large_url) if (local_match and getattr(local_match, "cover_large_url", None) and isinstance(local_match.cover_large_url, str)) else item.get("image_url")
+                card_slug = str(local_match.slug) if (local_match and getattr(local_match, "slug", None) and isinstance(local_match.slug, str)) else slug_clean
 
                 if card_id not in seen_ids:
                     seen_ids.add(card_id)
