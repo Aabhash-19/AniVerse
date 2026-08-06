@@ -332,7 +332,7 @@ def get_nami_lore_fallback(lowered_msg: str) -> Optional[str]:
 
 
 def clean_gemini_reply(text: str) -> str:
-    """Strip any system prompt leakage or internal rule echoing from Gemini reply."""
+    """Strip any system prompt leakage, internal rule echoing, or planning bullets from model reply."""
     if not text:
         return text
     lines = text.split("\n")
@@ -340,14 +340,20 @@ def clean_gemini_reply(text: str) -> str:
     forbidden_snippets = [
         "catalog ids", "raw status strings", "bold markdown for titles",
         "strict response constraints", "database catalog ground truth",
-        "filter compliance", "no metadata leaks", "watchlist compliance"
+        "filter compliance", "no metadata leaks", "watchlist compliance",
+        "user question:", "persona:", "tone:", "constraints:", "relationship with",
+        "direct answer:", "the \"nami\" twist:", "bold titles?", "self-correction"
     ]
     for line in lines:
-        line_lower = line.lower()
+        line_lower = line.lower().strip()
+        if line_lower.startswith("*") and any(k in line_lower for k in ["question", "persona", "tone", "constraint", "relationship", "answer", "twist", "self-correction", "intent:"]):
+            continue
         if any(f in line_lower for f in forbidden_snippets):
             continue
         cleaned_lines.append(line)
-    return "\n".join(cleaned_lines).strip()
+    result = "\n".join(cleaned_lines).strip()
+    return result
+
 
 
 def fetch_live_airing_anime() -> List[dict]:
@@ -483,7 +489,7 @@ def call_groq_nami_ai(
         "• If the user asks about an anime or character, answer fully, intelligently, and enthusiastically in Nami persona.\n"
         "• Write anime titles in bold markdown (e.g. **Death Note**).\n"
         "• Provide complete, intelligent, engaging responses. Never stop mid-sentence or output truncated fragments.\n"
-        "• Never output instructions or system rules. Speak directly as Nami."
+        "• CRITICAL: Output ONLY Nami's spoken reply. Do NOT output any thought process, planning notes, bullet points, reasoning steps, or analysis of the prompt. Speak directly as Nami."
     )
 
     messages = [{"role": "system", "content": system_prompt}]
