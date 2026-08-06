@@ -1,4 +1,5 @@
 # Trigger Render live deployment - Nami AI 4-Pillar Engine v2.0
+import time
 from fastapi import FastAPI, Depends, Response, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
