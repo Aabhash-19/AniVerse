@@ -1161,39 +1161,15 @@ def nami_chat(
 
 @router.get("/debug-gemini")
 def debug_gemini():
-    """Diagnostic endpoint to inspect Gemini API status live from server."""
+    """Diagnostic endpoint to inspect call_gemini_nami_ai output live."""
     raw_key = os.getenv("GEMINI_API_KEY") or getattr(settings, "GEMINI_API_KEY", "") or ""
     key_clean = raw_key.strip()
     
-    info = {
-        "key_configured": bool(key_clean),
-        "key_prefix": key_clean[:6] + "..." if len(key_clean) >= 6 else "SHORT_OR_EMPTY",
-        "key_length": len(key_clean),
-        "model_results": []
-    }
+    test_reply = call_gemini_nami_ai("who is your favourite strawhat Nami ?", [], "", "", "")
     
-    if not key_clean:
-        info["error"] = "GEMINI_API_KEY is not set in environment or settings"
-        return info
-        
-    models = ["gemini-flash-latest", "gemini-pro-latest", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
-    for m in models:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={key_clean}"
-        payload = {"contents": [{"role": "user", "parts": [{"text": "Hello"}]}]}
-        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
-        try:
-            with urllib.request.urlopen(req, timeout=5) as res:
-                data = json.loads(res.read().decode("utf-8"))
-                text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-                info["model_results"].append({"model": m, "status": 200, "text": text[:60]})
-        except urllib.error.HTTPError as he:
-            err_b = ""
-            try:
-                err_b = he.read().decode("utf-8")
-            except Exception:
-                pass
-            info["model_results"].append({"model": m, "status": he.code, "reason": he.reason, "body": err_b[:200]})
-        except Exception as ex:
-            info["model_results"].append({"model": m, "status": 500, "error": str(ex)})
-            
-    return info
+    return {
+        "key_configured": bool(key_clean),
+        "key_prefix": key_clean[:6] + "..." if len(key_clean) >= 6 else "NONE",
+        "key_length": len(key_clean),
+        "call_gemini_nami_ai_output": test_reply
+    }
