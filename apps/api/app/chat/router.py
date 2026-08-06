@@ -1173,11 +1173,47 @@ def debug_gemini():
     raw_key = os.getenv("GEMINI_API_KEY") or getattr(settings, "GEMINI_API_KEY", "") or ""
     key_clean = raw_key.strip()
     
-    test_reply = call_gemini_nami_ai("who is your favourite strawhat Nami ?", [], "", "", "")
+    models_to_test = [
+        "gemini-flash-latest",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemma-4-26b-a4b-it",
+        "gemma-4-31b-it",
+    ]
     
+    results = []
+    for model_name in models_to_test:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key_clean}"
+        payload = {
+            "contents": [{"role": "user", "parts": [{"text": "You are Nami. Hi!"}]}],
+            "generationConfig": {"maxOutputTokens": 100}
+        }
+        if not model_name.startswith("gemma"):
+            payload["systemInstruction"] = {"parts": [{"text": "You are Nami."}]}
+            
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 NamiVerse/1.0"}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=12) as res:
+                res_data = json.loads(res.read().decode("utf-8"))
+                text = res_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                results.append({"model": model_name, "status": 200, "text": text})
+        except urllib.error.HTTPError as he:
+            err_body = ""
+            try:
+                err_body = he.read().decode("utf-8")
+            except Exception:
+                pass
+            results.append({"model": model_name, "status": he.code, "reason": he.reason, "body": err_body[:200]})
+        except Exception as ex:
+            results.append({"model": model_name, "status": 500, "error": str(ex)})
+
     return {
         "key_configured": bool(key_clean),
         "key_prefix": key_clean[:6] + "..." if len(key_clean) >= 6 else "NONE",
         "key_length": len(key_clean),
-        "call_gemini_nami_ai_output": test_reply
+        "results": results
     }
