@@ -518,56 +518,68 @@ def call_gemini_nami_ai(
 
     for model_name in models_to_try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-        payload = {
-            "system_instruction": {
-                "parts": [{"text": system_instruction_text}]
-            },
-            "contents": contents,
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 2048
-            }
-        }
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "User-Agent": "Mozilla/5.0 NamiVerse/1.0"
-            }
-        )
+        
+        # Try with history first, fallback to single prompt if history causes HTTP 400
+        content_options = [contents]
+        if len(contents) > 1:
+            content_options.append([{"role": "user", "parts": [{"text": message}]}])
 
-        for attempt in range(2):
-            try:
-                with urllib.request.urlopen(req, timeout=10) as res:
-                    res_data = json.loads(res.read().decode("utf-8"))
-                    candidates = res_data.get("candidates", [])
-                    if candidates:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        if parts and parts[0].get("text"):
-                            raw_resp = parts[0]["text"].strip()
-                            cleaned_resp = clean_gemini_reply(raw_resp)
-                            if cleaned_resp:
-                                if len(_gemini_cache) >= _GEMINI_CACHE_MAX:
-                                    oldest = next(iter(_gemini_cache))
-                                    del _gemini_cache[oldest]
-                                _gemini_cache[cache_key] = cleaned_resp
-                                log.info(f"Gemini API success with model: {model_name}")
-                                return cleaned_resp
-            except urllib.error.HTTPError as he:
-                err_body = ""
+        for current_contents in content_options:
+            payload = {
+                "system_instruction": {
+                    "parts": [{"text": system_instruction_text}]
+                },
+                "contents": current_contents,
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 2048
+                }
+            }
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "User-Agent": "Mozilla/5.0 NamiVerse/1.0"
+                }
+            )
+
+            success = False
+            for attempt in range(2):
                 try:
-                    err_body = he.read().decode("utf-8")
-                except Exception:
-                    pass
-                log.warning(f"Gemini API model {model_name} (attempt {attempt}) HTTP {he.code}: {he.reason} - {err_body[:150]}")
-                if he.code == 429 and attempt == 0:
-                    time.sleep(2.5)  # Wait for Google's 2-second rate limit window to pass
-                    continue
-                else:
+                    with urllib.request.urlopen(req, timeout=10) as res:
+                        res_data = json.loads(res.read().decode("utf-8"))
+                        candidates = res_data.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            if parts and parts[0].get("text"):
+                                raw_resp = parts[0]["text"].strip()
+                                cleaned_resp = clean_gemini_reply(raw_resp)
+                                if cleaned_resp:
+                                    if len(_gemini_cache) >= _GEMINI_CACHE_MAX:
+                                        oldest = next(iter(_gemini_cache))
+                                        del _gemini_cache[oldest]
+                                    _gemini_cache[cache_key] = cleaned_resp
+                                    log.info(f"Gemini API success with model: {model_name}")
+                                    return cleaned_resp
+                except urllib.error.HTTPError as he:
+                    err_body = ""
+                    try:
+                        err_body = he.read().decode("utf-8")
+                    except Exception:
+                        pass
+                    log.warning(f"Gemini API model {model_name} (attempt {attempt}) HTTP {he.code}: {he.reason} - {err_body[:150]}")
+                    if he.code == 429 and attempt == 0:
+                        time.sleep(2.5)  # Wait for Google's 2-second rate limit window to pass
+                        continue
+                    elif he.code == 400:
+                        break  # Fallback to next content option (single-turn)
+                    else:
+                        break
+                except Exception as ex:
+                    log.warning(f"Gemini API model {model_name} error: {ex}")
                     break
-            except Exception as ex:
-                log.warning(f"Gemini API model {model_name} error: {ex}")
+            if success:
                 break
 
     log.warning("All Gemini API models failed to return a response.")
