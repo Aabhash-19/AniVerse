@@ -462,10 +462,12 @@ def call_gemini_nami_ai(
     # Cache check
     cache_key = message.lower()[:120]
     if cache_key in _gemini_cache:
+        log.info(f"Gemini Cache Hit for prompt: {message[:30]}")
         return _gemini_cache[cache_key]
 
-    api_key = (settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY") or "").strip()
+    api_key = (os.getenv("GEMINI_API_KEY") or getattr(settings, "GEMINI_API_KEY", "") or "").strip()
     if not api_key:
+        log.warning("Gemini API call skipped: GEMINI_API_KEY is empty or not configured in environment.")
         return None
 
     system_instruction_text = (
@@ -551,21 +553,24 @@ def call_gemini_nami_ai(
                                 oldest = next(iter(_gemini_cache))
                                 del _gemini_cache[oldest]
                             _gemini_cache[cache_key] = cleaned_resp
+                            log.info(f"Gemini API success with model: {model_name}")
                             return cleaned_resp
         except urllib.error.HTTPError as he:
-            if he.code == 429:
-                # 429 on this model family → INSTANTLY skip to next model family without sleeping
-                log.info(f"Gemini model {model_name} rate-limited (429), switching to next model family...")
+            err_body = ""
+            try:
+                err_body = he.read().decode("utf-8")
+            except Exception:
+                pass
+            log.warning(f"Gemini API model {model_name} HTTP {he.code}: {he.reason} - Details: {err_body[:200]}")
+            if he.code == 429 or he.code == 404:
                 continue
-            elif he.code == 404:
-                continue             # model doesn't exist, try next immediately
             else:
-                log.warning(f"Gemini API model {model_name} HTTP {he.code}: {he}")
                 continue
         except Exception as ex:
             log.warning(f"Gemini API model {model_name} error: {ex}")
             continue
 
+    log.warning("All Gemini API models failed to return a response.")
     return None
 
 
