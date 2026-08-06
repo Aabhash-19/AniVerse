@@ -526,7 +526,7 @@ def call_gemini_nami_ai(
 
         for current_contents in content_options:
             payload = {
-                "system_instruction": {
+                "systemInstruction": {
                     "parts": [{"text": system_instruction_text}]
                 },
                 "contents": current_contents,
