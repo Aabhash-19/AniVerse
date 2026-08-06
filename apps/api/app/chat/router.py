@@ -295,6 +295,8 @@ def get_nami_lore_fallback(lowered_msg: str) -> Optional[str]:
             "My dream is to draw a complete, perfect map of the entire world (**世界地図**)! 🗺️\n\n"
             "As Navigator of the Straw Hat Pirates, I've charted every sea from the East Blue to the New World—and here on NamiVerse, I'm charting the entire ocean of anime for you! ⛵🍊"
         )
+    elif any(k in msg for k in ["favourite strawhat", "favorite strawhat", "favourite crewmate", "favorite crewmate", "best crewmate"]):
+        return "Fufufu! Don't tell the others, but **Luffy** is the heart of our ship! 👒 He gave me my freedom back at Arlong Park when nobody else could! Robin-chan is my wonderful sister figure, Chopper is my adorable little brother, and Sanji... well, Sanji makes the best tangerine drinks, even if he gets 100,000 Berries charged to his tab! 😂🍊"
     elif any(k in msg for k in ["clima", "tact", "weapon", "sorcery", "zeus"]):
         return "My weapon is the **Sorcery Clima-Tact**, invented by Usopp and upgraded with Weatheria science! ⚡ I can create Heat Balls, Cool Balls, and Mirage Tempos—and I even fused Big Mom's cloud **Zeus** into it for devastating lightning strikes! 🌩️🍊"
     elif any(k in msg for k in ["goku", "vs", "win", "fight", "stronger"]) and any(k in msg for k in ["luffy", "monkey"]):
@@ -535,37 +537,38 @@ def call_gemini_nami_ai(
             }
         )
 
-        try:
-            with urllib.request.urlopen(req, timeout=8) as res:
-                res_data = json.loads(res.read().decode("utf-8"))
-                candidates = res_data.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts and parts[0].get("text"):
-                        raw_resp = parts[0]["text"].strip()
-                        cleaned_resp = clean_gemini_reply(raw_resp)
-                        if cleaned_resp:
-                            # Store in cache
-                            if len(_gemini_cache) >= _GEMINI_CACHE_MAX:
-                                oldest = next(iter(_gemini_cache))
-                                del _gemini_cache[oldest]
-                            _gemini_cache[cache_key] = cleaned_resp
-                            log.info(f"Gemini API success with model: {model_name}")
-                            return cleaned_resp
-        except urllib.error.HTTPError as he:
-            err_body = ""
+        for attempt in range(2):
             try:
-                err_body = he.read().decode("utf-8")
-            except Exception:
-                pass
-            log.warning(f"Gemini API model {model_name} HTTP {he.code}: {he.reason} - Details: {err_body[:200]}")
-            if he.code == 429 or he.code == 404:
-                continue
-            else:
-                continue
-        except Exception as ex:
-            log.warning(f"Gemini API model {model_name} error: {ex}")
-            continue
+                with urllib.request.urlopen(req, timeout=10) as res:
+                    res_data = json.loads(res.read().decode("utf-8"))
+                    candidates = res_data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts and parts[0].get("text"):
+                            raw_resp = parts[0]["text"].strip()
+                            cleaned_resp = clean_gemini_reply(raw_resp)
+                            if cleaned_resp:
+                                if len(_gemini_cache) >= _GEMINI_CACHE_MAX:
+                                    oldest = next(iter(_gemini_cache))
+                                    del _gemini_cache[oldest]
+                                _gemini_cache[cache_key] = cleaned_resp
+                                log.info(f"Gemini API success with model: {model_name}")
+                                return cleaned_resp
+            except urllib.error.HTTPError as he:
+                err_body = ""
+                try:
+                    err_body = he.read().decode("utf-8")
+                except Exception:
+                    pass
+                log.warning(f"Gemini API model {model_name} (attempt {attempt}) HTTP {he.code}: {he.reason} - {err_body[:150]}")
+                if he.code == 429 and attempt == 0:
+                    time.sleep(2.5)  # Wait for Google's 2-second rate limit window to pass
+                    continue
+                else:
+                    break
+            except Exception as ex:
+                log.warning(f"Gemini API model {model_name} error: {ex}")
+                break
 
     log.warning("All Gemini API models failed to return a response.")
     return None
