@@ -507,13 +507,11 @@ def call_gemini_nami_ai(
     else:
         contents.append({"role": "user", "parts": [{"text": message}]})
 
-    # Models ordered across distinct model families (each has its own separate rate limit on Google AI Studio)
     models_to_try = [
-        "gemini-2.0-flash-exp",
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
-        "gemini-1.5-flash-latest",
-        "gemini-1.5-pro-latest",
+        "gemini-flash-latest",        # Primary v1beta flash alias (Verified 200 OK ✅)
+        "gemini-pro-latest",          # Primary v1beta pro alias
+        "gemini-2.0-flash",           # 2.0 flash
+        "gemini-2.0-flash-lite",      # 2.0 flash lite
     ]
 
     for model_name in models_to_try:
@@ -1163,7 +1161,7 @@ def debug_gemini():
         info["error"] = "GEMINI_API_KEY is not set in environment or settings"
         return info
         
-    models = ["gemini-2.0-flash-exp", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash-latest", "gemini-1.5-pro-latest"]
+    models = ["gemini-flash-latest", "gemini-pro-latest", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
     for m in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={key_clean}"
         payload = {"contents": [{"role": "user", "parts": [{"text": "Hello"}]}]}
