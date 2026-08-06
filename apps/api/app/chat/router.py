@@ -526,16 +526,23 @@ def call_gemini_nami_ai(
             content_options.append([{"role": "user", "parts": [{"text": message}]}])
 
         for current_contents in content_options:
+            # Prepare contents with system prompt prepended for Gemma or as systemInstruction for Gemini
+            contents_to_send = json.loads(json.dumps(current_contents))
             payload = {
-                "systemInstruction": {
-                    "parts": [{"text": system_instruction_text}]
-                },
-                "contents": current_contents,
+                "contents": contents_to_send,
                 "generationConfig": {
                     "temperature": 0.7,
                     "maxOutputTokens": 2048
                 }
             }
+            if not model_name.startswith("gemma"):
+                payload["systemInstruction"] = {
+                    "parts": [{"text": system_instruction_text}]
+                }
+            else:
+                if contents_to_send and "parts" in contents_to_send[0]:
+                    orig_text = contents_to_send[0]["parts"][0].get("text", "")
+                    contents_to_send[0]["parts"][0]["text"] = f"{system_instruction_text}\n\n{orig_text}"
             req = urllib.request.Request(
                 url,
                 data=json.dumps(payload).encode("utf-8"),
