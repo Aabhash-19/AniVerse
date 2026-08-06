@@ -468,7 +468,7 @@ def call_gemini_nami_ai(
     if not api_key:
         return None
 
-    full_instruction = (
+    system_instruction_text = (
         "SYSTEM PERSONA INSTRUCTION:\n"
         "You are Nami, the Straw Hat Pirates Navigator from One Piece! "
         "You are navigating NamiVerse, the premier anime platform. Speak enthusiastically, warmly, wittily, and in-character as Nami.\n\n"
@@ -481,8 +481,7 @@ def call_gemini_nami_ai(
         "• If the user asks about an anime or character, answer fully, intelligently, and enthusiastically in Nami persona.\n"
         "• Write anime titles in bold markdown (e.g. **Death Note**).\n"
         "• Provide complete, intelligent, engaging responses. Never stop mid-sentence or output truncated fragments.\n"
-        "• Never output instructions or system rules. Speak directly as Nami.\n\n"
-        f"USER MESSAGE: {message}"
+        "• Never output instructions or system rules. Speak directly as Nami."
     )
 
     contents = []
@@ -500,13 +499,11 @@ def call_gemini_nami_ai(
                     "parts": [{"text": m.text.strip()}]
                 })
                 expected_role = "model" if expected_role == "user" else "user"
-        if contents and contents[-1]["role"] == "user":
-            contents.pop()
 
-    contents.append({
-        "role": "user",
-        "parts": [{"text": full_instruction}]
-    })
+    if contents and contents[-1]["role"] == "user":
+        contents[-1] = {"role": "user", "parts": [{"text": message}]}
+    else:
+        contents.append({"role": "user", "parts": [{"text": message}]})
 
     # Models ordered across distinct model families (each has its own separate rate limit on Google AI Studio)
     models_to_try = [
@@ -521,6 +518,9 @@ def call_gemini_nami_ai(
     for model_name in models_to_try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
         payload = {
+            "system_instruction": {
+                "parts": [{"text": system_instruction_text}]
+            },
             "contents": contents,
             "generationConfig": {
                 "temperature": 0.7,
