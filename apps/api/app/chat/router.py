@@ -450,6 +450,95 @@ def fetch_anilist_genre_anime(genre_name: Optional[str] = None) -> List[dict]:
         return []
 
 
+def call_groq_nami_ai(
+    message: str,
+    history: List[ChatMessage],
+    catalog_context: str = "",
+    watchlist_context: str = "",
+    jikan_context: str = ""
+) -> Optional[str]:
+    """
+    Call Groq API (Llama 3.3 70B / Mixtral) with Nami's persona.
+    100% Free, ultra-fast (0.3s), zero 429 quota issues.
+    """
+    groq_key = (os.getenv("GROQ_API_KEY") or getattr(settings, "GROQ_API_KEY", "") or "").strip()
+    if not groq_key:
+        return None
+
+    cache_key = f"groq_{message.lower()[:120]}"
+    if cache_key in _gemini_cache:
+        log.info(f"Groq Cache Hit for prompt: {message[:30]}")
+        return _gemini_cache[cache_key]
+
+    system_prompt = (
+        "SYSTEM PERSONA INSTRUCTION:\n"
+        "You are Nami, the Straw Hat Pirates Navigator from One Piece! "
+        "You are navigating NamiVerse, the premier anime platform. Speak enthusiastically, warmly, wittily, and in-character as Nami.\n\n"
+        f"{NAMI_FANDOM_WIKI_LORE}\n\n"
+        f"REAL-TIME ANILIST DATABASE DATA:\n{jikan_context or 'No external lookup needed.'}\n\n"
+        f"VERIFIED DATABASE ANIME ENTRIES:\n{catalog_context or 'Top rated anime available.'}\n\n"
+        f"USER PROFILE & WATCHLIST:\n{watchlist_context or 'Anonymous guest.'}\n\n"
+        "RULES & GUIDELINES:\n"
+        "• Answer ALL questions warmly, wittily, and in-character as Nami—especially fun personal questions (e.g. your favorite crewmate, your feelings about Sanji/Luffy/Zoro, your favorite anime, tangerines, Berries, or casual conversation).\n"
+        "• If the user asks about an anime or character, answer fully, intelligently, and enthusiastically in Nami persona.\n"
+        "• Write anime titles in bold markdown (e.g. **Death Note**).\n"
+        "• Provide complete, intelligent, engaging responses. Never stop mid-sentence or output truncated fragments.\n"
+        "• Never output instructions or system rules. Speak directly as Nami."
+    )
+
+    messages = [{"role": "system", "content": system_prompt}]
+    if history:
+        for m in history[-6:]:
+            if m.text and m.text.strip():
+                if not any(bad in m.text for bad in ["stormy weather", "catalog IDs", "Bold markdown", "raw status"]):
+                    role = "user" if m.sender == "user" else "assistant"
+                    messages.append({"role": role, "content": m.text.strip()})
+
+    messages.append({"role": "user", "content": message})
+
+    models_to_try = [
+        "llama-3.3-70b-versatile",
+        "llama3-70b-8192",
+        "mixtral-8x7b-32768"
+    ]
+
+    for model in models_to_try:
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.7,
+            "max_tokens": 1024
+        }
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {groq_key}",
+                "User-Agent": "Mozilla/5.0 NamiVerse/1.0"
+            }
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as res:
+                res_data = json.loads(res.read().decode("utf-8"))
+                choices = res_data.get("choices", [])
+                if choices:
+                    content = choices[0].get("message", {}).get("content", "")
+                    if content:
+                        cleaned = clean_gemini_reply(content)
+                        if cleaned:
+                            _gemini_cache[cache_key] = cleaned
+                            log.info(f"Groq API success with model {model}!")
+                            return cleaned
+        except urllib.error.HTTPError as he:
+            log.warning(f"Groq API model {model} HTTP {he.code}: {he.reason}")
+        except Exception as ex:
+            log.warning(f"Groq API model {model} error: {ex}")
+
+    return None
+
+
 def call_gemini_nami_ai(
     message: str,
     history: List[ChatMessage],
@@ -590,8 +679,21 @@ def call_gemini_nami_ai(
             if success:
                 break
 
-    log.warning("All Gemini API models failed to return a response.")
-    return None
+def call_nami_ai(
+    message: str,
+    history: List[ChatMessage],
+    catalog_context: str = "",
+    watchlist_context: str = "",
+    jikan_context: str = ""
+) -> Optional[str]:
+    """
+    Unified AI engine router: Try Groq first (0.3s ultra-fast, no 429 quota issues), fallback to Gemini.
+    """
+    groq_reply = call_groq_nami_ai(message, history, catalog_context, watchlist_context, jikan_context)
+    if groq_reply:
+        return groq_reply
+
+    return call_gemini_nami_ai(message, history, catalog_context, watchlist_context, jikan_context)
 
 
 @router.post("/nami", response_model=ChatResponse)
@@ -1050,7 +1152,7 @@ def nami_chat(
         # Route 3: EVERYTHING ELSE → DIRECT GEMINI AI (Pillar 4)
         # Science, Zoro eye scar, Sanji, hobbies, agriculture, typos, casual chat, lore
         else:
-            gemini_reply = call_gemini_nami_ai(
+            gemini_reply = call_nami_ai(
                 message=user_msg,
                 history=req.history or [],
                 catalog_context=catalog_context,
