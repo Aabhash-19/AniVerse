@@ -555,7 +555,7 @@ def call_gemini_nami_ai(
             success = False
             for attempt in range(2):
                 try:
-                    with urllib.request.urlopen(req, timeout=10) as res:
+                    with urllib.request.urlopen(req, timeout=25) as res:
                         res_data = json.loads(res.read().decode("utf-8"))
                         candidates = res_data.get("candidates", [])
                         if candidates:
