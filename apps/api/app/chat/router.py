@@ -658,6 +658,7 @@ def nami_chat(
             "love sanji", "like sanji", "love luffy", "love zoro",
             "favorite anime", "favourite anime", "favourite genre", "favorite genre",
             "clima tact", "clima-tact", "sorcery clima",
+            "pass time", "passtime", "pastime", "hobbies", "hobby", "free time", "in your free time",
             "where are you from", "your dream", "your bounty", "who are you",
             "tell me about yourself", "about nami", "about you"
         ]
@@ -930,8 +931,8 @@ def nami_chat(
             all_recs_pool = []
 
         # Pillar 2: Anime Title Search / Synopsis Query (AniList only)
-        # Guard: skip if recommendation, genre, airing, or upcoming request — let Pillar 3 handle it
-        elif not is_greeting_or_casual and not is_recommendation_request and not is_airing_request and not is_upcoming_request and (anilist_anime or is_plot_request or len(user_msg.split()) <= 4):
+        # Guard: ONLY enter Pillar 2 if a verified anime title was found or explicit plot request
+        elif not is_greeting_or_casual and not is_recommendation_request and not is_airing_request and not is_upcoming_request and (bool(anilist_anime) or is_plot_request):
             if not anilist_anime:
                 search_query_raw = " ".join([w for w in user_msg.split() if w.lower() not in ["can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of"]]).strip()
                 if search_query_raw:
