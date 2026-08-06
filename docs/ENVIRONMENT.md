@@ -51,6 +51,7 @@ npm run dev
 | `JWT_SECRET` | ✅ | Dev default (change in prod!) | Secret key for JWT token signing |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | ❌ | `30` | JWT access token lifetime |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | ❌ | `7` | JWT refresh token lifetime |
+| `GROQ_API_KEY` | ✅ | — | Groq API key for Llama 3.3 70B AI engine |
 | `BACKEND_CORS_ORIGINS` | ❌ | `http://localhost:3000` | Comma-separated list of allowed frontend origins |
 | `ANILIST_API_URL` | ❌ | `https://graphql.anilist.co` | AniList GraphQL endpoint |
 | `YOUTUBE_API_KEY` | ❌ | — | YouTube Data API v3 key (for trailer ingestion) |

@@ -14,7 +14,7 @@
   <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16.2-black?style=for-the-badge&logo=next.js" alt="Next.js 16" /></a>
   <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-0.109-009688?style=for-the-badge&logo=fastapi" alt="FastAPI" /></a>
   <a href="https://neon.tech"><img src="https://img.shields.io/badge/PostgreSQL-pgvector-336791?style=for-the-badge&logo=postgresql" alt="PostgreSQL pgvector" /></a>
-  <a href="https://ai.google.dev"><img src="https://img.shields.io/badge/Gemini_AI-1.5_/_2.5-8E44AD?style=for-the-badge&logo=google" alt="Gemini AI" /></a>
+  <a href="https://groq.com"><img src="https://img.shields.io/badge/Groq_AI-Llama_3.3_70B-F59E0B?style=for-the-badge&logo=groq" alt="Groq AI" /></a>
   <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-Upstash-DC382D?style=for-the-badge&logo=redis" alt="Redis Cache" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License" /></a>
 </p>
@@ -90,7 +90,7 @@ In **NamiVerse**, Nami changes her outfit to match your current vibe and page se
 </p>
 
 ### 🤖 1. Nami's Log Pose AI Chatbot
-- **Google Gemini AI Integration**: Driven by `gemini-1.5-flash` / `gemini-2.5` with a custom system prompt that enforces Nami's personality (witty, money-loving, navigator knowledge, anime expertise).
+- **Groq AI Integration (Llama 3.3 70B)**: Powered by Groq's high-speed LPUs running `llama-3.3-70b-versatile` (with automatic fallback to Gemini/Gemma) for sub-second (0.3s) responses with a custom system prompt that enforces Nami's personality (witty, money-loving, navigator knowledge, anime expertise).
 - **Interactive Inline Media Cards**: When Nami mentions an anime in chat, the API automatically extracts structured metadata and embeds rich, clickable anime recommendation cards directly inside the streaming chat interface.
 - **Contextual Session Memory**: Keeps track of prior messages during your browsing session with instant clear & reset controls.
 - **Fast Async Streaming Response**: Powered by Server-Sent Events (SSE) / streaming HTTP handlers in FastAPI for sub-second responses.
@@ -143,7 +143,7 @@ In **NamiVerse**, Nami changes her outfit to match your current vibe and page se
 | ⚡ **Engine Room** | **FastAPI** | `v0.109+` | Asynchronous RESTful API, Pydantic V2, SQLAlchemy | *"Python engine running smooth async tasks for zero lag!"* |
 | 💎 **Treasure Vault**| **PostgreSQL + pgvector**| `v16` | Serverless relational database with vector search | *"Stores all our anime treasures & 384d vector coordinates!"* |
 | 🌀 **Wind & Weather**| **Redis (Upstash)** | `v7` | Distributed token-bucket rate limiting & session cache | *"Defends our ship from DDoS storms & caches frequent queries!"* |
-| 🧭 **Log Pose AI** | **Google Gemini AI** | `v1.5/2.5` | Conversational AI chatbot & semantic query parser | *"My personal AI twin that helps pirates find their dream anime!"* |
+| 🧭 **Log Pose AI** | **Groq AI (Llama 3.3)** | `Llama 3.3 70B` | Ultra-fast sub-second conversational AI chatbot & semantic query parser | *"My personal AI twin running on Groq LPUs that helps pirates find their dream anime!"* |
 | ⚓ **Lighthouse** | **Vercel + Render** | Cloud | Global Edge deployment & containerized web API service | *"100% Free cloud hosting stack that costs us zero Berries!"* 💰 |
 
 ---
@@ -162,7 +162,7 @@ graph TD
     subgraph "Backend Engine (Render API)"
         Web -->|RESTful API Calls| API[⚡ FastAPI Service]
         API -->|Rate Limit Check| Redis[(🌀 Upstash Redis Cache)]
-        API -->|Prompt & Chat Context| Gemini[🧭 Google Gemini AI]
+        API -->|Prompt & Chat Context| Groq[🧭 Groq AI Llama 3.3]
     end
     
     subgraph "Data & Vector Storage (Neon PostgreSQL)"
@@ -214,7 +214,7 @@ REDIS_URL="redis://default:password@upstash-redis-url.upstash.io:6379"
 JWT_SECRET="your-super-secret-nami-jwt-key-change-this"
 
 # AI Integration
-GEMINI_API_KEY="AIzaSyYourGeminiApiKeyHere"
+GROQ_API_KEY="gsk_YourGroqApiKeyHere"
 
 # CORS Security
 BACKEND_CORS_ORIGINS="https://nami-verse.vercel.app,http://localhost:3000"
@@ -254,7 +254,7 @@ source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
 pip install -r requirements.txt
 
 # Create .env file from template and configure keys
-cp .env.example .env  # Edit .env with your PostgreSQL & Gemini keys
+cp .env.example .env  # Edit .env with your PostgreSQL & Groq keys
 
 # Launch FastAPI development server with hot-reload
 PYTHONPATH=. uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
