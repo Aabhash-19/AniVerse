@@ -880,155 +880,10 @@ def nami_chat(
                 if anilist_parts:
                     anilist_context_str = "\n\n".join(anilist_parts)
 
-        # ── 7. UNIFIED NAMI AI 4-PILLAR DISPATCHER ─────────────────────────────
+        # ── 7. UNIFIED CLEAN DISPATCHER ────────────────────────────────────────
 
-        # Pillar 1: Nami & One Piece Lore — powered by Gemini AI (knows all of One Piece natively)
-        # Triggers on any question about Nami, her crewmates, One Piece world, weapons, backstory
-        ONE_PIECE_LORE_KEYWORDS = [
-            # About Nami herself
-            "nami", "navigator", "cat burglar", "clima", "tact", "zeus", "thunderbolt",
-            "bell-mere", "bellmere", "nojiko", "arlong", "cocoyasi", "conomi", "weatheria",
-            "bounty", "wanted", "reward", "tangerine", "map", "cartography",
-            # Crewmates
-            "luffy", "zoro", "sanji", "usopp", "chopper", "robin", "franky", "brook", "jinbe",
-            "straw hat crew", "straw hats", "thousand sunny", "going merry",
-            # One Piece world
-            "one piece", "grand line", "new world", "east blue", "west blue", "north blue", "south blue",
-            "marine", "navy", "world government", "yonko", "emperor", "shichibukai", "warlord",
-            "devil fruit", "haki", "conqueror", "armament", "observation",
-            "alabasta", "skypiea", "water seven", "enies lobby", "thriller bark",
-            "sabaody", "impel down", "marineford", "fishman island", "punk hazard",
-            "dressrosa", "zou", "whole cake", "wano", "egghead",
-        ]
-        is_one_piece_lore = any(k in lowered_msg for k in ONE_PIECE_LORE_KEYWORDS)
-
-        if is_one_piece_lore and not is_recommendation_request and not is_greeting_or_casual:
-            # Use Gemini AI for all One Piece / Nami lore — Gemini knows the full One Piece universe
-            lore_context = (
-                "ONE PIECE LORE QUESTION:\n"
-                "The user is asking about One Piece lore, characters, world, or Nami herself. "
-                "Answer with 100% accurate One Piece canon knowledge. "
-                "Speak as Nami — first person for questions about yourself, third person for other characters. "
-                "Be engaging, accurate, and in full Nami character."
-            )
-            ai_reply = call_gemini_nami_ai(
-                message=user_msg,
-                history=req.history or [],
-                catalog_context=catalog_context,
-                watchlist_context=watchlist_context,
-                jikan_context=lore_context
-            )
-            if ai_reply:
-                reply_text = ai_reply
-            else:
-                # Fallback: use hardcoded lore only when Gemini is unavailable
-                lore_hit = get_nami_lore_fallback(lowered_msg)
-                reply_text = lore_hit if lore_hit else (
-                    "Fufufu! That's a deep One Piece question! "
-                    "My navigator's logbook covers all the seas — ask me anything about the Straw Hats! 🍊⛵"
-                )
-            recs_formatted = []
-            all_recs_pool = []
-
-        # Pillar 2: Anime Title Search / Synopsis Query (AniList only)
-        # Guard: ONLY enter Pillar 2 if a verified anime title was found or explicit plot request
-        elif not is_greeting_or_casual and not is_recommendation_request and not is_airing_request and not is_upcoming_request and (bool(anilist_anime) or is_plot_request):
-            if not anilist_anime:
-                search_query_raw = " ".join([w for w in user_msg.split() if w.lower() not in ["can", "you", "tell", "me", "about", "what", "is", "the", "plot", "of"]]).strip()
-                if search_query_raw:
-                    anilist_anime = fetch_anilist_anime_details(search_query_raw)
-
-            if anilist_anime:
-                ja = anilist_anime[0]
-                ai_reply = call_gemini_nami_ai(
-                    message=user_msg,
-                    history=req.history or [],
-                    catalog_context=catalog_context,
-                    watchlist_context=watchlist_context,
-                    jikan_context=anilist_context_str
-                )
-
-                if ai_reply:
-                    reply_text = ai_reply
-                else:
-                    score_str = ja["score"] if ja.get("score") else "N/A"
-                    ep_str = ja["episodes"] if ja.get("episodes") else "Ongoing"
-                    studio_str = ja["studios"] if ja.get("studios") else "Studio"
-                    genre_str = ja["genres"] if ja.get("genres") else "Anime"
-
-                    reply_text = (
-                        f"Yosh! Here is the lowdown on **{ja['title']}**:\n\n"
-                        f"{ja['synopsis']}\n\n"
-                        f"⭐ **Score:** {score_str}/10 | **Episodes:** {ep_str} | **Studio:** {studio_str} | **Genres:** {genre_str} 🍊"
-                    )
-
-                all_recs_pool = []
-                seen_ids = set()
-                for item in anilist_anime:
-                    t_str = item["title"]
-                    slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
-                    
-                    score_val = None
-                    if item.get("score") and str(item["score"]) != "N/A":
-                        try:
-                            score_val = float(item["score"])
-                        except Exception:
-                            score_val = None
-
-                    g_list = [g.strip() for g in item.get("genres", "").split(",") if g.strip()][:3]
-
-                    local_match = None
-                    try:
-                        clean_t = re.sub(r'[^a-zA-Z0-9\s]', '', t_str)
-                        if clean_t:
-                            local_match = db.query(Anime).filter(
-                                or_(
-                                    Anime.title_english.ilike(f"%{clean_t}%"),
-                                    Anime.title_romaji.ilike(f"%{clean_t}%")
-                                )
-                            ).first()
-                    except Exception as db_ex:
-                        log.warning(f"Local anime match query error for '{t_str}': {db_ex}")
-                        try:
-                            db.rollback()
-                        except Exception:
-                            pass
-                        local_match = None
-
-                    card_id = int(local_match.id) if (local_match and hasattr(local_match, "id") and isinstance(local_match.id, int)) else item["mal_id"]
-                    cover_url = str(local_match.cover_large_url) if (local_match and getattr(local_match, "cover_large_url", None) and isinstance(local_match.cover_large_url, str)) else item.get("image_url")
-                    card_slug = str(local_match.slug) if (local_match and getattr(local_match, "slug", None) and isinstance(local_match.slug, str)) else slug_clean
-
-                    if card_id not in seen_ids:
-                        seen_ids.add(card_id)
-                        all_recs_pool.append(RecommendedAnimeCard(
-                            id=card_id,
-                            slug=card_slug,
-                            title=t_str,
-                            cover_url=cover_url,
-                            score=score_val,
-                            genres=g_list
-                        ))
-
-                recs_formatted = all_recs_pool[:4]
-            else:
-                # If no anime title matched, fall back to Gemini AI instead of failing with a static error
-                ai_reply = call_gemini_nami_ai(
-                    message=user_msg,
-                    history=req.history or [],
-                    catalog_context=catalog_context,
-                    watchlist_context=watchlist_context,
-                    jikan_context=anilist_context_str
-                )
-                if ai_reply:
-                    reply_text = ai_reply
-                else:
-                    reply_text = f"Yosh! I searched my logbook for **\"{user_msg.strip()}\"**, but couldn't find a matching anime title! Check the spelling or ask me to recommend a genre! 🍊"
-                recs_formatted = []
-                all_recs_pool = []
-
-        # Pillar 3: Genre Recommendations & Specific Recommendation Queries
-        elif is_recommendation_request or matched_genres or is_airing_request or is_upcoming_request:
+        # Route 1: Genre Recommendations & Preset Buttons (Returns Anime Cards)
+        if is_recommendation_request or matched_genres or is_upcoming_request:
             ai_reply = call_gemini_nami_ai(
                 message=user_msg,
                 history=req.history or [],
@@ -1042,8 +897,6 @@ def nami_chat(
                 if matched_genres:
                     g_name = matched_genres[0]
                     reply_text = f"Yosh! For **{g_name}** lovers, I've mapped out top-tier recommendations from our logbook! Which one looks best for your next watch? 🍊"
-                elif is_airing_request:
-                    reply_text = "Yosh! Here are top anime currently airing right now! ⛵"
                 elif is_upcoming_request:
                     reply_text = "Yosh! Here are upcoming anime releases charted on our logbook! 🧭"
                 else:
@@ -1084,9 +937,93 @@ def nami_chat(
                             genres=m.get("genres", [])[:3]
                         ))
 
-            recs_formatted = all_recs_pool[:4]
+            return ChatResponse(
+                reply=reply_text,
+                anime_recommendations=all_recs_pool[:4],
+                all_recommendations=all_recs_pool
+            )
 
-        # Pillar 4: Fun, Random & Casual AI Conversation (Gemini AI + Rich Nami Engine)
+        # Route 2: Verified Anime Title Search (Returns Synopsis & Anime Card)
+        elif anilist_anime:
+            ja = anilist_anime[0]
+            ai_reply = call_gemini_nami_ai(
+                message=user_msg,
+                history=req.history or [],
+                catalog_context=catalog_context,
+                watchlist_context=watchlist_context,
+                jikan_context=anilist_context_str
+            )
+
+            if ai_reply:
+                reply_text = ai_reply
+            else:
+                score_str = ja["score"] if ja.get("score") else "N/A"
+                ep_str = ja["episodes"] if ja.get("episodes") else "Ongoing"
+                studio_str = ja["studios"] if ja.get("studios") else "Studio"
+                genre_str = ja["genres"] if ja.get("genres") else "Anime"
+
+                reply_text = (
+                    f"Yosh! Here is the lowdown on **{ja['title']}**:\n\n"
+                    f"{ja['synopsis']}\n\n"
+                    f"⭐ **Score:** {score_str}/10 | **Episodes:** {ep_str} | **Studio:** {studio_str} | **Genres:** {genre_str} 🍊"
+                )
+
+            all_recs_pool = []
+            seen_ids = set()
+            for item in anilist_anime:
+                t_str = item["title"]
+                slug_clean = re.sub(r'[^a-z0-9]+', '-', t_str.lower()).strip('-')
+                
+                score_val = None
+                if item.get("score") and str(item["score"]) != "N/A":
+                    try:
+                        score_val = float(item["score"])
+                    except Exception:
+                        score_val = None
+
+                g_list = [g.strip() for g in item.get("genres", "").split(",") if g.strip()][:3]
+
+                local_match = None
+                try:
+                    clean_t = re.sub(r'[^a-zA-Z0-9\s]', '', t_str)
+                    if clean_t:
+                        local_match = db.query(Anime).filter(
+                            or_(
+                                Anime.title_english.ilike(f"%{clean_t}%"),
+                                Anime.title_romaji.ilike(f"%{clean_t}%")
+                            )
+                        ).first()
+                except Exception as db_ex:
+                    log.warning(f"Local anime match query error for '{t_str}': {db_ex}")
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
+                    local_match = None
+
+                card_id = int(local_match.id) if (local_match and hasattr(local_match, "id") and isinstance(local_match.id, int)) else item["mal_id"]
+                cover_url = str(local_match.cover_large_url) if (local_match and getattr(local_match, "cover_large_url", None) and isinstance(local_match.cover_large_url, str)) else item.get("image_url")
+                card_slug = str(local_match.slug) if (local_match and getattr(local_match, "slug", None) and isinstance(local_match.slug, str)) else slug_clean
+
+                if card_id not in seen_ids:
+                    seen_ids.add(card_id)
+                    all_recs_pool.append(RecommendedAnimeCard(
+                        id=card_id,
+                        slug=card_slug,
+                        title=t_str,
+                        cover_url=cover_url,
+                        score=score_val,
+                        genres=g_list
+                    ))
+
+            return ChatResponse(
+                reply=reply_text,
+                anime_recommendations=all_recs_pool[:4],
+                all_recommendations=all_recs_pool
+            )
+
+        # Route 3: EVERYTHING ELSE → DIRECT GEMINI AI (Pillar 4)
+        # Science, Zoro eye scar, Sanji, hobbies, agriculture, typos, casual chat, lore
         else:
             gemini_reply = call_gemini_nami_ai(
                 message=user_msg,
@@ -1098,35 +1035,7 @@ def nami_chat(
             if gemini_reply:
                 reply_text = gemini_reply
             else:
-                # ── Rich Dynamic Nami Fallback Engine (when Gemini AI is unavailable) ──
-                # Topic-aware, rotating responses so nothing ever repeats or feels robotic.
-
-                if re.search(r'\b(hi|hello|hey|sup|howdy)\b', lowered_msg) and not is_nami_personal:
-                    reply_text = random.choice([
-                        "Yosh! Welcome aboard the Thousand Sunny, Irray! I'm Nami, your Straw Hat Navigator! Ask me about any anime, a genre you love, or just chat—I'm all ears! 🍊⛵",
-                        "Fufufu, Irray! You caught me between weather readings! What can your favorite Navigator help you with today? 🧭✨",
-                        "Hey Irray! Great to see you on deck! Ready to chart a new anime course or just here to hang out? 🍊"
-                    ])
-
-                elif any(k in lowered_msg for k in ["how are you", "how r u", "how are u", "are you okay", "are you happy"]):
-                    reply_text = random.choice([
-                        "Fufufu! I'm absolutely 100% doing great! Just calculated the best wind currents for our next voyage and pocketed 50,000 Berries from Luffy's emergency fund... he doesn't know yet! 🍊💰",
-                        "Yosh! Never better, Irray! The weather's perfect, the Log Pose is locked in, and nobody has eaten MY tangerines today! 🍊⛵",
-                        "Oh, I'm doing amazing! Just made Sanji cry by rejecting his cooking offer—for the 47th time this week! 😂 What about you? 🍊"
-                    ])
-
-                elif any(k in lowered_msg for k in ["outfit", "clothes", "style", "hair", "wear"]):
-                    reply_text = (
-                        "Fufufu! My fashion sense is as sharp as my navigation skills! 🍊✨\n\n"
-                        "My iconic look across the Grand Line:\n"
-                        "• **East Blue Arc**: Blue crop top + orange mini skirt 🍊\n"
-                        "• **Alabasta Arc**: White belly shirt + blue skirt\n"
-                        "• **Post-Timeskip**: Pink bikini top + jeans shorts with suspenders\n"
-                        "• **Wano Arc**: Beautiful kimono befitting the Land of Wano 🎋\n\n"
-                        "Every outfit is carefully chosen for maximum navigation efficiency AND maximum style! 💁‍♀️"
-                    )
-
-                elif any(k in lowered_msg for k in ["favourite genre", "favorite genre", "genre do you like", "what genre"]):
+                if any(k in lowered_msg for k in ["favourite genre", "favorite genre", "genre do you like", "what genre"]):
                     reply_text = (
                         "Fufufu! Great question, Irray! 🍊 As your Navigator, I've charted every genre in the anime ocean:\n\n"
                         "My personal top picks:\n"
