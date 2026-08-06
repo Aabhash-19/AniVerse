@@ -510,10 +510,11 @@ def call_gemini_nami_ai(
         contents.append({"role": "user", "parts": [{"text": message}]})
 
     models_to_try = [
-        "gemini-flash-latest",        # Primary v1beta flash alias (Verified 200 OK ✅)
-        "gemini-pro-latest",          # Primary v1beta pro alias
-        "gemini-2.0-flash",           # 2.0 flash
-        "gemini-2.0-flash-lite",      # 2.0 flash lite
+        "gemini-flash-latest",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemma-4-26b-a4b-it",
+        "gemma-4-31b-it",
     ]
 
     for model_name in models_to_try:
