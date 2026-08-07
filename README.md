@@ -24,7 +24,7 @@
 ## 🍊 Welcome Aboard! A Message From Navigator Nami ⛵
 
 <p>
-  <img align="left" src="./apps/web/public/nami-outfits/nami-clean-user.png" alt="Nami Navigator" width="260" style="margin-right: 24px; margin-bottom: 12px; max-width: 100%; height: auto;" />
+  <img align="left" src="https://github.com/Aabhash-19/Nami/blob/main/assets/nami-joy-transparent.png" alt="Nami Navigator" width="260" style="margin-right: 24px; margin-bottom: 12px; max-width: 100%; height: auto;" />
   <h3><i>"Yosh, Mina-san! Welcome to NamiVerse!"</i> 💰🍊</h3>
   I'm <b>Nami</b>, official Navigator of the Straw Hat Pirates! When I'm not steering the Thousand Sunny through treacherous Grand Line storms or counting my precious Berries (💰 100,000,000 and counting!), I chart the vast ocean of anime so you never have to waste your time on filler again!
   <br /><br />
